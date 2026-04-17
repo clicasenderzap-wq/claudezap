@@ -45,6 +45,7 @@ async function start() {
 
     app.listen(PORT, () => {
       console.log(`[Server] rodando em http://localhost:${PORT}`);
+      require('./workers/messageWorker');
     });
   } catch (err) {
     console.error('[Startup] falha ao iniciar:', err.message);

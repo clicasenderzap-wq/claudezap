@@ -1,0 +1,27 @@
+services:
+  - type: web
+    name: claudezap-api
+    runtime: node
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node src/app.js
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: JWT_EXPIRES_IN
+        value: 7d
+      - key: WA_SESSION_DIR
+        value: ./wa_sessions
+      - key: MSG_DELAY_MS
+        value: "3000"
+      - key: MSG_RATE_LIMIT_PER_MIN
+        value: "20"
+      - key: JWT_SECRET
+        generateValue: true
+      # Configurar manualmente no painel do Render após criar os serviços:
+      # DATABASE_URL  → connection string do Neon
+      # REDIS_URL     → connection string do Upstash (rediss://...)
+      # CORS_ORIGIN   → URL do seu frontend no Vercel (ex: https://claudezap.vercel.app)
