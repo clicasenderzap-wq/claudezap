@@ -1,0 +1,49 @@
+const { DataTypes } = require('sequelize');
+const sequelize = require('../config/database');
+
+const Campaign = sequelize.define('Campaign', {
+  id: {
+    type: DataTypes.UUID,
+    defaultValue: DataTypes.UUIDV4,
+    primaryKey: true,
+  },
+  user_id: {
+    type: DataTypes.UUID,
+    allowNull: false,
+  },
+  name: {
+    type: DataTypes.STRING,
+    allowNull: false,
+  },
+  message_template: {
+    type: DataTypes.TEXT,
+    allowNull: false,
+    comment: 'Supports {{name}}, {{phone}} variables',
+  },
+  status: {
+    type: DataTypes.ENUM('draft', 'running', 'paused', 'completed', 'failed'),
+    defaultValue: 'draft',
+  },
+  total_contacts: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  sent_count: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  failed_count: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  delay_ms: {
+    type: DataTypes.INTEGER,
+    defaultValue: 3000,
+    comment: 'Delay between messages in milliseconds',
+  },
+}, {
+  tableName: 'campaigns',
+  underscored: true,
+});
+
+module.exports = Campaign;
