@@ -2,7 +2,15 @@ const Redis = require('ioredis');
 
 function buildConnection() {
   if (process.env.REDIS_URL) {
-    const url = new URL(process.env.REDIS_URL);
+    let url;
+    try {
+      url = new URL(process.env.REDIS_URL);
+    } catch {
+      console.error('[Redis] REDIS_URL inválida — use o formato: rediss://default:senha@host:6380');
+      console.error('[Redis] Valor recebido:', process.env.REDIS_URL.slice(0, 60) + '...');
+      // Fallback para local em vez de crashar o servidor
+      return { host: 'localhost', port: 6379, maxRetriesPerRequest: null };
+    }
     return {
       host: url.hostname,
       port: Number(url.port),
