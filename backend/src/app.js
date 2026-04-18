@@ -35,7 +35,13 @@ app.use((err, req, res, next) => {
 
 const PORT = process.env.PORT || 3000;
 
-async function start() {
+// Abre a porta primeiro — o Render exige isso antes de qualquer outra coisa
+const server = app.listen(PORT, () => {
+  console.log(`[Server] rodando na porta ${PORT}`);
+});
+
+// Conecta ao banco e inicia o worker em background
+(async () => {
   try {
     await sequelize.authenticate();
     console.log('[DB] Conexão estabelecida');
@@ -43,16 +49,12 @@ async function start() {
     await sequelize.sync({ alter: process.env.NODE_ENV === 'development' });
     console.log('[DB] Modelos sincronizados');
 
-    app.listen(PORT, () => {
-      console.log(`[Server] rodando em http://localhost:${PORT}`);
-      require('./workers/messageWorker');
-    });
+    require('./workers/messageWorker');
+    console.log('[Worker] iniciado');
   } catch (err) {
-    console.error('[Startup] falha ao iniciar:', err.message);
-    process.exit(1);
+    console.error('[Startup] falha ao conectar:', err.message);
+    // Não encerra o processo — deixa o /health responder para diagnóstico
   }
-}
-
-start();
+})();
 
 module.exports = app;
