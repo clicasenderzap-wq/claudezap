@@ -9,6 +9,9 @@ const routes = require('./routes');
 
 const app = express();
 
+// Necessário no Render (e qualquer proxy reverso) para o rate-limit funcionar corretamente
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(cors({
   origin: process.env.CORS_ORIGIN || '*',

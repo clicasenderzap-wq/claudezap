@@ -9,6 +9,14 @@ const path = require('path');
 const fs = require('fs');
 const { EventEmitter } = require('events');
 
+const noop = () => {};
+const silentLogger = {
+  level: 'silent',
+  trace: noop, debug: noop, info: noop,
+  warn: noop, error: noop, fatal: noop,
+  child: () => silentLogger,
+};
+
 class WhatsAppService extends EventEmitter {
   constructor() {
     super();
@@ -31,7 +39,7 @@ class WhatsAppService extends EventEmitter {
         keys: makeCacheableSignalKeyStore(state.keys, console),
       },
       printQRInTerminal: false,
-      logger: { level: 'silent', child: () => ({ level: 'silent', trace: () => {}, debug: () => {}, info: () => {}, warn: () => {}, error: () => {}, fatal: () => {} }) },
+      logger: silentLogger,
     });
 
     sock.ev.on('creds.update', saveCreds);
