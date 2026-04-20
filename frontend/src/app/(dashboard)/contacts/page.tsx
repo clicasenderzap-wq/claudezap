@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Upload, Trash2, Search, Ban } from 'lucide-react';
+import { Plus, Upload, Trash2, Search, Ban, Pencil } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -18,11 +18,20 @@ const schema = z.object({
 });
 type FormData = z.infer<typeof schema>;
 
+interface Contact {
+  id: string;
+  name: string;
+  phone: string;
+  notes?: string;
+  opt_out: boolean;
+}
+
 export default function ContactsPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<Contact | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { data, isLoading } = useQuery({
@@ -30,18 +39,28 @@ export default function ContactsPage() {
     queryFn: () => api.get('/contacts', { params: { search, page, limit: 20 } }).then((r) => r.data),
   });
 
-  const { register, handleSubmit, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
-    resolver: zodResolver(schema),
-  });
+  const createForm = useForm<FormData>({ resolver: zodResolver(schema) });
+  const editForm = useForm<FormData>({ resolver: zodResolver(schema) });
 
   const createMutation = useMutation({
     mutationFn: (d: FormData) => api.post('/contacts', d),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contacts'] });
       toast.success('Contato adicionado');
-      reset(); setOpen(false);
+      createForm.reset();
+      setOpen(false);
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro'),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: FormData }) => api.put(`/contacts/${id}`, data),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['contacts'] });
+      toast.success('Contato atualizado');
+      setEditing(null);
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao atualizar'),
   });
 
   const deleteMutation = useMutation({
@@ -54,6 +73,11 @@ export default function ContactsPage() {
       api.put(`/contacts/${id}`, { opt_out }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['contacts'] }),
   });
+
+  function openEdit(contact: Contact) {
+    setEditing(contact);
+    editForm.reset({ name: contact.name, phone: contact.phone, notes: contact.notes ?? '' });
+  }
 
   async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -110,7 +134,7 @@ export default function ContactsPage() {
             {!isLoading && !data?.data?.length && (
               <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">Nenhum contato encontrado</td></tr>
             )}
-            {data?.data?.map((c: any) => (
+            {data?.data?.map((c: Contact) => (
               <tr key={c.id} className="hover:bg-gray-50">
                 <td className="px-4 py-3 font-medium text-gray-900">{c.name}</td>
                 <td className="px-4 py-3 text-gray-600">{formatPhone(c.phone)}</td>
@@ -122,6 +146,13 @@ export default function ContactsPage() {
                 </td>
                 <td className="px-4 py-3">
                   <div className="flex gap-2">
+                    <button
+                      onClick={() => openEdit(c)}
+                      title="Editar"
+                      className="text-gray-400 hover:text-blue-500 transition-colors"
+                    >
+                      <Pencil size={16} />
+                    </button>
                     <button
                       onClick={() => optOutMutation.mutate({ id: c.id, opt_out: !c.opt_out })}
                       title={c.opt_out ? 'Reativar' : 'Opt-out'}
@@ -153,25 +184,52 @@ export default function ContactsPage() {
         )}
       </div>
 
-      <Modal open={open} onClose={() => { setOpen(false); reset(); }} title="Novo contato">
-        <form onSubmit={handleSubmit((d) => createMutation.mutate(d))} className="space-y-4">
+      {/* Modal — Novo contato */}
+      <Modal open={open} onClose={() => { setOpen(false); createForm.reset(); }} title="Novo contato">
+        <form onSubmit={createForm.handleSubmit((d) => createMutation.mutate(d))} className="space-y-4">
           <div>
             <label className="label">Nome *</label>
-            <input {...register('name')} className="input" placeholder="Nome completo" />
-            {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}
+            <input {...createForm.register('name')} className="input" placeholder="Nome completo" />
+            {createForm.formState.errors.name && <p className="text-red-500 text-xs mt-1">{createForm.formState.errors.name.message}</p>}
           </div>
           <div>
             <label className="label">Telefone *</label>
-            <input {...register('phone')} className="input" placeholder="5511999999999" />
-            {errors.phone && <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>}
+            <input {...createForm.register('phone')} className="input" placeholder="11999999999 (sem o 55)" />
+            <p className="text-xs text-gray-400 mt-1">O código do Brasil (55) é adicionado automaticamente.</p>
+            {createForm.formState.errors.phone && <p className="text-red-500 text-xs mt-1">{createForm.formState.errors.phone.message}</p>}
           </div>
           <div>
             <label className="label">Observações</label>
-            <textarea {...register('notes')} className="input resize-none" rows={3} placeholder="Anotações opcionais" />
+            <textarea {...createForm.register('notes')} className="input resize-none" rows={3} placeholder="Anotações opcionais" />
           </div>
           <div className="flex gap-3 justify-end pt-2">
-            <button type="button" onClick={() => { setOpen(false); reset(); }} className="btn-secondary">Cancelar</button>
-            <button type="submit" disabled={isSubmitting} className="btn-primary">Salvar</button>
+            <button type="button" onClick={() => { setOpen(false); createForm.reset(); }} className="btn-secondary">Cancelar</button>
+            <button type="submit" disabled={createForm.formState.isSubmitting} className="btn-primary">Salvar</button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal — Editar contato */}
+      <Modal open={!!editing} onClose={() => setEditing(null)} title="Editar contato">
+        <form onSubmit={editForm.handleSubmit((d) => updateMutation.mutate({ id: editing!.id, data: d }))} className="space-y-4">
+          <div>
+            <label className="label">Nome *</label>
+            <input {...editForm.register('name')} className="input" placeholder="Nome completo" />
+            {editForm.formState.errors.name && <p className="text-red-500 text-xs mt-1">{editForm.formState.errors.name.message}</p>}
+          </div>
+          <div>
+            <label className="label">Telefone *</label>
+            <input {...editForm.register('phone')} className="input" placeholder="5511999999999" />
+            <p className="text-xs text-gray-400 mt-1">Inclua o 55 se for número brasileiro. Ex: 5511999999999</p>
+            {editForm.formState.errors.phone && <p className="text-red-500 text-xs mt-1">{editForm.formState.errors.phone.message}</p>}
+          </div>
+          <div>
+            <label className="label">Observações</label>
+            <textarea {...editForm.register('notes')} className="input resize-none" rows={3} placeholder="Anotações opcionais" />
+          </div>
+          <div className="flex gap-3 justify-end pt-2">
+            <button type="button" onClick={() => setEditing(null)} className="btn-secondary">Cancelar</button>
+            <button type="submit" disabled={editForm.formState.isSubmitting} className="btn-primary">Salvar alterações</button>
           </div>
         </form>
       </Modal>

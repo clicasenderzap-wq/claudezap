@@ -96,7 +96,10 @@ async function importCSV(req, res) {
 }
 
 function normalizePhone(phone) {
-  return String(phone).replace(/\D/g, '');
+  const digits = String(phone).replace(/\D/g, '');
+  // Números brasileiros sem DDI: 10 dígitos (DDD+8) ou 11 (DDD+9) → adiciona 55
+  if (digits.length === 10 || digits.length === 11) return `55${digits}`;
+  return digits;
 }
 
 module.exports = { list, create, update, remove, importCSV };
