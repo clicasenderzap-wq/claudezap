@@ -87,7 +87,14 @@ export default function ContactsPage() {
     try {
       const res = await api.post('/contacts/import', form);
       qc.invalidateQueries({ queryKey: ['contacts'] });
-      toast.success(`${res.data.imported} contatos importados`);
+      const { imported, skipped } = res.data;
+      if (imported === 0 && skipped === 0) {
+        toast.error('Nenhum contato encontrado no arquivo. Verifique se as colunas se chamam "nome" e "telefone".');
+      } else if (skipped > 0) {
+        toast.success(`${imported} contatos importados, ${skipped} ignorados por erro.`);
+      } else {
+        toast.success(`${imported} contatos importados com sucesso!`);
+      }
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Erro na importação');
     }

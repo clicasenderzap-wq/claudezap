@@ -105,16 +105,32 @@ async function importCSV(req, res) {
   }
 
   let imported = 0;
+  let duplicates = 0;
   for (const row of results) {
     try {
-      await Contact.upsert(row, { conflictFields: ['user_id', 'phone'] });
+      await Contact.create(row);
       imported++;
-    } catch {
-      errors.push({ row, reason: 'erro ao salvar' });
+    } catch (err) {
+      if (err.name === 'SequelizeUniqueConstraintError') {
+        // Telefone já existe — atualiza nome e observações
+        try {
+          await Contact.update(
+            { name: row.name, notes: row.notes },
+            { where: { user_id: row.user_id, phone: row.phone } }
+          );
+          imported++;
+          duplicates++;
+        } catch {
+          errors.push({ phone: row.phone, reason: 'erro ao atualizar duplicado' });
+        }
+      } else {
+        console.error('[Import] erro ao salvar contato:', err.message, row);
+        errors.push({ phone: row.phone, reason: err.message });
+      }
     }
   }
 
-  res.json({ imported, skipped: errors.length, errors });
+  res.json({ imported, duplicates, skipped: errors.length, errors });
 }
 
 function normalizePhone(phone) {
