@@ -1,8 +1,11 @@
 const router = require('express').Router();
-const ctrl = require('../controllers/whatsappController');
+const accounts = require('../controllers/whatsappAccountController');
 
-router.get('/qr', ctrl.getQR);
-router.get('/status', ctrl.getStatus);
-router.delete('/session', ctrl.disconnect);
+// Multi-account routes
+router.get('/accounts', accounts.list);
+router.post('/accounts', accounts.create);
+router.put('/accounts/:id', accounts.updateLabel);
+router.get('/accounts/:id/qr', accounts.getQR);
+router.delete('/accounts/:id', accounts.remove);
 
 module.exports = router;

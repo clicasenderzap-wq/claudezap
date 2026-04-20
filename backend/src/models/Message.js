@@ -39,6 +39,10 @@ const Message = sequelize.define('Message', {
     type: DataTypes.DATE,
     allowNull: true,
   },
+  account_id: {
+    type: DataTypes.UUID,
+    allowNull: true,
+  },
 }, {
   tableName: 'messages',
   underscored: true,

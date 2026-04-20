@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Megaphone, Check, RefreshCw, Trash2, Plus, History, AlertCircle, X } from 'lucide-react';
+import { Megaphone, Check, RefreshCw, Trash2, Plus, History, AlertCircle, X, Smartphone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { formatDate, statusColor, statusLabel } from '@/lib/utils';
@@ -26,6 +26,14 @@ export default function CampaignsPage() {
   const [search, setSearch] = useState('');
   const [histPage, setHistPage] = useState(1);
   const [detailCampaign, setDetailCampaign] = useState<any>(null);
+  const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
+
+  const { data: waAccounts = [] } = useQuery<any[]>({
+    queryKey: ['wa-accounts'],
+    queryFn: () => api.get('/whatsapp/accounts').then((r) => r.data),
+    refetchInterval: 10000,
+  });
+  const connectedAccounts = waAccounts.filter((a: any) => a.status === 'connected');
 
   const { data: contacts } = useQuery({
     queryKey: ['contacts-all'],
@@ -45,12 +53,12 @@ export default function CampaignsPage() {
   const template = watch('message_template', '');
 
   const sendMutation = useMutation({
-    mutationFn: (d: FormData & { contact_ids: string[] }) => api.post('/messages/campaign', d),
+    mutationFn: (d: FormData & { contact_ids: string[]; account_ids: string[] }) => api.post('/messages/campaign', d),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['campaigns'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success(`Campanha criada! ${res.data.queued} mensagens na fila.`);
-      reset(); setSelected([]); setTab('history');
+      reset(); setSelected([]); setSelectedAccounts([]); setTab('history');
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao criar campanha'),
   });
@@ -84,9 +92,14 @@ export default function CampaignsPage() {
     setSelected(selected.length === active.length ? [] : active);
   }
 
+  function toggleAccount(id: string) {
+    setSelectedAccounts((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
+  }
+
   function onSubmit(data: FormData) {
     if (!selected.length) return toast.error('Selecione pelo menos um contato');
-    sendMutation.mutate({ ...data, contact_ids: selected });
+    if (!connectedAccounts.length) return toast.error('Nenhum número WhatsApp conectado. Conecte um número primeiro.');
+    sendMutation.mutate({ ...data, contact_ids: selected, account_ids: selectedAccounts });
   }
 
   const filtered = (contacts ?? []).filter(
@@ -236,6 +249,39 @@ export default function CampaignsPage() {
                 <input {...register('delay_ms', { valueAsNumber: true })} type="number" min={1000} step={500} className="input" />
                 <p className="text-xs text-gray-400 mt-1">Mínimo: 1000ms. Recomendado: 3000ms+</p>
               </div>
+              {/* Seleção de números */}
+              <div>
+                <label className="label flex items-center gap-1.5"><Smartphone size={13} /> Números para envio</label>
+                {connectedAccounts.length === 0 ? (
+                  <p className="text-xs text-red-500 mt-1">Nenhum número conectado. <a href="/whatsapp" className="underline">Conectar agora</a></p>
+                ) : (
+                  <div className="space-y-1.5 mt-1">
+                    {connectedAccounts.map((a: any) => (
+                      <label key={a.id} className="flex items-center gap-2.5 cursor-pointer text-sm">
+                        <div
+                          onClick={() => toggleAccount(a.id)}
+                          className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 cursor-pointer ${selectedAccounts.includes(a.id) ? 'bg-brand-600 border-brand-600' : 'border-gray-300'}`}
+                        >
+                          {selectedAccounts.includes(a.id) && <Check size={10} className="text-white" />}
+                        </div>
+                        <span className="text-gray-700 font-medium">{a.label}</span>
+                        {a.phone && <span className="text-gray-400 text-xs">+{a.phone}</span>}
+                        <span className="ml-auto text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">Conectado</span>
+                      </label>
+                    ))}
+                    {connectedAccounts.length > 1 && (
+                      <p className="text-xs text-gray-400 pt-1">
+                        {selectedAccounts.length === 0
+                          ? 'Nenhum selecionado = usa todos os conectados em round-robin'
+                          : selectedAccounts.length === 1
+                          ? 'Enviando por 1 número'
+                          : `Alternando entre ${selectedAccounts.length} números automaticamente`}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {preview && (
                 <div className="bg-brand-50 border border-brand-200 rounded-lg p-3">
                   <p className="text-xs font-medium text-brand-700 mb-1">Preview</p>

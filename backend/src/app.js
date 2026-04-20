@@ -55,19 +55,13 @@ const server = app.listen(PORT, () => {
     require('./workers/messageWorker');
     console.log('[Worker] iniciado');
 
-    // Reconecta sessões WhatsApp salvas automaticamente no startup
-    const fs = require('fs');
-    const path = require('path');
+    // Reconecta contas WhatsApp salvas no banco ao iniciar
     const whatsapp = require('./services/whatsappService');
-    const sessionDir = process.env.WA_SESSION_DIR || path.join(__dirname, '../wa_sessions');
-    if (fs.existsSync(sessionDir)) {
-      const sessions = fs.readdirSync(sessionDir).filter((f) => {
-        return fs.statSync(path.join(sessionDir, f)).isDirectory();
-      });
-      for (const userId of sessions) {
-        console.log(`[WA] Reconectando sessão: ${userId}`);
-        whatsapp.connect(userId).catch((e) => console.error(`[WA] Falha ao reconectar ${userId}:`, e.message));
-      }
+    const { WhatsappAccount } = require('./models');
+    const accounts = await WhatsappAccount.findAll();
+    for (const account of accounts) {
+      console.log(`[WA] Reconectando conta: ${account.label} (${account.id})`);
+      whatsapp.connect(account.id).catch((e) => console.error(`[WA] Falha ao reconectar ${account.id}:`, e.message));
     }
   } catch (err) {
     console.error('[Startup] falha ao conectar:', err.message);

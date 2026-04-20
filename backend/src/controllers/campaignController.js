@@ -46,6 +46,15 @@ async function resend(req, res) {
 
   if (!contacts.length) return res.status(400).json({ error: 'Nenhum contato ativo encontrado' });
 
+  const whatsapp = require('../services/whatsappService');
+  const allAccounts = await Contact.sequelize.models.WhatsappAccount.findAll({ where: { user_id: req.user.id } });
+  const connectedAccounts = allAccounts.filter((a) => whatsapp.getStatus(a.id) === 'connected');
+  // Usa as mesmas contas da campanha original se ainda conectadas, senão usa as disponíveis
+  const originalAccountIds = original.account_ids || [];
+  let accountsToUse = connectedAccounts.filter((a) => originalAccountIds.includes(a.id));
+  if (!accountsToUse.length) accountsToUse = connectedAccounts;
+  if (!accountsToUse.length) return res.status(400).json({ error: 'Nenhuma conta WhatsApp conectada' });
+
   const newCampaign = await Campaign.create({
     user_id: req.user.id,
     name: `${original.name} (Reenvio)`,
@@ -53,13 +62,15 @@ async function resend(req, res) {
     status: 'running',
     total_contacts: contacts.length,
     delay_ms: original.delay_ms,
+    account_ids: accountsToUse.map((a) => a.id),
   });
 
   const messages = await Message.bulkCreate(
-    contacts.map((c) => ({
+    contacts.map((c, i) => ({
       user_id: req.user.id,
       contact_id: c.id,
       campaign_id: newCampaign.id,
+      account_id: accountsToUse[i % accountsToUse.length].id,
       content: applyTemplate(original.message_template, c),
       status: 'queued',
     }))
@@ -68,6 +79,7 @@ async function resend(req, res) {
   const jobs = messages.map((m, i) => ({
     messageId: m.id,
     userId: req.user.id,
+    accountId: accountsToUse[i % accountsToUse.length].id,
     phone: contacts[i].phone,
     content: m.content,
   }));

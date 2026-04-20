@@ -34,13 +34,27 @@ async function sendCampaign(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
 
-  const { name, message_template, contact_ids, delay_ms = 3000 } = req.body;
+  const { name, message_template, contact_ids, delay_ms = 3000, account_ids = [] } = req.body;
 
   const contacts = await Contact.findAll({
     where: { id: contact_ids, user_id: req.user.id, opt_out: false },
   });
 
   if (!contacts.length) return res.status(400).json({ error: 'Nenhum contato válido selecionado' });
+
+  // Valida contas selecionadas; se nenhuma, usa todas conectadas do usuário
+  const { WhatsappAccount } = require('../models');
+  const whatsapp = require('../services/whatsappService');
+  let selectedAccounts = [];
+  if (account_ids.length) {
+    selectedAccounts = await WhatsappAccount.findAll({
+      where: { id: account_ids, user_id: req.user.id },
+    });
+  } else {
+    selectedAccounts = await WhatsappAccount.findAll({ where: { user_id: req.user.id } });
+  }
+  const connectedAccounts = selectedAccounts.filter((a) => whatsapp.getStatus(a.id) === 'connected');
+  if (!connectedAccounts.length) return res.status(400).json({ error: 'Nenhuma conta WhatsApp conectada selecionada' });
 
   const campaign = await Campaign.create({
     user_id: req.user.id,
@@ -49,13 +63,15 @@ async function sendCampaign(req, res) {
     status: 'running',
     total_contacts: contacts.length,
     delay_ms,
+    account_ids: connectedAccounts.map((a) => a.id),
   });
 
   const messages = await Message.bulkCreate(
-    contacts.map((c) => ({
+    contacts.map((c, i) => ({
       user_id: req.user.id,
       contact_id: c.id,
       campaign_id: campaign.id,
+      account_id: connectedAccounts[i % connectedAccounts.length].id,
       content: applyTemplate(message_template, c),
       status: 'queued',
     }))
@@ -64,6 +80,7 @@ async function sendCampaign(req, res) {
   const jobs = messages.map((m, i) => ({
     messageId: m.id,
     userId: req.user.id,
+    accountId: connectedAccounts[i % connectedAccounts.length].id,
     phone: contacts[i].phone,
     content: m.content,
   }));

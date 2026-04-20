@@ -25,10 +25,10 @@ class WhatsAppService extends EventEmitter {
     if (!fs.existsSync(this.sessionDir)) fs.mkdirSync(this.sessionDir, { recursive: true });
   }
 
-  async connect(userId) {
-    if (this.sockets.has(userId)) return;
+  async connect(accountId) {
+    if (this.sockets.has(accountId)) return;
 
-    const sessionPath = path.join(this.sessionDir, userId);
+    const sessionPath = path.join(this.sessionDir, accountId);
     const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
     const { version } = await fetchLatestBaileysVersion();
 
@@ -44,37 +44,43 @@ class WhatsAppService extends EventEmitter {
 
     sock.ev.on('creds.update', saveCreds);
 
-    sock.ev.on('connection.update', (update) => {
+    sock.ev.on('connection.update', async (update) => {
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
-        this.emit('qr', { userId, qr });
+        this.emit('qr', { accountId, qr });
       }
 
       if (connection === 'open') {
-        this.emit('ready', { userId });
+        // Captura o número do WhatsApp conectado
+        const phone = sock.user?.id?.split(':')[0] ?? null;
+        this.emit('ready', { accountId, phone });
       }
 
       if (connection === 'close') {
         const code = lastDisconnect?.error?.output?.statusCode;
         const shouldReconnect = code !== DisconnectReason.loggedOut;
-        this.sockets.delete(userId);
-        this.emit('disconnected', { userId, code });
+        this.sockets.delete(accountId);
+        this.emit('disconnected', { accountId, code });
         if (shouldReconnect) {
-          setTimeout(() => this.connect(userId), 5000);
+          setTimeout(() => this.connect(accountId), 5000);
+        } else {
+          // Sessão inválida — remove arquivos de sessão
+          const sessionPath = path.join(this.sessionDir, accountId);
+          if (fs.existsSync(sessionPath)) fs.rmSync(sessionPath, { recursive: true });
         }
       }
     });
 
     sock.ev.on('messages.update', (updates) => {
-      this.emit('message.update', { userId, updates });
+      this.emit('message.update', { accountId, updates });
     });
 
-    this.sockets.set(userId, sock);
+    this.sockets.set(accountId, sock);
   }
 
-  async sendText(userId, phone, text) {
-    const sock = this.sockets.get(userId);
+  async sendText(accountId, phone, text) {
+    const sock = this.sockets.get(accountId);
     if (!sock) throw new Error('WhatsApp não conectado');
 
     const jid = this._toJid(phone);
@@ -82,16 +88,19 @@ class WhatsAppService extends EventEmitter {
     return result.key.id;
   }
 
-  async disconnect(userId) {
-    const sock = this.sockets.get(userId);
+  async disconnect(accountId) {
+    const sock = this.sockets.get(accountId);
     if (sock) {
-      await sock.logout();
-      this.sockets.delete(userId);
+      try { await sock.logout(); } catch {}
+      this.sockets.delete(accountId);
     }
+    // Remove session files
+    const sessionPath = path.join(this.sessionDir, accountId);
+    if (fs.existsSync(sessionPath)) fs.rmSync(sessionPath, { recursive: true });
   }
 
-  getStatus(userId) {
-    const sock = this.sockets.get(userId);
+  getStatus(accountId) {
+    const sock = this.sockets.get(accountId);
     if (!sock) return 'disconnected';
     return sock.user ? 'connected' : 'connecting';
   }

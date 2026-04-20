@@ -41,6 +41,11 @@ const Campaign = sequelize.define('Campaign', {
     defaultValue: 3000,
     comment: 'Delay between messages in milliseconds',
   },
+  account_ids: {
+    type: DataTypes.JSON,
+    allowNull: true,
+    defaultValue: [],
+  },
 }, {
   tableName: 'campaigns',
   underscored: true,
