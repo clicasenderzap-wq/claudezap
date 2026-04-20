@@ -12,8 +12,11 @@ export function formatPhone(phone: string) {
   return phone;
 }
 
-export function formatDate(date: string) {
-  return new Date(date).toLocaleDateString('pt-BR', {
+export function formatDate(date: string | null | undefined) {
+  if (!date) return '—';
+  const d = new Date(date);
+  if (isNaN(d.getTime())) return '—';
+  return d.toLocaleString('pt-BR', {
     day: '2-digit', month: '2-digit', year: 'numeric',
     hour: '2-digit', minute: '2-digit',
   });

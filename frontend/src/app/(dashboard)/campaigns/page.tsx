@@ -156,7 +156,7 @@ export default function CampaignsPage() {
               {campaigns?.data?.map((c: any) => (
                 <tr key={c.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 font-medium text-gray-900 max-w-[160px] truncate">{c.name}</td>
-                  <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatDate(c.created_at)}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatDate(c.createdAt ?? c.created_at)}</td>
                   <td className="px-4 py-3 text-center text-gray-700">{c.total_contacts}</td>
                   <td className="px-4 py-3 text-center text-green-600 font-medium">{c.sent_count}</td>
                   <td className="px-4 py-3 text-center text-red-500">{c.failed_count}</td>
