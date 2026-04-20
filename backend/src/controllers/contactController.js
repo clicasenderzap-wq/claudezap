@@ -1,5 +1,6 @@
 const { validationResult } = require('express-validator');
 const csv = require('csv-parser');
+const XLSX = require('xlsx');
 const { Readable } = require('stream');
 const { Contact } = require('../models');
 const { Op } = require('sequelize');
@@ -61,26 +62,47 @@ async function remove(req, res) {
 }
 
 async function importCSV(req, res) {
-  if (!req.file) return res.status(400).json({ error: 'Arquivo CSV obrigatório' });
+  if (!req.file) return res.status(400).json({ error: 'Arquivo obrigatório' });
+
+  const ext = (req.file.originalname || '').split('.').pop().toLowerCase();
+  let rawRows = [];
+
+  if (ext === 'xlsx' || ext === 'xls') {
+    const workbook = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const sheet = workbook.Sheets[workbook.SheetNames[0]];
+    rawRows = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+    // Normaliza cabeçalhos para lowercase sem espaços
+    rawRows = rawRows.map((r) => {
+      const normalized = {};
+      for (const key of Object.keys(r)) normalized[key.trim().toLowerCase()] = r[key];
+      return normalized;
+    });
+  } else {
+    // CSV — detecta separador automaticamente (vírgula ou ponto-e-vírgula)
+    const sample = req.file.buffer.toString('utf8', 0, 512);
+    const separator = sample.includes(';') ? ';' : ',';
+
+    await new Promise((resolve, reject) => {
+      Readable.from(req.file.buffer)
+        .pipe(csv({ separator, mapHeaders: ({ header }) => header.trim().toLowerCase() }))
+        .on('data', (row) => rawRows.push(row))
+        .on('end', resolve)
+        .on('error', reject);
+    });
+  }
 
   const results = [];
   const errors = [];
 
-  await new Promise((resolve, reject) => {
-    Readable.from(req.file.buffer)
-      .pipe(csv({ mapHeaders: ({ header }) => header.trim().toLowerCase() }))
-      .on('data', (row) => {
-        const name = row.nome || row.name;
-        const phone = row.telefone || row.phone;
-        if (name && phone) {
-          results.push({ user_id: req.user.id, name: name.trim(), phone: normalizePhone(phone), notes: row.observacoes || row.notes || null });
-        } else {
-          errors.push({ row, reason: 'nome/telefone obrigatórios' });
-        }
-      })
-      .on('end', resolve)
-      .on('error', reject);
-  });
+  for (const row of rawRows) {
+    const name = String(row.nome || row.name || '').trim();
+    const phone = String(row.telefone || row.phone || '').trim();
+    if (name && phone) {
+      results.push({ user_id: req.user.id, name, phone: normalizePhone(phone), notes: String(row.observacoes || row.notes || '').trim() || null });
+    } else {
+      errors.push({ row, reason: 'nome/telefone obrigatórios' });
+    }
+  }
 
   let imported = 0;
   for (const row of results) {

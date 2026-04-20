@@ -99,12 +99,12 @@ export default function ContactsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Contatos</h1>
         <div className="flex gap-2">
-          <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
-          <a href="/contatos_modelo.csv" download className="btn-secondary">
-            <Download size={16} /> Baixar modelo CSV
+          <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} />
+          <a href="/contatos_modelo.xlsx" download className="btn-secondary">
+            <Download size={16} /> Baixar modelo Excel
           </a>
           <button onClick={() => fileRef.current?.click()} className="btn-secondary">
-            <Upload size={16} /> Importar CSV
+            <Upload size={16} /> Importar CSV / Excel
           </button>
           <button onClick={() => setOpen(true)} className="btn-primary">
             <Plus size={16} /> Novo contato
@@ -238,7 +238,7 @@ export default function ContactsPage() {
       </Modal>
 
       <p className="text-xs text-gray-400">
-        CSV esperado: colunas <code>nome</code>, <code>telefone</code> (só DDD + número, sem o 55), <code>observacoes</code> (opcional). Use o botão "Baixar modelo CSV" para obter um arquivo já formatado.
+        Aceita Excel (.xlsx) ou CSV. Colunas: <code>nome</code>, <code>telefone</code> (só DDD + número, sem o 55), <code>observacoes</code> (opcional). Baixe o modelo Excel para começar.
       </p>
     </div>
   );
