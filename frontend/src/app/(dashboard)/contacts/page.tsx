@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Upload, Trash2, Search, Ban, Pencil } from 'lucide-react';
+import { Plus, Upload, Trash2, Search, Ban, Pencil, Download } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -100,6 +100,9 @@ export default function ContactsPage() {
         <h1 className="text-2xl font-bold text-gray-900">Contatos</h1>
         <div className="flex gap-2">
           <input ref={fileRef} type="file" accept=".csv" className="hidden" onChange={handleImport} />
+          <a href="/contatos_modelo.csv" download className="btn-secondary">
+            <Download size={16} /> Baixar modelo CSV
+          </a>
           <button onClick={() => fileRef.current?.click()} className="btn-secondary">
             <Upload size={16} /> Importar CSV
           </button>
@@ -235,7 +238,7 @@ export default function ContactsPage() {
       </Modal>
 
       <p className="text-xs text-gray-400">
-        CSV esperado: colunas <code>nome</code>, <code>telefone</code>, <code>observacoes</code> (opcional)
+        CSV esperado: colunas <code>nome</code>, <code>telefone</code> (só DDD + número, sem o 55), <code>observacoes</code> (opcional). Use o botão "Baixar modelo CSV" para obter um arquivo já formatado.
       </p>
     </div>
   );
