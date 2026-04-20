@@ -1,6 +1,7 @@
 const QRCode = require('qrcode');
 const whatsapp = require('../services/whatsappService');
 const { WhatsappAccount } = require('../models');
+const optout = require('../services/optoutService');
 
 const pendingQR = new Map();
 
@@ -14,6 +15,13 @@ whatsapp.on('ready', async ({ accountId, phone }) => {
     { status: 'connected', phone: phone || null },
     { where: { id: accountId } }
   ).catch(() => {});
+});
+
+whatsapp.on('message.received', async ({ accountId, from, text }) => {
+  const account = await WhatsappAccount.findByPk(accountId).catch(() => null);
+  if (!account) return;
+  const removed = await optout.handleIncoming(account.user_id, from, text).catch(() => false);
+  if (removed) console.log(`[Optout] via conta ${account.label}: ${from} saiu da lista`);
 });
 
 whatsapp.on('disconnected', async ({ accountId }) => {

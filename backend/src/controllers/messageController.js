@@ -34,7 +34,8 @@ async function sendCampaign(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
 
-  const { name, message_template, contact_ids, delay_ms = 3000, account_ids = [] } = req.body;
+  const { name, message_template, contact_ids, delay_ms = 3000, account_ids = [], include_optout = true } = req.body;
+  const optoutText = include_optout ? '\n\nPara sair desta lista, responda: SAIR' : '';
 
   const contacts = await Contact.findAll({
     where: { id: contact_ids, user_id: req.user.id, opt_out: false },
@@ -72,7 +73,7 @@ async function sendCampaign(req, res) {
       contact_id: c.id,
       campaign_id: campaign.id,
       account_id: connectedAccounts[i % connectedAccounts.length].id,
-      content: applyTemplate(message_template, c),
+      content: applyTemplate(message_template, c) + optoutText,
       status: 'queued',
     }))
   );

@@ -5,19 +5,45 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Megaphone, Check, RefreshCw, Trash2, Plus, History, AlertCircle, X, Smartphone } from 'lucide-react';
+import {
+  Megaphone, Check, RefreshCw, Trash2, Plus, History,
+  X, Smartphone, BarChart2, Send, CheckCircle2, XCircle, Clock,
+  ChevronRight,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
-import { formatDate, statusColor, statusLabel } from '@/lib/utils';
+import { formatDate } from '@/lib/utils';
 
 const schema = z.object({
   name: z.string().min(1, 'Obrigatório'),
   message_template: z.string().min(1, 'Obrigatório'),
   delay_ms: z.number().min(1000).default(3000),
+  include_optout: z.boolean().default(true),
 });
 type FormData = z.infer<typeof schema>;
 
 type Tab = 'history' | 'new';
+
+const STATUS_STYLE: Record<string, string> = {
+  sent: 'bg-green-100 text-green-700',
+  delivered: 'bg-brand-100 text-brand-700',
+  failed: 'bg-red-100 text-red-700',
+  queued: 'bg-blue-100 text-blue-700',
+  pending: 'bg-gray-100 text-gray-600',
+};
+const STATUS_LABEL: Record<string, string> = {
+  sent: 'Enviado', delivered: 'Entregue', failed: 'Falhou',
+  queued: 'Na fila', pending: 'Pendente',
+};
+const CAMPAIGN_STATUS: Record<string, string> = {
+  draft: 'bg-gray-100 text-gray-600', running: 'bg-blue-100 text-blue-700',
+  completed: 'bg-green-100 text-green-700', paused: 'bg-yellow-100 text-yellow-700',
+  failed: 'bg-red-100 text-red-700',
+};
+const CAMPAIGN_LABEL: Record<string, string> = {
+  draft: 'Rascunho', running: 'Enviando', completed: 'Concluída',
+  paused: 'Pausada', failed: 'Falhou',
+};
 
 export default function CampaignsPage() {
   const qc = useQueryClient();
@@ -27,6 +53,7 @@ export default function CampaignsPage() {
   const [histPage, setHistPage] = useState(1);
   const [detailCampaign, setDetailCampaign] = useState<any>(null);
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
+  const [msgFilter, setMsgFilter] = useState<string>('all');
 
   const { data: waAccounts = [] } = useQuery<any[]>({
     queryKey: ['wa-accounts'],
@@ -47,13 +74,15 @@ export default function CampaignsPage() {
 
   const { register, handleSubmit, watch, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { delay_ms: 3000 },
+    defaultValues: { delay_ms: 3000, include_optout: true },
   });
 
   const template = watch('message_template', '');
+  const includeOptout = watch('include_optout', true);
 
   const sendMutation = useMutation({
-    mutationFn: (d: FormData & { contact_ids: string[]; account_ids: string[] }) => api.post('/messages/campaign', d),
+    mutationFn: (d: FormData & { contact_ids: string[]; account_ids: string[] }) =>
+      api.post('/messages/campaign', d),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['campaigns'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
@@ -77,28 +106,26 @@ export default function CampaignsPage() {
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['campaigns'] }); toast.success('Campanha removida'); },
   });
 
-  const { data: campaignMessages, isLoading: loadingMessages } = useQuery({
-    queryKey: ['campaign-messages', detailCampaign?.id],
+  const { data: detail, isLoading: loadingDetail } = useQuery({
+    queryKey: ['campaign-detail', detailCampaign?.id],
     queryFn: () => api.get(`/campaigns/${detailCampaign!.id}/messages`).then((r) => r.data),
     enabled: !!detailCampaign,
+    refetchInterval: detailCampaign ? 5000 : false,
   });
 
   function toggleContact(id: string) {
     setSelected((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   }
-
   function toggleAll() {
     const active = filtered.filter((c: any) => !c.opt_out).map((c: any) => c.id);
     setSelected(selected.length === active.length ? [] : active);
   }
-
   function toggleAccount(id: string) {
     setSelectedAccounts((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   }
-
   function onSubmit(data: FormData) {
     if (!selected.length) return toast.error('Selecione pelo menos um contato');
-    if (!connectedAccounts.length) return toast.error('Nenhum número WhatsApp conectado. Conecte um número primeiro.');
+    if (!connectedAccounts.length) return toast.error('Nenhum número WhatsApp conectado.');
     sendMutation.mutate({ ...data, contact_ids: selected, account_ids: selectedAccounts });
   }
 
@@ -107,35 +134,24 @@ export default function CampaignsPage() {
   );
   const activeFiltered = filtered.filter((c: any) => !c.opt_out);
   const previewName = contacts?.find((c: any) => selected[0] === c.id)?.name ?? 'João';
-  const preview = template.replace(/\{\{nome\}\}/gi, previewName).replace(/\{\{name\}\}/gi, previewName);
+  const preview = template
+    .replace(/\{\{nome\}\}/gi, previewName)
+    .replace(/\{\{name\}\}/gi, previewName)
+    + (includeOptout ? '\n\nPara sair desta lista, responda: SAIR' : '');
 
-  const CAMPAIGN_STATUS: Record<string, string> = {
-    draft: 'bg-gray-100 text-gray-600',
-    running: 'bg-blue-100 text-blue-700',
-    completed: 'bg-green-100 text-green-700',
-    paused: 'bg-yellow-100 text-yellow-700',
-    failed: 'bg-red-100 text-red-700',
-  };
-  const CAMPAIGN_LABEL: Record<string, string> = {
-    draft: 'Rascunho', running: 'Enviando', completed: 'Concluída',
-    paused: 'Pausada', failed: 'Falhou',
-  };
+  const filteredMessages = (detail?.messages ?? []).filter((m: any) =>
+    msgFilter === 'all' ? true : m.status === msgFilter
+  );
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Campanhas</h1>
         <div className="flex gap-2">
-          <button
-            onClick={() => setTab('history')}
-            className={`btn ${tab === 'history' ? 'btn-primary' : 'btn-secondary'}`}
-          >
+          <button onClick={() => setTab('history')} className={`btn ${tab === 'history' ? 'btn-primary' : 'btn-secondary'}`}>
             <History size={16} /> Histórico
           </button>
-          <button
-            onClick={() => setTab('new')}
-            className={`btn ${tab === 'new' ? 'btn-primary' : 'btn-secondary'}`}
-          >
+          <button onClick={() => setTab('new')} className={`btn ${tab === 'new' ? 'btn-primary' : 'btn-secondary'}`}>
             <Plus size={16} /> Nova campanha
           </button>
         </div>
@@ -168,7 +184,14 @@ export default function CampaignsPage() {
               )}
               {campaigns?.data?.map((c: any) => (
                 <tr key={c.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 font-medium text-gray-900 max-w-[160px] truncate">{c.name}</td>
+                  <td className="px-4 py-3 max-w-[160px]">
+                    <button
+                      onClick={() => { setDetailCampaign(c); setMsgFilter('all'); }}
+                      className="font-medium text-brand-600 hover:text-brand-800 truncate flex items-center gap-1 text-left"
+                    >
+                      {c.name} <ChevronRight size={13} />
+                    </button>
+                  </td>
                   <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatDate(c.createdAt ?? c.created_at)}</td>
                   <td className="px-4 py-3 text-center text-gray-700">{c.total_contacts}</td>
                   <td className="px-4 py-3 text-center text-green-600 font-medium">{c.sent_count}</td>
@@ -180,18 +203,9 @@ export default function CampaignsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
-                      {c.failed_count > 0 && (
-                        <button
-                          onClick={() => setDetailCampaign(c)}
-                          title="Ver erros"
-                          className="text-gray-400 hover:text-red-500 transition-colors"
-                        >
-                          <AlertCircle size={16} />
-                        </button>
-                      )}
                       <button
                         onClick={() => { if (confirm(`Reenviar campanha "${c.name}"?`)) resendMutation.mutate(c.id); }}
-                        title="Reenviar para os mesmos contatos"
+                        title="Reenviar"
                         className="text-gray-400 hover:text-brand-600 transition-colors"
                         disabled={resendMutation.isPending}
                       >
@@ -210,7 +224,6 @@ export default function CampaignsPage() {
               ))}
             </tbody>
           </table>
-
           {campaigns?.total > 10 && (
             <div className="flex items-center justify-between px-4 py-3 border-t border-gray-200 text-sm text-gray-600">
               <span>Página {histPage} de {Math.ceil(campaigns.total / 10)}</span>
@@ -249,7 +262,17 @@ export default function CampaignsPage() {
                 <input {...register('delay_ms', { valueAsNumber: true })} type="number" min={1000} step={500} className="input" />
                 <p className="text-xs text-gray-400 mt-1">Mínimo: 1000ms. Recomendado: 3000ms+</p>
               </div>
-              {/* Seleção de números */}
+
+              {/* Opt-out */}
+              <label className="flex items-center gap-2.5 cursor-pointer">
+                <input type="checkbox" {...register('include_optout')} className="w-4 h-4 accent-brand-600" />
+                <span className="text-sm text-gray-700">Incluir opção de saída da lista</span>
+              </label>
+              {includeOptout && (
+                <p className="text-xs text-gray-400 -mt-2 ml-6">Será adicionado ao final: <em>"Para sair desta lista, responda: SAIR"</em></p>
+              )}
+
+              {/* Números */}
               <div>
                 <label className="label flex items-center gap-1.5"><Smartphone size={13} /> Números para envio</label>
                 {connectedAccounts.length === 0 ? (
@@ -269,14 +292,8 @@ export default function CampaignsPage() {
                         <span className="ml-auto text-xs bg-green-100 text-green-700 px-1.5 py-0.5 rounded-full">Conectado</span>
                       </label>
                     ))}
-                    {connectedAccounts.length > 1 && (
-                      <p className="text-xs text-gray-400 pt-1">
-                        {selectedAccounts.length === 0
-                          ? 'Nenhum selecionado = usa todos os conectados em round-robin'
-                          : selectedAccounts.length === 1
-                          ? 'Enviando por 1 número'
-                          : `Alternando entre ${selectedAccounts.length} números automaticamente`}
-                      </p>
+                    {connectedAccounts.length > 1 && selectedAccounts.length === 0 && (
+                      <p className="text-xs text-gray-400 pt-1">Nenhum selecionado = alterna entre todos automaticamente</p>
                     )}
                   </div>
                 )}
@@ -326,28 +343,104 @@ export default function CampaignsPage() {
           </div>
         </form>
       )}
-      {/* Modal — detalhes da campanha */}
+
+      {/* ── DASHBOARD DA CAMPANHA ── */}
       {detailCampaign && (
-        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-              <h2 className="font-semibold text-gray-900">{detailCampaign.name} — mensagens com falha</h2>
-              <button onClick={() => setDetailCampaign(null)} className="text-gray-400 hover:text-gray-600">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="overflow-y-auto flex-1 divide-y divide-gray-100 text-sm">
-              {loadingMessages && <p className="px-5 py-6 text-gray-400 text-center">Carregando...</p>}
-              {campaignMessages?.filter((m: any) => m.status === 'failed').map((m: any) => (
-                <div key={m.id} className="px-5 py-3">
-                  <p className="font-medium text-gray-800">{m.Contact?.name ?? '—'} <span className="font-normal text-gray-500">{m.Contact?.phone}</span></p>
-                  <p className="text-red-500 text-xs mt-0.5">{m.error_message || 'Erro desconhecido'}</p>
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center gap-3">
+                <BarChart2 size={20} className="text-brand-600" />
+                <div>
+                  <h2 className="font-semibold text-gray-900">{detailCampaign.name}</h2>
+                  <p className="text-xs text-gray-400">{formatDate(detailCampaign.createdAt ?? detailCampaign.created_at)}</p>
                 </div>
-              ))}
-              {!loadingMessages && campaignMessages?.filter((m: any) => m.status === 'failed').length === 0 && (
-                <p className="px-5 py-6 text-gray-400 text-center">Nenhuma falha registrada</p>
-              )}
+              </div>
+              <button onClick={() => setDetailCampaign(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
+
+            {loadingDetail ? (
+              <p className="px-6 py-12 text-center text-gray-400">Carregando...</p>
+            ) : (
+              <>
+                {/* Cards de estatísticas */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-6 py-4 border-b border-gray-100">
+                  {[
+                    { label: 'Total', value: detail?.stats?.total ?? 0, icon: <Send size={16} />, color: 'text-gray-600 bg-gray-100' },
+                    { label: 'Enviados', value: detail?.stats?.sent ?? 0, icon: <CheckCircle2 size={16} />, color: 'text-green-600 bg-green-100' },
+                    { label: 'Entregues', value: detail?.stats?.delivered ?? 0, icon: <CheckCircle2 size={16} />, color: 'text-brand-600 bg-brand-100' },
+                    { label: 'Falhas', value: detail?.stats?.failed ?? 0, icon: <XCircle size={16} />, color: 'text-red-600 bg-red-100' },
+                  ].map((s) => (
+                    <div key={s.label} className="text-center">
+                      <div className={`inline-flex items-center justify-center w-9 h-9 rounded-xl ${s.color} mb-2`}>{s.icon}</div>
+                      <p className="text-2xl font-bold text-gray-900">{s.value}</p>
+                      <p className="text-xs text-gray-500">{s.label}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Barra de progresso */}
+                {(detail?.stats?.total ?? 0) > 0 && (
+                  <div className="px-6 py-3 border-b border-gray-100">
+                    <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
+                      <span>Taxa de entrega</span>
+                      <span>{Math.round(((detail.stats.sent + detail.stats.delivered) / detail.stats.total) * 100)}%</span>
+                    </div>
+                    <div className="w-full bg-gray-100 rounded-full h-2">
+                      <div
+                        className="bg-green-500 h-2 rounded-full transition-all"
+                        style={{ width: `${Math.round(((detail.stats.sent + detail.stats.delivered) / detail.stats.total) * 100)}%` }}
+                      />
+                    </div>
+                  </div>
+                )}
+
+                {/* Filtros */}
+                <div className="flex gap-2 px-6 py-3 border-b border-gray-100 overflow-x-auto">
+                  {[
+                    { key: 'all', label: `Todos (${detail?.stats?.total ?? 0})` },
+                    { key: 'sent', label: `Enviados (${detail?.stats?.sent ?? 0})` },
+                    { key: 'delivered', label: `Entregues (${detail?.stats?.delivered ?? 0})` },
+                    { key: 'failed', label: `Falhas (${detail?.stats?.failed ?? 0})` },
+                    { key: 'queued', label: `Na fila (${detail?.stats?.queued ?? 0})` },
+                  ].map((f) => (
+                    <button
+                      key={f.key}
+                      onClick={() => setMsgFilter(f.key)}
+                      className={`text-xs px-3 py-1.5 rounded-full whitespace-nowrap border transition-colors ${msgFilter === f.key ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}
+                    >
+                      {f.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* Tabela de mensagens */}
+                <div className="overflow-y-auto flex-1 divide-y divide-gray-100 text-sm">
+                  {filteredMessages.length === 0 && (
+                    <p className="px-6 py-10 text-center text-gray-400">Nenhuma mensagem neste filtro</p>
+                  )}
+                  {filteredMessages.map((m: any) => (
+                    <div key={m.id} className="px-6 py-3 flex items-center gap-4">
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-gray-800">{m.Contact?.name ?? '—'}</p>
+                        <p className="text-xs text-gray-500">{m.Contact?.phone}</p>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <span className={`badge text-xs ${STATUS_STYLE[m.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                          {STATUS_LABEL[m.status] ?? m.status}
+                        </span>
+                        {m.sent_at && <p className="text-xs text-gray-400 mt-0.5">{formatDate(m.sent_at)}</p>}
+                        {m.status === 'failed' && m.error_message && (
+                          <p className="text-xs text-red-500 mt-0.5 max-w-[200px] text-right">{m.error_message}</p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

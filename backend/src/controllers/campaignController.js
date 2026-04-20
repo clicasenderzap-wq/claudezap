@@ -71,7 +71,7 @@ async function resend(req, res) {
       contact_id: c.id,
       campaign_id: newCampaign.id,
       account_id: accountsToUse[i % accountsToUse.length].id,
-      content: applyTemplate(original.message_template, c),
+      content: applyTemplate(original.message_template, c) + '\n\nPara sair desta lista, responda: SAIR',
       status: 'queued',
     }))
   );
@@ -101,7 +101,24 @@ async function messages(req, res) {
     order: [['created_at', 'ASC']],
   });
 
-  res.json(msgs);
+  // Recalcula contadores ao vivo a partir das mensagens
+  const stats = msgs.reduce((acc, m) => {
+    acc[m.status] = (acc[m.status] || 0) + 1;
+    return acc;
+  }, {});
+
+  res.json({
+    campaign,
+    stats: {
+      total: msgs.length,
+      sent: stats.sent || 0,
+      delivered: stats.delivered || 0,
+      failed: stats.failed || 0,
+      queued: stats.queued || 0,
+      pending: stats.pending || 0,
+    },
+    messages: msgs,
+  });
 }
 
 async function remove(req, res) {

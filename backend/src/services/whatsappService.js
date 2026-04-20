@@ -72,6 +72,18 @@ class WhatsAppService extends EventEmitter {
       }
     });
 
+    sock.ev.on('messages.upsert', ({ messages: msgs, type }) => {
+      if (type !== 'notify') return;
+      for (const msg of msgs) {
+        if (msg.key.fromMe) continue;
+        const from = msg.key.remoteJid?.replace('@s.whatsapp.net', '').replace('@g.us', '') ?? '';
+        const text = msg.message?.conversation
+          || msg.message?.extendedTextMessage?.text
+          || '';
+        if (from && text) this.emit('message.received', { accountId, from, text });
+      }
+    });
+
     sock.ev.on('messages.update', (updates) => {
       this.emit('message.update', { accountId, updates });
     });

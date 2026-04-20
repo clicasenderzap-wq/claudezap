@@ -1,6 +1,6 @@
 const { Worker } = require('bullmq');
 const { connection } = require('../config/redis');
-const { Message } = require('../models');
+const { Message, Campaign } = require('../models');
 const whatsapp = require('../services/whatsappService');
 
 const worker = new Worker(
@@ -28,8 +28,14 @@ const worker = new Worker(
     try {
       const waId = await whatsapp.sendText(senderId, phone, content);
       await message.update({ status: 'sent', wa_message_id: waId, sent_at: new Date(), account_id: senderId });
+      if (message.campaign_id) {
+        await Campaign.increment('sent_count', { where: { id: message.campaign_id } }).catch(() => {});
+      }
     } catch (err) {
       await message.update({ status: 'failed', error_message: err.message });
+      if (message.campaign_id) {
+        await Campaign.increment('failed_count', { where: { id: message.campaign_id } }).catch(() => {});
+      }
       throw err;
     }
   },
