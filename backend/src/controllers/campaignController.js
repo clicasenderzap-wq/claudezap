@@ -77,6 +77,21 @@ async function resend(req, res) {
   res.status(201).json({ campaign: newCampaign, queued: messages.length });
 }
 
+async function messages(req, res) {
+  const campaign = await Campaign.findOne({
+    where: { id: req.params.id, user_id: req.user.id },
+  });
+  if (!campaign) return res.status(404).json({ error: 'Campanha não encontrada' });
+
+  const msgs = await Message.findAll({
+    where: { campaign_id: campaign.id },
+    include: [{ model: Contact, attributes: ['name', 'phone'] }],
+    order: [['created_at', 'ASC']],
+  });
+
+  res.json(msgs);
+}
+
 async function remove(req, res) {
   const campaign = await Campaign.findOne({
     where: { id: req.params.id, user_id: req.user.id },
@@ -86,4 +101,4 @@ async function remove(req, res) {
   res.status(204).send();
 }
 
-module.exports = { list, resend, remove };
+module.exports = { list, messages, resend, remove };

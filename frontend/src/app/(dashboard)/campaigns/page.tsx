@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Megaphone, Check, RefreshCw, Trash2, Plus, History } from 'lucide-react';
+import { Megaphone, Check, RefreshCw, Trash2, Plus, History, AlertCircle, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { formatDate, statusColor, statusLabel } from '@/lib/utils';
@@ -25,6 +25,7 @@ export default function CampaignsPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [histPage, setHistPage] = useState(1);
+  const [detailCampaign, setDetailCampaign] = useState<any>(null);
 
   const { data: contacts } = useQuery({
     queryKey: ['contacts-all'],
@@ -66,6 +67,12 @@ export default function CampaignsPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/campaigns/${id}`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['campaigns'] }); toast.success('Campanha removida'); },
+  });
+
+  const { data: campaignMessages, isLoading: loadingMessages } = useQuery({
+    queryKey: ['campaign-messages', detailCampaign?.id],
+    queryFn: () => api.get(`/campaigns/${detailCampaign!.id}/messages`).then((r) => r.data),
+    enabled: !!detailCampaign,
   });
 
   function toggleContact(id: string) {
@@ -160,6 +167,15 @@ export default function CampaignsPage() {
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex gap-2">
+                      {c.failed_count > 0 && (
+                        <button
+                          onClick={() => setDetailCampaign(c)}
+                          title="Ver erros"
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          <AlertCircle size={16} />
+                        </button>
+                      )}
                       <button
                         onClick={() => { if (confirm(`Reenviar campanha "${c.name}"?`)) resendMutation.mutate(c.id); }}
                         title="Reenviar para os mesmos contatos"
@@ -263,6 +279,31 @@ export default function CampaignsPage() {
             </div>
           </div>
         </form>
+      )}
+      {/* Modal — detalhes da campanha */}
+      {detailCampaign && (
+        <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+              <h2 className="font-semibold text-gray-900">{detailCampaign.name} — mensagens com falha</h2>
+              <button onClick={() => setDetailCampaign(null)} className="text-gray-400 hover:text-gray-600">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="overflow-y-auto flex-1 divide-y divide-gray-100 text-sm">
+              {loadingMessages && <p className="px-5 py-6 text-gray-400 text-center">Carregando...</p>}
+              {campaignMessages?.filter((m: any) => m.status === 'failed').map((m: any) => (
+                <div key={m.id} className="px-5 py-3">
+                  <p className="font-medium text-gray-800">{m.Contact?.name ?? '—'} <span className="font-normal text-gray-500">{m.Contact?.phone}</span></p>
+                  <p className="text-red-500 text-xs mt-0.5">{m.error_message || 'Erro desconhecido'}</p>
+                </div>
+              ))}
+              {!loadingMessages && campaignMessages?.filter((m: any) => m.status === 'failed').length === 0 && (
+                <p className="px-5 py-6 text-gray-400 text-center">Nenhuma falha registrada</p>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
