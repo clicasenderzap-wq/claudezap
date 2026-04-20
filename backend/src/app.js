@@ -1,5 +1,10 @@
 require('dotenv').config();
 
+// Impede que rejeições de Promise não capturadas derrubem o processo no Node.js v15+
+process.on('unhandledRejection', (err) => {
+  console.error('[UnhandledRejection]', err?.message || err);
+});
+
 const express = require('express');
 const helmet = require('helmet');
 const cors = require('cors');
@@ -49,7 +54,7 @@ const server = app.listen(PORT, () => {
     await sequelize.authenticate();
     console.log('[DB] Conexão estabelecida');
 
-    await sequelize.sync({ alter: process.env.NODE_ENV === 'development' });
+    await sequelize.sync({ alter: true });
     console.log('[DB] Modelos sincronizados');
 
     require('./workers/messageWorker');
