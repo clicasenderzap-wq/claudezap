@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, MessageSquare, Megaphone, Smartphone, Flame, Bot, ShieldCheck, LogOut, AlertTriangle } from 'lucide-react';
+import { LayoutDashboard, Users, MessageSquare, Megaphone, Smartphone, Flame, Bot, ShieldCheck, LogOut, AlertTriangle, BookOpen } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
 
@@ -85,6 +85,21 @@ export default function Sidebar() {
           </Link>
         ))}
 
+        {/* Guia de Utilização — botão destacado */}
+        <div className="pt-2 pb-1">
+          <Link
+            href="/guide"
+            className={cn(
+              'flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-semibold border-2 transition-all',
+              pathname.startsWith('/guide')
+                ? 'bg-amber-500 border-amber-500 text-white'
+                : 'border-amber-400 text-amber-700 bg-amber-50 hover:bg-amber-100'
+            )}
+          >
+            <BookOpen size={17} />
+            Guia de Utilização
+          </Link>
+        </div>
       </nav>
 
       <div className="px-3 py-4 border-t border-gray-200 space-y-1">
