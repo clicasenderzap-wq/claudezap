@@ -12,7 +12,10 @@
       "Bash(node -e ' *)",
       "Read(//usr/local/bin/**)",
       "Read(//c/Users/Clica Mkt/.nvm/versions/**)",
-      "Bash('/c/Program Files/nodejs/node.exe' -e ' *)"
+      "Bash('/c/Program Files/nodejs/node.exe' -e ' *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)"
     ]
   }
 }

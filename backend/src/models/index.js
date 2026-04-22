@@ -4,6 +4,8 @@ const Contact = require('./Contact');
 const Campaign = require('./Campaign');
 const Message = require('./Message');
 const WhatsappAccount = require('./WhatsappAccount');
+const WarmupConfig = require('./WarmupConfig');
+const WarmupLog = require('./WarmupLog');
 
 // Associations
 User.hasMany(Contact, { foreignKey: 'user_id', onDelete: 'CASCADE' });
@@ -26,4 +28,10 @@ WhatsappAccount.belongsTo(User, { foreignKey: 'user_id' });
 
 Message.belongsTo(WhatsappAccount, { foreignKey: 'account_id', as: 'account' });
 
-module.exports = { sequelize, User, Contact, Campaign, Message, WhatsappAccount };
+User.hasOne(WarmupConfig, { foreignKey: 'user_id', onDelete: 'CASCADE' });
+WarmupConfig.belongsTo(User, { foreignKey: 'user_id' });
+
+User.hasMany(WarmupLog, { foreignKey: 'user_id', onDelete: 'CASCADE' });
+WarmupLog.belongsTo(User, { foreignKey: 'user_id' });
+
+module.exports = { sequelize, User, Contact, Campaign, Message, WhatsappAccount, WarmupConfig, WarmupLog };

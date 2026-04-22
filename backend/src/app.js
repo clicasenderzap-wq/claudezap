@@ -60,6 +60,9 @@ const server = app.listen(PORT, () => {
     require('./workers/messageWorker');
     console.log('[Worker] iniciado');
 
+    require('./services/warmupService').start();
+    console.log('[Warmup] iniciado');
+
     // Reconecta contas WhatsApp salvas no banco ao iniciar
     const whatsapp = require('./services/whatsappService');
     const { WhatsappAccount } = require('./models');

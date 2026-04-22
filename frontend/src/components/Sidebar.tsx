@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, MessageSquare, Megaphone, Smartphone, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, MessageSquare, Megaphone, Smartphone, Flame, LogOut } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
 
@@ -12,6 +12,7 @@ const NAV = [
   { href: '/messages', label: 'Mensagens', icon: MessageSquare },
   { href: '/campaigns', label: 'Campanhas', icon: Megaphone },
   { href: '/whatsapp', label: 'WhatsApp', icon: Smartphone },
+  { href: '/warmup', label: 'Aquecimento', icon: Flame },
 ];
 
 export default function Sidebar() {
