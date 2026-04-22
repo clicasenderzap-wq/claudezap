@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, ShieldCheck, TrendingUp, Search, ChevronDown, Check, X, RefreshCw } from 'lucide-react';
+import { Users, ShieldCheck, Search, Check, X, RefreshCw, ArrowLeft } from 'lucide-react';
+import Link from 'next/link';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -63,14 +64,23 @@ export default function AdminPage() {
   return (
     <div className="min-h-screen bg-gray-50 p-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <div className="p-2.5 bg-brand-100 rounded-xl">
-          <ShieldCheck size={22} className="text-brand-600" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 bg-brand-100 rounded-xl">
+            <ShieldCheck size={22} className="text-brand-600" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Painel Administrativo</h1>
+            <p className="text-sm text-gray-500">Gerencie usuários e planos da plataforma</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Painel Administrativo</h1>
-          <p className="text-sm text-gray-500">Gerencie usuários e planos da plataforma</p>
-        </div>
+        <Link
+          href="/dashboard"
+          className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-200 bg-white text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors"
+        >
+          <ArrowLeft size={16} />
+          Voltar ao sistema
+        </Link>
       </div>
 
       {/* Stats cards */}

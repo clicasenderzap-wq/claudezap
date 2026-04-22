@@ -85,24 +85,19 @@ export default function Sidebar() {
           </Link>
         ))}
 
+      </nav>
+
+      <div className="px-3 py-4 border-t border-gray-200 space-y-1">
         {isAdmin && (
           <Link
             href="/admin"
-            className={cn(
-              'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors mt-2 border-t border-gray-100 pt-3',
-              pathname.startsWith('/admin')
-                ? 'bg-brand-50 text-brand-700'
-                : 'text-gray-600 hover:bg-gray-100'
-            )}
+            className="flex items-center gap-3 w-full px-3 py-2 rounded-lg text-sm font-semibold bg-brand-600 text-white hover:bg-brand-700 transition-colors"
           >
-            <ShieldCheck size={18} />
+            <ShieldCheck size={16} />
             Painel Admin
           </Link>
         )}
-      </nav>
-
-      <div className="px-3 py-4 border-t border-gray-200">
-        <div className="px-3 py-2 mb-1">
+        <div className="px-3 py-2">
           <p className="text-xs text-gray-500">Logado como</p>
           <p className="text-sm font-medium text-gray-800 truncate">{user?.name}</p>
           <p className="text-xs text-gray-400 truncate">{user?.email}</p>
