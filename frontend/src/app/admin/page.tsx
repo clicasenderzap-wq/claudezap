@@ -2,18 +2,19 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, ShieldCheck, Search, Check, X, RefreshCw, ArrowLeft } from 'lucide-react';
+import { Users, ShieldCheck, Search, Check, X, RefreshCw, ArrowLeft, Clock, CheckCircle2, XCircle } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 
 const PLAN_LABELS: Record<string, string> = { starter: 'Starter', pro: 'Pro' };
-const STATUS_LABELS: Record<string, string> = { active: 'Ativo', trial: 'Trial', inactive: 'Inativo' };
+const STATUS_LABELS: Record<string, string> = { active: 'Ativo', trial: 'Trial', inactive: 'Inativo', pending: 'Pendente' };
 const STATUS_COLORS: Record<string, string> = {
   active: 'bg-green-100 text-green-700',
   trial: 'bg-yellow-100 text-yellow-700',
   inactive: 'bg-red-100 text-red-600',
+  pending: 'bg-purple-100 text-purple-700',
 };
 const PLAN_COLORS: Record<string, string> = {
   starter: 'bg-gray-100 text-gray-700',
@@ -39,15 +40,44 @@ export default function AdminPage() {
       api.get('/admin/users', { params: { search, status: filterStatus, plan: filterPlan, limit: 50 } }).then((r) => r.data),
   });
 
+  const { data: pendingData } = useQuery({
+    queryKey: ['admin-pending'],
+    queryFn: () => api.get('/admin/users', { params: { status: 'pending', limit: 50 } }).then((r) => r.data),
+    refetchInterval: 30000,
+  });
+
   const updateMutation = useMutation({
     mutationFn: ({ id, body }: { id: string; body: object }) => api.put(`/admin/users/${id}`, body),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['admin-users'] });
       qc.invalidateQueries({ queryKey: ['admin-stats'] });
+      qc.invalidateQueries({ queryKey: ['admin-pending'] });
       setEditing(null);
       toast.success('Usuário atualizado!');
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao atualizar'),
+  });
+
+  const approveMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/admin/users/${id}/approve`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-users'] });
+      qc.invalidateQueries({ queryKey: ['admin-stats'] });
+      qc.invalidateQueries({ queryKey: ['admin-pending'] });
+      toast.success('Conta aprovada! Email de boas-vindas enviado.');
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao aprovar'),
+  });
+
+  const rejectMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/admin/users/${id}/reject`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-users'] });
+      qc.invalidateQueries({ queryKey: ['admin-stats'] });
+      qc.invalidateQueries({ queryKey: ['admin-pending'] });
+      toast.success('Conta rejeitada.');
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao rejeitar'),
   });
 
   function startEdit(user: any) {
@@ -60,6 +90,7 @@ export default function AdminPage() {
   }
 
   const users = data?.data ?? [];
+  const pendingUsers = pendingData?.data ?? [];
 
   return (
     <div className="min-h-screen bg-gray-50 p-6 space-y-6">
@@ -85,16 +116,20 @@ export default function AdminPage() {
 
       {/* Stats cards */}
       {stats && (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-4">
           {[
-            { label: 'Total', value: stats.total, color: 'text-gray-700' },
-            { label: 'Ativos', value: stats.active, color: 'text-green-600' },
-            { label: 'Trial', value: stats.trial, color: 'text-yellow-600' },
-            { label: 'Inativos', value: stats.inactive, color: 'text-red-500' },
-            { label: 'Trial expirado', value: stats.trial_expired, color: 'text-orange-500' },
-            { label: 'Novos (mês)', value: stats.new_this_month, color: 'text-brand-600' },
+            { label: 'Total', value: stats.total, color: 'text-gray-700', ring: false },
+            { label: 'Ativos', value: stats.active, color: 'text-green-600', ring: false },
+            { label: 'Trial', value: stats.trial, color: 'text-yellow-600', ring: false },
+            { label: 'Inativos', value: stats.inactive, color: 'text-red-500', ring: false },
+            { label: 'Trial expirado', value: stats.trial_expired, color: 'text-orange-500', ring: false },
+            { label: 'Novos (mês)', value: stats.new_this_month, color: 'text-brand-600', ring: false },
+            { label: 'Pendentes', value: stats.pending, color: 'text-purple-600', ring: (stats.pending ?? 0) > 0 },
           ].map((s) => (
-            <div key={s.label} className="bg-white rounded-xl border border-gray-200 p-4 text-center">
+            <div
+              key={s.label}
+              className={`bg-white rounded-xl border p-4 text-center ${s.ring ? 'border-purple-400 ring-2 ring-purple-200' : 'border-gray-200'}`}
+            >
               <p className={`text-2xl font-bold ${s.color}`}>{s.value}</p>
               <p className="text-xs text-gray-500 mt-0.5">{s.label}</p>
             </div>
@@ -114,6 +149,60 @@ export default function AdminPage() {
         </div>
       )}
 
+      {/* Pending approval section */}
+      {pendingUsers.length > 0 && (
+        <div className="bg-white rounded-xl border-2 border-purple-300 overflow-hidden">
+          <div className="px-5 py-3 bg-purple-50 border-b border-purple-200 flex items-center gap-2">
+            <Clock size={16} className="text-purple-600" />
+            <h2 className="font-semibold text-purple-800">Aguardando Aprovação</h2>
+            <span className="ml-auto bg-purple-600 text-white text-xs font-bold px-2 py-0.5 rounded-full">
+              {pendingUsers.length}
+            </span>
+          </div>
+          <div className="divide-y divide-gray-100">
+            {pendingUsers.map((user: any) => (
+              <div key={user.id} className="px-5 py-4 flex flex-wrap items-center gap-4">
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-900 truncate">{user.name}</p>
+                  <p className="text-sm text-gray-500 truncate">{user.email}</p>
+                  {user.whatsapp && (
+                    <p className="text-xs text-gray-400 mt-0.5">WhatsApp: {user.whatsapp}</p>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-xs">
+                  {user.email_verified ? (
+                    <span className="flex items-center gap-1 text-green-600 bg-green-50 px-2 py-0.5 rounded-full">
+                      <CheckCircle2 size={12} /> Email verificado
+                    </span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-orange-500 bg-orange-50 px-2 py-0.5 rounded-full">
+                      <XCircle size={12} /> Email não verificado
+                    </span>
+                  )}
+                  <span className="text-gray-400">{formatDate(user.created_at)}</span>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => approveMutation.mutate(user.id)}
+                    disabled={approveMutation.isPending}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-green-600 text-white text-xs font-semibold rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                  >
+                    <Check size={13} /> Aprovar
+                  </button>
+                  <button
+                    onClick={() => rejectMutation.mutate(user.id)}
+                    disabled={rejectMutation.isPending}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-100 text-red-600 text-xs font-semibold rounded-lg hover:bg-red-200 transition-colors disabled:opacity-50"
+                  >
+                    <X size={13} /> Rejeitar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Filtros */}
       <div className="bg-white rounded-xl border border-gray-200 p-4 flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-48">
@@ -127,6 +216,7 @@ export default function AdminPage() {
         </div>
         <select className="input w-auto" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value)}>
           <option value="">Todos os status</option>
+          <option value="pending">Pendente</option>
           <option value="active">Ativo</option>
           <option value="trial">Trial</option>
           <option value="inactive">Inativo</option>
@@ -178,6 +268,7 @@ export default function AdminPage() {
                   </div>
                   <div className="col-span-2">
                     <select className="input text-xs" value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
+                      <option value="pending">Pendente</option>
                       <option value="trial">Trial</option>
                       <option value="active">Ativo</option>
                       <option value="inactive">Inativo</option>
@@ -206,7 +297,7 @@ export default function AdminPage() {
                     </span>
                   </div>
                   <div className="col-span-2">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[user.status]}`}>
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[user.status] ?? 'bg-gray-100 text-gray-600'}`}>
                       {STATUS_LABELS[user.status] ?? user.status}
                     </span>
                   </div>

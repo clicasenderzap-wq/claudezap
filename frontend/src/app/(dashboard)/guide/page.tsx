@@ -6,6 +6,7 @@ import {
   MessageSquare, BookOpen, ChevronRight, Info, AlertTriangle,
   CheckCircle, Lightbulb, ArrowRight, Key, Clock, Zap, Shield,
   FileSpreadsheet, Send, BarChart2, RefreshCw, Settings, Star, Tag, Moon,
+  UserCheck, MailCheck,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -20,12 +21,13 @@ interface Section {
 // ─── Sections index ───────────────────────────────────────────────────────────
 
 const SECTIONS: Section[] = [
-  { id: 'dashboard',  label: 'Dashboard',            icon: LayoutDashboard, color: 'text-blue-600 bg-blue-100' },
-  { id: 'contacts',   label: 'Importar Contatos',     icon: Users,           color: 'text-green-600 bg-green-100' },
-  { id: 'campaigns',  label: 'Mensagens e Campanhas', icon: Megaphone,       color: 'text-purple-600 bg-purple-100' },
-  { id: 'whatsapp',   label: 'Conectar WhatsApp',     icon: Smartphone,      color: 'text-emerald-600 bg-emerald-100' },
-  { id: 'warmup',     label: 'Aquecimento',           icon: Flame,           color: 'text-orange-600 bg-orange-100' },
-  { id: 'bots',       label: 'Bot de Atendimento',    icon: Bot,             color: 'text-indigo-600 bg-indigo-100' },
+  { id: 'getting-started', label: 'Primeiros Passos',       icon: UserCheck,       color: 'text-teal-600 bg-teal-100' },
+  { id: 'dashboard',       label: 'Dashboard',              icon: LayoutDashboard, color: 'text-blue-600 bg-blue-100' },
+  { id: 'contacts',        label: 'Importar Contatos',      icon: Users,           color: 'text-green-600 bg-green-100' },
+  { id: 'campaigns',       label: 'Mensagens e Campanhas',  icon: Megaphone,       color: 'text-purple-600 bg-purple-100' },
+  { id: 'whatsapp',        label: 'Conectar WhatsApp',      icon: Smartphone,      color: 'text-emerald-600 bg-emerald-100' },
+  { id: 'warmup',          label: 'Aquecimento',            icon: Flame,           color: 'text-orange-600 bg-orange-100' },
+  { id: 'bots',            label: 'Bot de Atendimento',     icon: Bot,             color: 'text-indigo-600 bg-indigo-100' },
 ];
 
 // ─── Helper Components ────────────────────────────────────────────────────────
@@ -94,6 +96,69 @@ function SectionTitle({ icon: Icon, color, title, subtitle }: { icon: React.Elem
 }
 
 // ─── Content Sections ─────────────────────────────────────────────────────────
+
+function GettingStartedSection() {
+  return (
+    <div id="getting-started">
+      <SectionTitle
+        icon={UserCheck}
+        color="text-teal-600 bg-teal-100"
+        title="Primeiros Passos"
+        subtitle="Como criar sua conta, verificar o email e acessar a plataforma."
+      />
+
+      <p className="text-gray-600 text-sm leading-relaxed mb-6">
+        O acesso ao Clica Aí é controlado em duas etapas de segurança: confirmação de email e aprovação manual pela equipe.
+        Isso garante que apenas usuários reais e legítimos utilizem a plataforma.
+      </p>
+
+      <h3 className="font-bold text-gray-800 mb-4 text-lg">Fluxo de cadastro</h3>
+
+      <div className="grid sm:grid-cols-3 gap-4 mb-6">
+        {[
+          { num: '1', icon: MailCheck, color: 'bg-teal-100 text-teal-600', title: 'Cadastre-se', desc: 'Preencha nome completo, email, WhatsApp e senha. Aceite os Termos de Uso.' },
+          { num: '2', icon: MailCheck, color: 'bg-blue-100 text-blue-600', title: 'Confirme o email', desc: 'Você receberá um link por email. Clique para confirmar sua identidade.' },
+          { num: '3', icon: UserCheck, color: 'bg-green-100 text-green-600', title: 'Aguarde aprovação', desc: 'Nossa equipe analisa o cadastro e libera o acesso em até 24h. Você será notificado por email.' },
+        ].map((step) => (
+          <div key={step.num} className="bg-gray-50 border border-gray-200 rounded-xl p-5 text-center">
+            <div className={`w-10 h-10 rounded-full ${step.color} flex items-center justify-center mx-auto mb-3`}>
+              <span className="font-black text-sm">{step.num}</span>
+            </div>
+            <p className="font-semibold text-gray-800 text-sm mb-1.5">{step.title}</p>
+            <p className="text-xs text-gray-500 leading-relaxed">{step.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      <Success>
+        <strong>Conta aprovada!</strong> Você receberá um email com as instruções de acesso e começa automaticamente com <strong>7 dias de trial gratuito</strong> para explorar todas as funcionalidades.
+      </Success>
+
+      <h3 className="font-bold text-gray-800 mb-4 text-lg mt-6">O que cada status significa</h3>
+      <div className="space-y-3 mb-6">
+        {[
+          { status: 'Pendente', color: 'bg-purple-100 text-purple-700', desc: 'Conta criada, aguardando análise da equipe. Email deve estar verificado.' },
+          { status: 'Trial', color: 'bg-yellow-100 text-yellow-700', desc: 'Conta aprovada — você tem 7 dias para testar todas as funcionalidades.' },
+          { status: 'Ativo', color: 'bg-green-100 text-green-700', desc: 'Plano ativo e pago. Acesso completo conforme o plano contratado.' },
+          { status: 'Inativo', color: 'bg-red-100 text-red-600', desc: 'Acesso suspenso. Entre em contato com o suporte.' },
+        ].map((s) => (
+          <div key={s.status} className="flex items-center gap-3 text-sm">
+            <span className={`px-2.5 py-0.5 rounded-full font-semibold text-xs whitespace-nowrap ${s.color}`}>{s.status}</span>
+            <span className="text-gray-600">{s.desc}</span>
+          </div>
+        ))}
+      </div>
+
+      <Warning>
+        <strong>Email não confirmado?</strong> Se você não encontrar o email de verificação, verifique a pasta de spam. O link expira em 24h — se necessário, entre em contato com o suporte para reenvio.
+      </Warning>
+
+      <Tip>
+        <strong>Dica de segurança:</strong> Use uma senha forte (mínimo 8 caracteres, misture letras, números e símbolos). Nunca compartilhe suas credenciais de acesso.
+      </Tip>
+    </div>
+  );
+}
 
 function DashboardSection() {
   return (
@@ -739,6 +804,9 @@ export default function GuidePage() {
 
         {/* Content */}
         <div ref={contentRef} className="flex-1 min-w-0 space-y-16">
+          <div className="card p-8">
+            <GettingStartedSection />
+          </div>
           <div className="card p-8">
             <DashboardSection />
           </div>

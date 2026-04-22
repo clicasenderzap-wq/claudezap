@@ -1,6 +1,8 @@
 const { validationResult } = require('express-validator');
 const { Message, Contact, Campaign } = require('../models');
 const { enqueueMessage, enqueueBulk } = require('../services/queueService');
+const { Op } = require('sequelize');
+const { getLimit } = require('../middleware/planGuard');
 
 function applyTemplate(template, contact) {
   return template
@@ -52,6 +54,16 @@ async function sendCampaign(req, res) {
   }
 
   if (!contacts.length) return res.status(400).json({ error: 'Nenhum contato válido selecionado' });
+
+  // Verifica limite diário de mensagens do plano
+  const dailyLimit = getLimit(req.user.plan, 'daily_messages');
+  const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+  const sentToday = await Message.count({ where: { user_id: req.user.id, created_at: { [Op.gte]: startOfDay } } });
+  if (sentToday + contacts.length > dailyLimit) {
+    return res.status(403).json({
+      error: `Limite diário do plano ${req.user.plan === 'pro' ? 'Pro' : 'Starter'} atingido (${dailyLimit} mensagens/dia). Saldo restante hoje: ${Math.max(0, dailyLimit - sentToday)}.`,
+    });
+  }
 
   // Valida contas selecionadas; se nenhuma, usa todas conectadas do usuário
   const { WhatsappAccount } = require('../models');

@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, MessageSquare, Megaphone, Smartphone, Flame, Bot, ShieldCheck, LogOut, AlertTriangle, BookOpen } from 'lucide-react';
+import { LayoutDashboard, Users, MessageSquare, Megaphone, Smartphone, Flame, Bot, ShieldCheck, LogOut, AlertTriangle, BookOpen, MailWarning, Clock } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
 
@@ -37,6 +37,10 @@ export default function Sidebar() {
   const trialEndsAt = (user as any)?.trial_ends_at;
   const isAdmin = user?.email === 'clicasenderzap@gmail.com';
 
+  const emailVerified = (user as any)?.email_verified;
+  const isPending = status === 'pending';
+  const isEmailUnverified = emailVerified === false;
+
   const trialDaysLeft = trialEndsAt
     ? Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
     : null;
@@ -53,6 +57,22 @@ export default function Sidebar() {
           </span>
         )}
       </div>
+
+      {/* Banner email não verificado */}
+      {isEmailUnverified && (
+        <div className="mx-3 mt-3 bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-xs text-orange-700 flex items-start gap-1.5">
+          <MailWarning size={13} className="mt-0.5 shrink-0" />
+          <span>Confirme seu <strong>email</strong> para acessar a plataforma.</span>
+        </div>
+      )}
+
+      {/* Banner conta pendente */}
+      {isPending && !isEmailUnverified && (
+        <div className="mx-3 mt-3 bg-purple-50 border border-purple-200 rounded-lg px-3 py-2 text-xs text-purple-700 flex items-start gap-1.5">
+          <Clock size={13} className="mt-0.5 shrink-0" />
+          <span>Conta <strong>em análise</strong>. Você receberá um email quando for liberada.</span>
+        </div>
+      )}
 
       {/* Banner trial */}
       {trialExpired && (

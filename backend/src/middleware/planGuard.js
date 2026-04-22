@@ -1,6 +1,6 @@
 const PLAN_LIMITS = {
-  starter: { whatsapp_accounts: 3, contacts: 5000 },
-  pro:     { whatsapp_accounts: 6, contacts: Infinity },
+  starter: { whatsapp_accounts: 3, contacts: 5000, daily_messages: 1000 },
+  pro:     { whatsapp_accounts: 6, contacts: Infinity, daily_messages: 5000 },
 };
 
 function getLimit(plan, resource) {

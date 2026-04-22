@@ -1,5 +1,6 @@
-const { User, WhatsappAccount, Campaign, Contact, Message } = require('../models');
+const { User, WhatsappAccount, AuditLog } = require('../models');
 const { Op } = require('sequelize');
+const emailSvc = require('../services/emailService');
 
 async function listUsers(req, res) {
   const { page = 1, limit = 30, search = '', status, plan } = req.query;
@@ -10,13 +11,12 @@ async function listUsers(req, res) {
 
   const { count, rows } = await User.findAndCountAll({
     where,
-    attributes: { exclude: ['password_hash'] },
+    attributes: { exclude: ['password_hash', 'email_verification_token'] },
     order: [['created_at', 'DESC']],
     limit: Number(limit),
     offset: (Number(page) - 1) * Number(limit),
   });
 
-  // Adiciona contagem de contas WhatsApp por usuário
   const userIds = rows.map((u) => u.id);
   const accountCounts = await WhatsappAccount.findAll({
     where: { user_id: userIds },
@@ -25,14 +25,15 @@ async function listUsers(req, res) {
     raw: true,
   });
   const accountMap = Object.fromEntries(accountCounts.map((a) => [a.user_id, Number(a.count)]));
-
   const data = rows.map((u) => ({ ...u.toJSON(), whatsapp_count: accountMap[u.id] || 0 }));
 
   res.json({ total: count, page: Number(page), data });
 }
 
 async function getUser(req, res) {
-  const user = await User.findByPk(req.params.id, { attributes: { exclude: ['password_hash'] } });
+  const user = await User.findByPk(req.params.id, {
+    attributes: { exclude: ['password_hash', 'email_verification_token'] },
+  });
   if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
   res.json(user);
 }
@@ -50,19 +51,58 @@ async function updateUser(req, res) {
     ...(trial_ends_at !== undefined && { trial_ends_at }),
   });
 
-  const { password_hash, ...safe } = user.toJSON();
+  const { password_hash, email_verification_token, ...safe } = user.toJSON();
   res.json(safe);
+}
+
+async function approveUser(req, res) {
+  const user = await User.findByPk(req.params.id);
+  if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+  if (user.status !== 'pending') return res.status(400).json({ error: 'Usuário não está pendente' });
+
+  const trial_ends_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  await user.update({ status: 'trial', trial_ends_at });
+
+  emailSvc.sendApprovalEmail(user).catch(() => {});
+
+  await AuditLog.create({
+    user_id: req.user.id,
+    action: 'admin_approve_user',
+    ip: req.ip,
+    metadata: { target_user_id: user.id, target_email: user.email },
+  });
+
+  res.json({ message: 'Conta aprovada com sucesso', user: { id: user.id, status: 'trial' } });
+}
+
+async function rejectUser(req, res) {
+  const user = await User.findByPk(req.params.id);
+  if (!user) return res.status(404).json({ error: 'Usuário não encontrado' });
+
+  await user.update({ status: 'inactive' });
+
+  emailSvc.sendRejectionEmail(user).catch(() => {});
+
+  await AuditLog.create({
+    user_id: req.user.id,
+    action: 'admin_reject_user',
+    ip: req.ip,
+    metadata: { target_user_id: user.id, target_email: user.email },
+  });
+
+  res.json({ message: 'Conta rejeitada' });
 }
 
 async function getStats(req, res) {
   const now = new Date();
   const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
 
-  const [total, active, trial, inactive, trialExpired, newThisMonth] = await Promise.all([
+  const [total, active, trial, inactive, pending, trialExpired, newThisMonth] = await Promise.all([
     User.count(),
     User.count({ where: { status: 'active' } }),
     User.count({ where: { status: 'trial', trial_ends_at: { [Op.gte]: now } } }),
     User.count({ where: { status: 'inactive' } }),
+    User.count({ where: { status: 'pending' } }),
     User.count({ where: { status: 'trial', trial_ends_at: { [Op.lt]: now } } }),
     User.count({ where: { created_at: { [Op.gte]: startOfMonth } } }),
   ]);
@@ -74,14 +114,11 @@ async function getStats(req, res) {
   });
 
   res.json({
-    total,
-    active,
-    trial,
-    inactive,
+    total, active, trial, inactive, pending,
     trial_expired: trialExpired,
     new_this_month: newThisMonth,
     by_plan: Object.fromEntries(byPlan.map((r) => [r.plan, Number(r.count)])),
   });
 }
 
-module.exports = { listUsers, getUser, updateUser, getStats };
+module.exports = { listUsers, getUser, updateUser, approveUser, rejectUser, getStats };

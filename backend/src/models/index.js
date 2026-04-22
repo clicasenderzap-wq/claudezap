@@ -1,5 +1,6 @@
 const sequelize = require('../config/database');
 const User = require('./User');
+const AuditLog = require('./AuditLog');
 const Contact = require('./Contact');
 const Campaign = require('./Campaign');
 const Message = require('./Message');
@@ -42,4 +43,4 @@ BotConfig.belongsTo(WhatsappAccount, { foreignKey: 'account_id' });
 WhatsappAccount.hasMany(BotConversation, { foreignKey: 'account_id', onDelete: 'CASCADE' });
 BotConversation.belongsTo(WhatsappAccount, { foreignKey: 'account_id' });
 
-module.exports = { sequelize, User, Contact, Campaign, Message, WhatsappAccount, WarmupConfig, WarmupLog, BotConfig, BotConversation };
+module.exports = { sequelize, User, AuditLog, Contact, Campaign, Message, WhatsappAccount, WarmupConfig, WarmupLog, BotConfig, BotConversation };

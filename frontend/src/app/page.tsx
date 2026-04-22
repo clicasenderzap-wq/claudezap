@@ -52,18 +52,18 @@ const FEATURES = [
 const STEPS = [
   {
     num: '01',
-    title: 'Conecte seus números',
-    desc: 'Escaneie o QR code para conectar seu WhatsApp. Funciona com qualquer número — pessoal ou business.',
+    title: 'Crie e confirme sua conta',
+    desc: 'Cadastre-se com nome, email e WhatsApp. Confirme seu email e aguarde a aprovação da equipe Clica Aí — geralmente em até 24h.',
   },
   {
     num: '02',
-    title: 'Importe seus contatos',
-    desc: 'Suba uma planilha Excel ou CSV com nome e telefone. O sistema identifica duplicatas e já respeita os opt-outs.',
+    title: 'Conecte e aqueça seus números',
+    desc: 'Escaneie o QR code para conectar seu WhatsApp. Ative o aquecimento automático para construir reputação antes de disparar.',
   },
   {
     num: '03',
-    title: 'Dispare e acompanhe',
-    desc: 'Configure a mensagem, o delay entre envios e os números que vão disparar. Monitore tudo em tempo real.',
+    title: 'Importe, dispare e acompanhe',
+    desc: 'Suba uma planilha de contatos, crie sua campanha e monitore entregues, falhas e opt-outs em tempo real.',
   },
 ];
 
@@ -465,6 +465,58 @@ export default function LandingPage() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── TRUST / SECURITY ── */}
+        <section className="py-24 bg-gray-950 text-white">
+          <div className="max-w-5xl mx-auto px-4">
+            <div className="text-center mb-14">
+              <span className="text-green-400 font-bold text-sm uppercase tracking-widest">Segurança & Confiança</span>
+              <h2 className="text-4xl font-black tracking-tight mt-3 mb-4">
+                Sua conta protegida<br />desde o cadastro
+              </h2>
+              <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+                Acesso controlado e auditado — apenas usuários verificados e aprovados operam na plataforma.
+              </p>
+            </div>
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+              {[
+                {
+                  emoji: '✉️',
+                  title: 'Confirmação de email',
+                  desc: 'Todo cadastro exige verificação por email antes de qualquer acesso à plataforma.',
+                },
+                {
+                  emoji: '🔍',
+                  title: 'Aprovação manual',
+                  desc: 'Nossa equipe analisa cada conta antes de liberar o acesso. Sem bots, sem abuso.',
+                },
+                {
+                  emoji: '🛡️',
+                  title: 'Conformidade LGPD',
+                  desc: 'Seus dados são tratados conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018).',
+                },
+                {
+                  emoji: '📋',
+                  title: 'Auditoria completa',
+                  desc: 'Todas as ações administrativas ficam registradas com data, hora e IP de origem.',
+                },
+              ].map((item) => (
+                <div key={item.title} className="bg-gray-900 border border-gray-800 rounded-3xl p-6 hover:border-green-800 transition-colors text-center">
+                  <p className="text-4xl mb-4">{item.emoji}</p>
+                  <h3 className="font-bold text-white mb-2">{item.title}</h3>
+                  <p className="text-gray-400 text-sm leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+            <div className="mt-10 bg-green-900/30 border border-green-800/50 rounded-2xl p-6 text-center">
+              <p className="text-green-200 text-sm leading-relaxed">
+                Ao se cadastrar você aceita os <Link href="/termos" target="_blank" className="text-green-400 font-semibold hover:underline">Termos de Uso</Link>{' '}
+                e a <Link href="/privacidade" target="_blank" className="text-green-400 font-semibold hover:underline">Política de Privacidade</Link>.
+                O acesso é liberado apenas após verificação de email e aprovação da equipe.
+              </p>
             </div>
           </div>
         </section>

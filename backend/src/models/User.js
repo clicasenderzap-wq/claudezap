@@ -22,6 +22,10 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  whatsapp: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
   role: {
     type: DataTypes.ENUM('user', 'admin'),
     defaultValue: 'user',
@@ -31,14 +35,32 @@ const User = sequelize.define('User', {
     defaultValue: 'starter',
   },
   status: {
-    type: DataTypes.ENUM('trial', 'active', 'inactive'),
-    defaultValue: 'trial',
+    type: DataTypes.ENUM('pending', 'trial', 'active', 'inactive'),
+    defaultValue: 'pending',
   },
   trial_ends_at: {
     type: DataTypes.DATE,
     allowNull: true,
   },
   whatsapp_support: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  accepted_terms_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  terms_ip: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  // null = legacy user (pre-verification feature), false = unverified, true = verified
+  email_verified: {
+    type: DataTypes.BOOLEAN,
+    allowNull: true,
+    defaultValue: null,
+  },
+  email_verification_token: {
     type: DataTypes.STRING,
     allowNull: true,
   },
