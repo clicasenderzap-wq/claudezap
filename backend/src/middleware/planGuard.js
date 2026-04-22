@@ -34,8 +34,10 @@ function limitCheck(resource, countFn) {
   };
 }
 
+const ADMIN_EMAIL = 'clicasenderzap@gmail.com';
+
 function requireAdmin(req, res, next) {
-  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Acesso restrito a administradores' });
+  if (req.user.email !== ADMIN_EMAIL) return res.status(403).json({ error: 'Acesso restrito a administradores' });
   next();
 }
 

@@ -35,7 +35,7 @@ export default function Sidebar() {
   const plan = (user as any)?.plan ?? 'starter';
   const status = (user as any)?.status ?? 'trial';
   const trialEndsAt = (user as any)?.trial_ends_at;
-  const isAdmin = (user as any)?.role === 'admin';
+  const isAdmin = user?.email === 'clicasenderzap@gmail.com';
 
   const trialDaysLeft = trialEndsAt
     ? Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
