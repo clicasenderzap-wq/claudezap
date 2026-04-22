@@ -21,8 +21,12 @@ const Campaign = sequelize.define('Campaign', {
     comment: 'Supports {{name}}, {{phone}} variables',
   },
   status: {
-    type: DataTypes.ENUM('draft', 'running', 'paused', 'completed', 'failed'),
+    type: DataTypes.ENUM('draft', 'scheduled', 'running', 'paused', 'completed', 'failed'),
     defaultValue: 'draft',
+  },
+  scheduled_for: {
+    type: DataTypes.DATE,
+    allowNull: true,
   },
   total_contacts: {
     type: DataTypes.INTEGER,

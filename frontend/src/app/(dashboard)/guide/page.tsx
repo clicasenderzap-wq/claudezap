@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Megaphone, Smartphone, Flame, Bot,
   MessageSquare, BookOpen, ChevronRight, Info, AlertTriangle,
   CheckCircle, Lightbulb, ArrowRight, Key, Clock, Zap, Shield,
-  FileSpreadsheet, Send, BarChart2, RefreshCw, Settings, Star, Tag,
+  FileSpreadsheet, Send, BarChart2, RefreshCw, Settings, Star, Tag, Moon,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -287,10 +287,16 @@ function CampaignsSection() {
         Escolha o intervalo entre cada envio. Opções disponíveis: 3s, 5s, 10s, 15s, 30s, 60s ou valor personalizado em milissegundos.
         <Tip>Use no mínimo 5 segundos entre mensagens. Delays maiores (10s–30s) reduzem muito o risco de banimento em listas grandes.</Tip>
       </Step>
-      <Step num={5} title="Selecione os números de WhatsApp">
+      <Step num={5} title="Agende o disparo (opcional)">
+        Use o campo <strong>Agendar disparo</strong> para definir uma data e hora futura. Se preencher, a campanha ficará com status <strong>Agendada</strong> (roxo) e disparará automaticamente no horário marcado — sem precisar estar logado. Se deixar em branco, dispara imediatamente.
+        <div className="mt-2 bg-purple-50 border border-purple-200 rounded-xl p-3 text-xs text-purple-800">
+          <strong>Exemplo:</strong> Crie duas campanhas agora mesmo — uma sem agendamento (dispara já com 200 contatos) e outra agendada para amanhã às 10h (mais 200 contatos). Assim você divide o volume sem precisar voltar ao sistema.
+        </div>
+      </Step>
+      <Step num={6} title="Selecione os números de WhatsApp">
         Escolha quais números conectados vão enviar as mensagens. Para múltiplos números, configure o <strong>Rotacionar a cada N mensagens</strong> — por exemplo, "10" significa que o sistema alterna de número a cada 10 envios.
       </Step>
-      <Step num={6} title="Escolha os contatos e dispare">
+      <Step num={7} title="Escolha os contatos e dispare">
         No painel direito, você pode selecionar contatos de duas formas:
         <div className="mt-3 space-y-3">
           <div className="flex gap-3 bg-gray-50 rounded-xl p-3 border border-gray-200">
@@ -469,7 +475,30 @@ function WarmupSection() {
         ))}
       </div>
 
-      <h3 className="font-bold text-gray-800 mb-4 text-lg">Recomendações importantes</h3>
+      <h3 className="font-bold text-gray-800 mb-4 text-lg mt-8 flex items-center gap-2">
+        <Moon size={18} className="text-indigo-500" /> Aquecimento Noturno
+      </h3>
+      <p className="text-gray-600 text-sm leading-relaxed mb-4">
+        O aquecimento noturno funciona em paralelo ao diurno, com seu próprio período de horário e cota de mensagens. É ideal para aproveitar a madrugada — quando ninguém está usando os chips para atender clientes — e acelerar o processo de aquecimento.
+      </p>
+      <div className="grid sm:grid-cols-2 gap-4 mb-6">
+        <div className="border border-orange-200 bg-orange-50 rounded-xl p-4">
+          <p className="font-bold text-sm text-orange-800 mb-1 flex items-center gap-1.5"><Flame size={14} /> Aquecimento Diurno</p>
+          <p className="text-xs text-orange-700 leading-relaxed">Funciona dentro do seu horário comercial (ex: 08:00–22:00). Cota separada para não interferir no ritmo de trabalho.</p>
+        </div>
+        <div className="border border-indigo-200 bg-indigo-50 rounded-xl p-4">
+          <p className="font-bold text-sm text-indigo-800 mb-1 flex items-center gap-1.5"><Moon size={14} /> Aquecimento Noturno</p>
+          <p className="text-xs text-indigo-700 leading-relaxed">Roda durante a madrugada (ex: 23:00–07:00). Pode ter cota maior pois não há risco de confundir com conversas reais.</p>
+        </div>
+      </div>
+      <p className="text-sm text-gray-600 mb-4 leading-relaxed">
+        Para ativar, acesse <strong>Aquecimento</strong> no menu e role até a seção <strong>Aquecimento Noturno</strong>. Clique no toggle para ativar, configure o horário e a cota, e salve. Os dois períodos são somados na cota diária total.
+      </p>
+      <Success>
+        <strong>Exemplo prático:</strong> Diurno com 20 mensagens/dia (08:00–22:00) + Noturno com 40 mensagens/dia (23:00–07:00) = 60 mensagens/dia total. Isso acelera significativamente o aquecimento sem precisar aumentar a frequência durante o horário comercial.
+      </Success>
+
+      <h3 className="font-bold text-gray-800 mb-4 text-lg mt-8">Recomendações importantes</h3>
       <div className="space-y-2">
         {[
           { tip: 'Número novo: comece com 10–15 mensagens/dia na primeira semana.' },
@@ -477,6 +506,7 @@ function WarmupSection() {
           { tip: 'Mantenha o aquecimento ativo mesmo quando não tiver campanhas rodando.' },
           { tip: 'Números com nível "Aquecido" têm risco muito menor ao fazer disparos.' },
           { tip: 'Para contas Pro com 6 números, selecione quais vão aquecer entre si para não misturar grupos de uso diferente.' },
+          { tip: 'Use o aquecimento noturno para acelerar o processo sem aumentar o risco durante o horário de uso real.' },
         ].map(({ tip }) => (
           <div key={tip} className="flex gap-2.5 text-sm text-gray-700">
             <Flame size={14} className="text-orange-400 mt-0.5 shrink-0" />

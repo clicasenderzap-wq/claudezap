@@ -8,7 +8,7 @@ import { z } from 'zod';
 import {
   Megaphone, Check, RefreshCw, Trash2, Plus, History,
   X, Smartphone, BarChart2, Send, CheckCircle2, XCircle, Clock,
-  ChevronRight, Timer, Repeat2, Tag, Users,
+  ChevronRight, Timer, Repeat2, Tag, Users, CalendarClock,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
@@ -20,6 +20,7 @@ const schema = z.object({
   delay_ms: z.number().min(1000).default(5000),
   rotate_every: z.number().min(1).default(10),
   include_optout: z.boolean().default(true),
+  scheduled_for: z.string().optional(),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -47,12 +48,13 @@ const STATUS_LABEL: Record<string, string> = {
 };
 const CAMPAIGN_STATUS: Record<string, string> = {
   draft: 'bg-gray-100 text-gray-600', running: 'bg-blue-100 text-blue-700',
+  scheduled: 'bg-purple-100 text-purple-700',
   completed: 'bg-green-100 text-green-700', paused: 'bg-yellow-100 text-yellow-700',
   failed: 'bg-red-100 text-red-700',
 };
 const CAMPAIGN_LABEL: Record<string, string> = {
-  draft: 'Rascunho', running: 'Enviando', completed: 'Concluída',
-  paused: 'Pausada', failed: 'Falhou',
+  draft: 'Rascunho', running: 'Enviando', scheduled: 'Agendada',
+  completed: 'Concluída', paused: 'Pausada', failed: 'Falhou',
 };
 
 export default function CampaignsPage() {
@@ -105,7 +107,12 @@ export default function CampaignsPage() {
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['campaigns'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
-      toast.success(`Campanha criada! ${res.data.queued} mensagens na fila.`);
+      const isScheduled = res.data.campaign?.status === 'scheduled';
+      if (isScheduled) {
+        toast.success(`Campanha agendada! ${res.data.queued} mensagens serão enviadas no horário configurado.`);
+      } else {
+        toast.success(`Campanha criada! ${res.data.queued} mensagens na fila.`);
+      }
       reset(); setSelected([]); setSelectedTags([]); setSelectedAccounts([]); setTab('history');
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao criar campanha'),
@@ -158,6 +165,9 @@ export default function CampaignsPage() {
       if (!selected.length) return toast.error('Selecione pelo menos um contato');
     }
     if (!connectedAccounts.length) return toast.error('Nenhum número WhatsApp conectado.');
+    if (data.scheduled_for && new Date(data.scheduled_for) <= new Date()) {
+      return toast.error('O horário agendado deve ser no futuro');
+    }
     const payload =
       contactMode === 'tag'
         ? { ...data, tags: selectedTags, account_ids: selectedAccounts, rotate_every: data.rotate_every }
@@ -228,7 +238,11 @@ export default function CampaignsPage() {
                       {c.name} <ChevronRight size={13} />
                     </button>
                   </td>
-                  <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">{formatDate(c.createdAt ?? c.created_at)}</td>
+                  <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
+                    {c.status === 'scheduled' && c.scheduled_for
+                      ? <span className="flex items-center gap-1 text-purple-600 font-medium"><CalendarClock size={12} />{formatDate(c.scheduled_for)}</span>
+                      : formatDate(c.createdAt ?? c.created_at)}
+                  </td>
                   <td className="px-4 py-3 text-center text-gray-700">{c.total_contacts}</td>
                   <td className="px-4 py-3 text-center text-green-600 font-medium">{c.sent_count}</td>
                   <td className="px-4 py-3 text-center text-red-500">{c.failed_count}</td>
@@ -343,6 +357,20 @@ export default function CampaignsPage() {
                   </p>
                 </div>
               )}
+
+              {/* Agendamento */}
+              <div>
+                <label className="label flex items-center gap-1.5"><CalendarClock size={13} /> Agendar disparo (opcional)</label>
+                <input
+                  type="datetime-local"
+                  {...register('scheduled_for')}
+                  className="input"
+                  min={new Date(Date.now() + 60000).toISOString().slice(0, 16)}
+                />
+                <p className="text-xs text-gray-400 mt-1">
+                  Deixe em branco para disparar imediatamente. Se preencher, a campanha ficará com status <strong>Agendada</strong> e disparará automaticamente no horário escolhido.
+                </p>
+              </div>
 
               {/* Opt-out */}
               <label className="flex items-center gap-2.5 cursor-pointer">

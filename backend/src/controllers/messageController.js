@@ -34,7 +34,7 @@ async function sendCampaign(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
 
-  const { name, message_template, contact_ids, tags, delay_ms = 3000, account_ids = [], include_optout = true, rotate_every = 1 } = req.body;
+  const { name, message_template, contact_ids, tags, delay_ms = 3000, account_ids = [], include_optout = true, rotate_every = 1, scheduled_for } = req.body;
   const optoutText = include_optout ? '\n\nPara sair desta lista, responda: SAIR' : '';
   const rotateEvery = Math.max(1, Number(rotate_every));
 
@@ -67,11 +67,15 @@ async function sendCampaign(req, res) {
   const connectedAccounts = selectedAccounts.filter((a) => whatsapp.getStatus(a.id) === 'connected');
   if (!connectedAccounts.length) return res.status(400).json({ error: 'Nenhuma conta WhatsApp conectada selecionada' });
 
+  const startOffset = scheduled_for ? Math.max(0, new Date(scheduled_for).getTime() - Date.now()) : 0;
+  const campaignStatus = startOffset > 0 ? 'scheduled' : 'running';
+
   const campaign = await Campaign.create({
     user_id: req.user.id,
     name,
     message_template,
-    status: 'running',
+    status: campaignStatus,
+    scheduled_for: scheduled_for ? new Date(scheduled_for) : null,
     total_contacts: contacts.length,
     delay_ms,
     rotate_every: rotateEvery,
@@ -97,7 +101,7 @@ async function sendCampaign(req, res) {
     content: m.content,
   }));
 
-  await enqueueBulk(jobs, delay_ms);
+  await enqueueBulk(jobs, delay_ms, startOffset);
   res.status(201).json({ campaign, queued: messages.length });
 }
 

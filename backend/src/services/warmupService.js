@@ -95,17 +95,31 @@ class WarmupService {
     }
   }
 
-  async _processUser(config) {
+  _isInWindow(config) {
     const hour = new Date().getHours();
-    if (hour < config.start_hour || hour >= config.end_hour) return;
+    const inDay = hour >= config.start_hour && hour < config.end_hour;
+    if (inDay) return true;
+    if (!config.night_enabled) return false;
+    const ns = config.night_start_hour;
+    const ne = config.night_end_hour;
+    // Cross-midnight range (e.g. 23 → 07)
+    return ns > ne ? (hour >= ns || hour < ne) : (hour >= ns && hour < ne);
+  }
 
-    // Verifica cota diária
+  _getDailyQuota(config) {
+    return config.messages_per_day + (config.night_enabled ? (config.night_messages_per_day ?? 30) : 0);
+  }
+
+  async _processUser(config) {
+    if (!this._isInWindow(config)) return;
+
+    // Verifica cota diária combinada (dia + noite)
     const startOfDay = new Date();
     startOfDay.setHours(0, 0, 0, 0);
     const sentToday = await WarmupLog.count({
       where: { user_id: config.user_id, sent_at: { [Op.gte]: startOfDay } },
     });
-    if (sentToday >= config.messages_per_day) return;
+    if (sentToday >= this._getDailyQuota(config)) return;
 
     // Contas conectadas com número identificado (filtra pelas selecionadas se houver)
     const selectedIds = config.account_ids || [];
@@ -138,7 +152,7 @@ class WarmupService {
     console.log(`[Warmup] ${sender.label} → ${receiver.label}: "${initMsg}"`);
 
     // Resposta após 15–90 segundos
-    if (sentToday + 1 < config.messages_per_day) {
+    if (sentToday + 1 < this._getDailyQuota(config)) {
       const replyDelay = (15 + Math.random() * 75) * 1000;
       setTimeout(async () => {
         try {

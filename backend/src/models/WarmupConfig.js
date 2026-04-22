@@ -9,6 +9,10 @@ const WarmupConfig = sequelize.define('WarmupConfig', {
   start_hour: { type: DataTypes.INTEGER, defaultValue: 8 },
   end_hour: { type: DataTypes.INTEGER, defaultValue: 22 },
   account_ids: { type: DataTypes.JSON, defaultValue: [] },
+  night_enabled: { type: DataTypes.BOOLEAN, defaultValue: false },
+  night_start_hour: { type: DataTypes.INTEGER, defaultValue: 23 },
+  night_end_hour: { type: DataTypes.INTEGER, defaultValue: 7 },
+  night_messages_per_day: { type: DataTypes.INTEGER, defaultValue: 30 },
 }, { tableName: 'warmup_configs', underscored: true });
 
 module.exports = WarmupConfig;

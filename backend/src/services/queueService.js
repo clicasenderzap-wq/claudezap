@@ -19,11 +19,11 @@ async function enqueueMessage(messageId, userId, phone, content, delayMs = 0) {
   );
 }
 
-async function enqueueBulk(messages, baseDelayMs = 3000) {
+async function enqueueBulk(messages, baseDelayMs = 3000, startOffset = 0) {
   const jobs = messages.map((msg, index) => ({
     name: 'send',
     data: msg,
-    opts: { delay: index * baseDelayMs },
+    opts: { delay: startOffset + index * baseDelayMs },
   }));
   return messageQueue.addBulk(jobs);
 }

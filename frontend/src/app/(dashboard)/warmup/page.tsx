@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Flame, Power, MessageSquare, Calendar, Clock, Zap, ArrowRight, Info, CheckSquare, Square } from 'lucide-react';
+import { Flame, Power, MessageSquare, Calendar, Clock, Zap, ArrowRight, Info, CheckSquare, Square, Moon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -29,6 +29,10 @@ export default function WarmupPage() {
     messages_per_day: number;
     start_hour: number;
     end_hour: number;
+    night_enabled?: boolean;
+    night_start_hour?: number;
+    night_end_hour?: number;
+    night_messages_per_day?: number;
   } | null>(null);
 
   const [selectedIds, setSelectedIds] = useState<string[] | null>(null);
@@ -39,6 +43,10 @@ export default function WarmupPage() {
     messages_per_day: config?.messages_per_day ?? 20,
     start_hour: config?.start_hour ?? 8,
     end_hour: config?.end_hour ?? 22,
+    night_enabled: config?.night_enabled ?? false,
+    night_start_hour: config?.night_start_hour ?? 23,
+    night_end_hour: config?.night_end_hour ?? 7,
+    night_messages_per_day: config?.night_messages_per_day ?? 30,
   };
 
   // Initialize selectedIds from config once loaded
@@ -88,6 +96,13 @@ export default function WarmupPage() {
   const isEnabled = config?.enabled ?? false;
   const activeHours = Math.max(1, liveForm.end_hour - liveForm.start_hour);
   const msgPerHour = (liveForm.messages_per_day / activeHours).toFixed(1);
+  const nightActiveHours = (() => {
+    const ns = liveForm.night_start_hour ?? 23;
+    const ne = liveForm.night_end_hour ?? 7;
+    return ns > ne ? (24 - ns + ne) : Math.max(1, ne - ns);
+  })();
+  const nightMsgPerHour = ((liveForm.night_messages_per_day ?? 30) / nightActiveHours).toFixed(1);
+  const totalDailyQuota = liveForm.messages_per_day + (liveForm.night_enabled ? (liveForm.night_messages_per_day ?? 30) : 0);
 
   // Nível de aquecimento baseado em mensagens da semana
   const weekTotal = stats?.week ?? 0;
@@ -273,12 +288,97 @@ export default function WarmupPage() {
         </div>
       </div>
 
+      {/* ── Aquecimento Noturno ─────────────────────────────────── */}
+      <div className="card p-6 space-y-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`p-2.5 rounded-xl ${liveForm.night_enabled ? 'bg-indigo-100' : 'bg-gray-100'}`}>
+              <Moon size={18} className={liveForm.night_enabled ? 'text-indigo-500' : 'text-gray-400'} />
+            </div>
+            <div>
+              <p className="font-semibold text-gray-900">Aquecimento Noturno</p>
+              <p className="text-xs text-gray-500">Funciona em paralelo ao aquecimento diurno, com cota própria</p>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const next = { ...liveForm, night_enabled: !liveForm.night_enabled };
+              setForm(next);
+              updateMutation.mutate({ night_enabled: next.night_enabled });
+              toast.success(next.night_enabled ? 'Aquecimento noturno ativado!' : 'Aquecimento noturno desativado');
+            }}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${liveForm.night_enabled ? 'bg-indigo-500' : 'bg-gray-300'}`}
+          >
+            <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${liveForm.night_enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+          </button>
+        </div>
+
+        {liveForm.night_enabled && (
+          <div className="space-y-5 pt-1">
+            <div>
+              <label className="label flex items-center gap-1.5">
+                <MessageSquare size={13} /> Mensagens por noite
+              </label>
+              <div className="flex items-center gap-4">
+                <input
+                  type="range" min={5} max={100} step={5}
+                  value={liveForm.night_messages_per_day ?? 30}
+                  onChange={(e) => setForm({ ...liveForm, night_messages_per_day: Number(e.target.value) })}
+                  className="flex-1 accent-indigo-500"
+                />
+                <span className="w-12 text-center font-semibold text-gray-800">{liveForm.night_messages_per_day ?? 30}</span>
+              </div>
+              <p className="text-xs text-gray-400 mt-1">
+                ~{nightMsgPerHour} mensagens/hora durante o período noturno. Total diário combinado: <strong>{totalDailyQuota}</strong>/dia.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label flex items-center gap-1.5"><Clock size={13} /> Início (noite)</label>
+                <select
+                  value={liveForm.night_start_hour ?? 23}
+                  onChange={(e) => setForm({ ...liveForm, night_start_hour: Number(e.target.value) })}
+                  className="input"
+                >
+                  {HOURS.map((h) => (
+                    <option key={h} value={h}>{fmt(h)}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="label flex items-center gap-1.5"><Clock size={13} /> Fim (manhã)</label>
+                <select
+                  value={liveForm.night_end_hour ?? 7}
+                  onChange={(e) => setForm({ ...liveForm, night_end_hour: Number(e.target.value) })}
+                  className="input"
+                >
+                  {HOURS.map((h) => (
+                    <option key={h} value={h}>{fmt(h)}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <p className="text-xs text-indigo-600 bg-indigo-50 rounded-lg px-3 py-2">
+              <Moon size={12} className="inline mr-1" />
+              O horário noturno pode cruzar a meia-noite — ex: 23:00 até 07:00. Isso é tratado corretamente pelo sistema.
+            </p>
+
+            {form && (
+              <button onClick={saveSettings} className="btn-primary w-full">
+                Salvar configurações noturnas
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Stats do dia */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
           { label: 'Hoje', value: stats?.today ?? 0, icon: <Zap size={16} />, color: 'text-orange-500 bg-orange-100' },
           { label: 'Esta semana', value: stats?.week ?? 0, icon: <Calendar size={16} />, color: 'text-brand-600 bg-brand-100' },
-          { label: 'Números participando', value: participatingCount, icon: <Flame size={16} />, color: 'text-green-600 bg-green-100' },
+          { label: `Cota diária${liveForm.night_enabled ? ' (dia+noite)' : ''}`, value: totalDailyQuota, icon: <MessageSquare size={16} />, color: 'text-indigo-600 bg-indigo-100' },
           { label: 'Nível de aquecimento', value: `${warmthLevel}%`, icon: <Flame size={16} />, color: `${warmthLevel > 50 ? 'text-orange-600 bg-orange-100' : 'text-blue-600 bg-blue-100'}` },
         ].map((s) => (
           <div key={s.label} className="card p-4 text-center">
