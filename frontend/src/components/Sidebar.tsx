@@ -46,7 +46,7 @@ export default function Sidebar() {
   return (
     <aside className="w-60 min-h-screen bg-white border-r border-gray-200 flex flex-col">
       <div className="px-6 py-5 border-b border-gray-200 flex items-center justify-between">
-        <span className="text-xl font-bold text-brand-600">ClaudeZap</span>
+        <span className="text-xl font-black text-gray-900">Clica <span className="text-green-600">Aí</span></span>
         {plan && (
           <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${PLAN_COLORS[plan]}`}>
             {PLAN_LABELS[plan] ?? plan}
