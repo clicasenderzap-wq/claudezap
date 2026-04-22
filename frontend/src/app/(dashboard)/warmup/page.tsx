@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Flame, Power, MessageSquare, Calendar, Clock, Zap, ArrowRight, Info } from 'lucide-react';
+import { Flame, Power, MessageSquare, Calendar, Clock, Zap, ArrowRight, Info, CheckSquare, Square } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -31,12 +31,36 @@ export default function WarmupPage() {
     end_hour: number;
   } | null>(null);
 
+  const [selectedIds, setSelectedIds] = useState<string[] | null>(null);
+
   const config = data?.config;
+  const accounts: { id: string; label: string; phone: string }[] = data?.accounts ?? [];
   const liveForm = form ?? {
     messages_per_day: config?.messages_per_day ?? 20,
     start_hour: config?.start_hour ?? 8,
     end_hour: config?.end_hour ?? 22,
   };
+
+  // Initialize selectedIds from config once loaded
+  const liveSelectedIds = selectedIds ?? (config?.account_ids ?? []);
+
+  function toggleAccount(id: string) {
+    const current = liveSelectedIds as string[];
+    const next = current.includes(id) ? current.filter((x) => x !== id) : [...current, id];
+    setSelectedIds(next);
+    updateMutation.mutate({ account_ids: next });
+  }
+
+  function selectAllAccounts() {
+    const all = accounts.map((a) => a.id);
+    setSelectedIds(all);
+    updateMutation.mutate({ account_ids: all });
+  }
+
+  function selectNoAccounts() {
+    setSelectedIds([]);
+    updateMutation.mutate({ account_ids: [] });
+  }
 
   const updateMutation = useMutation({
     mutationFn: (body: object) => api.put('/warmup', body),
@@ -59,7 +83,8 @@ export default function WarmupPage() {
     toast.success('Configurações salvas!');
   }
 
-  const connectedCount = data?.connected_accounts ?? 0;
+  const connectedCount = accounts.length;
+  const participatingCount = (liveSelectedIds as string[]).length || connectedCount;
   const isEnabled = config?.enabled ?? false;
   const activeHours = Math.max(1, liveForm.end_hour - liveForm.start_hour);
   const msgPerHour = (liveForm.messages_per_day / activeHours).toFixed(1);
@@ -179,6 +204,50 @@ export default function WarmupPage() {
             </div>
           </div>
 
+          {/* Seleção de números */}
+          {accounts.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="label mb-0">Números participantes</label>
+                <div className="flex gap-3 text-xs text-brand-600">
+                  <button onClick={selectAllAccounts} className="hover:underline">Todos</button>
+                  <button onClick={selectNoAccounts} className="hover:underline">Nenhum</button>
+                </div>
+              </div>
+              <p className="text-xs text-gray-400 mb-2">Sem seleção = todos os números conectados participam</p>
+              <div className="space-y-1.5 max-h-48 overflow-y-auto pr-1">
+                {accounts.map((acc) => {
+                  const checked = (liveSelectedIds as string[]).length === 0 || (liveSelectedIds as string[]).includes(acc.id);
+                  const explicitly = (liveSelectedIds as string[]).length > 0;
+                  return (
+                    <button
+                      key={acc.id}
+                      onClick={() => {
+                        if (!explicitly) {
+                          // First click: select only this one
+                          const next = [acc.id];
+                          setSelectedIds(next);
+                          updateMutation.mutate({ account_ids: next });
+                        } else {
+                          toggleAccount(acc.id);
+                        }
+                      }}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg border text-sm transition-colors ${
+                        checked
+                          ? 'border-brand-300 bg-brand-50 text-brand-700'
+                          : 'border-gray-200 bg-white text-gray-500'
+                      }`}
+                    >
+                      {checked ? <CheckSquare size={15} className="shrink-0" /> : <Square size={15} className="shrink-0" />}
+                      <span className="font-medium flex-1 text-left">{acc.label}</span>
+                      <span className="text-xs text-gray-400">{acc.phone}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Preview do plano */}
           <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm space-y-2">
             <p className="font-medium text-gray-700">Resumo do plano</p>
@@ -209,7 +278,7 @@ export default function WarmupPage() {
         {[
           { label: 'Hoje', value: stats?.today ?? 0, icon: <Zap size={16} />, color: 'text-orange-500 bg-orange-100' },
           { label: 'Esta semana', value: stats?.week ?? 0, icon: <Calendar size={16} />, color: 'text-brand-600 bg-brand-100' },
-          { label: 'Números participando', value: connectedCount, icon: <Flame size={16} />, color: 'text-green-600 bg-green-100' },
+          { label: 'Números participando', value: participatingCount, icon: <Flame size={16} />, color: 'text-green-600 bg-green-100' },
           { label: 'Nível de aquecimento', value: `${warmthLevel}%`, icon: <Flame size={16} />, color: `${warmthLevel > 50 ? 'text-orange-600 bg-orange-100' : 'text-blue-600 bg-blue-100'}` },
         ].map((s) => (
           <div key={s.label} className="card p-4 text-center">
