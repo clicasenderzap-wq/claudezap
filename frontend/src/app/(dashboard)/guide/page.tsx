@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Users, Megaphone, Smartphone, Flame, Bot,
   MessageSquare, BookOpen, ChevronRight, Info, AlertTriangle,
   CheckCircle, Lightbulb, ArrowRight, Key, Clock, Zap, Shield,
-  FileSpreadsheet, Send, BarChart2, RefreshCw, Settings, Star,
+  FileSpreadsheet, Send, BarChart2, RefreshCw, Settings, Star, Tag,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -150,7 +150,7 @@ function DashboardSection() {
 function ContactsSection() {
   return (
     <div id="contacts">
-      <SectionTitle icon={Users} color="text-green-600 bg-green-100" title="Importar Contatos" subtitle="Construa e gerencie sua base de contatos" />
+      <SectionTitle icon={Users} color="text-green-600 bg-green-100" title="Importar Contatos" subtitle="Construa, organize e gerencie sua base de contatos" />
 
       <p className="text-gray-600 mb-6 leading-relaxed">
         Você pode adicionar contatos manualmente ou importar em massa por planilha. O sistema aceita arquivos Excel (.xlsx, .xls) e CSV.
@@ -161,23 +161,79 @@ function ContactsSection() {
         A planilha deve ter as colunas <Code>nome</Code> e <Code>telefone</Code> (ou <Code>name</Code> e <Code>phone</Code> em inglês).
         A coluna <Code>observacoes</Code> é opcional. O telefone deve estar no formato <Code>5511999999999</Code> (código do país + DDD + número) ou apenas <Code>11999999999</Code> — o sistema aceita ambos.
       </Step>
-      <Step num={2} title="Acesse a página de Contatos">
-        No menu lateral clique em <strong>Contatos</strong> e depois no botão <strong>Importar planilha</strong> no canto superior direito.
+      <Step num={2} title="Adicione uma coluna de tag (opcional, mas muito útil)">
+        Para classificar seus contatos na importação, adicione uma coluna chamada <Code>tag</Code>, <Code>tipo</Code>, <Code>grupo</Code> ou <Code>etiqueta</Code>. O sistema lê qualquer uma delas. Exemplos de valores: <Code>DEVEDOR</Code>, <Code>CLIENTE</Code>, <Code>LEAD</Code>, <Code>VIP</Code>.
+        <Tip>
+          Importar com tag já resolve 90% das segmentações. Se você tem uma lista de devedores, coloque "DEVEDOR" na coluna de tag — assim já chegam organizados no sistema.
+        </Tip>
       </Step>
-      <Step num={3} title="Selecione o arquivo">
-        Arraste o arquivo ou clique para escolher. O sistema detecta automaticamente o separador do CSV (vírgula ou ponto-e-vírgula) e lê todas as abas do Excel.
+      <Step num={3} title="Acesse a página de Contatos e importe">
+        No menu lateral clique em <strong>Contatos</strong> e depois no botão <strong>Importar CSV / Excel</strong> no canto superior direito.
       </Step>
       <Step num={4} title="Aguarde o processamento">
-        O sistema importa os contatos e informa quantos foram adicionados, quantos já existiam (duplicatas são ignoradas) e quantos tiveram erro de formato.
+        O sistema importa os contatos e informa quantos foram adicionados, quantos já existiam (duplicatas têm as tags mescladas) e quantos tiveram erro de formato.
       </Step>
 
       <Warning>
         <strong>Formato do telefone:</strong> Sempre inclua o código do país (55 para Brasil) e o DDD. Exemplo: <Code>5511987654321</Code>. Telefones com formatação incorreta são descartados na importação.
       </Warning>
 
+      {/* Tags section */}
+      <h3 className="font-bold text-gray-800 mb-4 text-lg mt-10 flex items-center gap-2">
+        <Tag size={18} className="text-green-600" /> Tags (etiquetas de contatos)
+      </h3>
+      <p className="text-gray-600 text-sm leading-relaxed mb-4">
+        Tags são etiquetas coloridas que classificam seus contatos. Um contato pode ter várias tags ao mesmo tempo. As tags são sempre salvas em maiúsculo (<Code>CLIENTE</Code>, não <Code>cliente</Code>).
+      </p>
+
+      <div className="grid sm:grid-cols-3 gap-3 mb-6">
+        {[
+          { title: 'Filtrar por tag', desc: 'Na lista de contatos, clique em uma tag para ver apenas os contatos daquele grupo.' },
+          { title: 'Editar em massa', desc: 'Selecione vários contatos com as caixas de seleção e use "Alterar tag" para mudar todos de uma vez.' },
+          { title: 'Disparar por tag', desc: 'Na hora de criar uma campanha, selecione contatos pelo modo "Por tag" em vez de escolher um por um.' },
+        ].map((c) => (
+          <div key={c.title} className="bg-green-50 border border-green-200 rounded-xl p-4">
+            <p className="font-semibold text-sm text-green-800 mb-1">{c.title}</p>
+            <p className="text-xs text-green-700 leading-relaxed">{c.desc}</p>
+          </div>
+        ))}
+      </div>
+
+      <h3 className="font-bold text-gray-800 mb-3 text-base mt-6">Como editar tags em massa (exemplo prático)</h3>
+      <div className="bg-gray-50 border border-gray-200 rounded-2xl p-5 text-sm text-gray-700 space-y-3 mb-6">
+        <p className="font-semibold text-gray-800">Cenário: você tem 50 contatos com tag DEVEDOR e 10 deles pagaram. Quer mudar esses 10 para CLIENTE.</p>
+        <div className="flex gap-2.5">
+          <span className="w-5 h-5 bg-brand-600 rounded-full text-white text-xs font-black flex items-center justify-center shrink-0">1</span>
+          <span>Clique na tag <strong>DEVEDOR</strong> na barra de filtros para ver só esses contatos.</span>
+        </div>
+        <div className="flex gap-2.5">
+          <span className="w-5 h-5 bg-brand-600 rounded-full text-white text-xs font-black flex items-center justify-center shrink-0">2</span>
+          <span>Marque as caixas de seleção dos 10 que pagaram.</span>
+        </div>
+        <div className="flex gap-2.5">
+          <span className="w-5 h-5 bg-brand-600 rounded-full text-white text-xs font-black flex items-center justify-center shrink-0">3</span>
+          <span>Clique no botão <strong>Alterar tag</strong> que aparece na barra de ação.</span>
+        </div>
+        <div className="flex gap-2.5">
+          <span className="w-5 h-5 bg-brand-600 rounded-full text-white text-xs font-black flex items-center justify-center shrink-0">4</span>
+          <span>Digite <Code>CLIENTE</Code>, escolha o modo <strong>Substituir</strong> e clique em Aplicar.</span>
+        </div>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4 mb-6">
+        <div className="border-2 border-gray-200 rounded-xl p-4">
+          <p className="font-bold text-sm text-gray-800 mb-1">Modo Substituir</p>
+          <p className="text-xs text-gray-600 leading-relaxed">Remove todas as tags atuais e coloca apenas as novas. Use quando quiser reclassificar o contato completamente.</p>
+        </div>
+        <div className="border-2 border-brand-200 bg-brand-50 rounded-xl p-4">
+          <p className="font-bold text-sm text-brand-800 mb-1">Modo Adicionar</p>
+          <p className="text-xs text-brand-700 leading-relaxed">Mantém as tags existentes e adiciona as novas. Use quando quiser acumular classificações (ex: é DEVEDOR e também CAMPANHA2024).</p>
+        </div>
+      </div>
+
       <h3 className="font-bold text-gray-800 mb-4 text-lg mt-8">Adicionar contato manualmente</h3>
       <p className="text-gray-600 text-sm leading-relaxed mb-4">
-        Clique em <strong>Novo contato</strong> na página de Contatos. Preencha nome, telefone e observações (opcional). Útil para adicionar contatos avulsos sem precisar de planilha.
+        Clique em <strong>Novo contato</strong> na página de Contatos. Preencha nome, telefone, tags (separadas por vírgula) e observações (opcional).
       </p>
 
       <h3 className="font-bold text-gray-800 mb-4 text-lg mt-8">Opt-out (remoção da lista)</h3>
@@ -235,7 +291,22 @@ function CampaignsSection() {
         Escolha quais números conectados vão enviar as mensagens. Para múltiplos números, configure o <strong>Rotacionar a cada N mensagens</strong> — por exemplo, "10" significa que o sistema alterna de número a cada 10 envios.
       </Step>
       <Step num={6} title="Escolha os contatos e dispare">
-        Selecione os grupos ou contatos que vão receber a campanha. Contatos com opt-out são automaticamente excluídos. Clique em <strong>Iniciar campanha</strong>.
+        No painel direito, você pode selecionar contatos de duas formas:
+        <div className="mt-3 space-y-3">
+          <div className="flex gap-3 bg-gray-50 rounded-xl p-3 border border-gray-200">
+            <div className="font-semibold text-sm text-gray-800 min-w-24 flex items-center gap-1.5">
+              <Users size={13} className="text-gray-500" /> Individual
+            </div>
+            <div className="text-sm text-gray-600">Busque e marque os contatos um a um, ou clique em <strong>Marcar todos</strong>. Ideal para listas pequenas ou contatos específicos.</div>
+          </div>
+          <div className="flex gap-3 bg-brand-50 rounded-xl p-3 border border-brand-200">
+            <div className="font-semibold text-sm text-brand-800 min-w-24 flex items-center gap-1.5">
+              <Tag size={13} className="text-brand-600" /> Por tag
+            </div>
+            <div className="text-sm text-brand-700">Selecione uma ou mais tags. O sistema mostra quantos contatos cada tag tem e calcula automaticamente o total de destinatários. Contatos com opt-out são sempre excluídos.</div>
+          </div>
+        </div>
+        <p className="mt-3 text-sm text-gray-600">Clique em <strong>Disparar</strong> para criar a campanha e colocar as mensagens na fila.</p>
       </Step>
 
       <h3 className="font-bold text-gray-800 mb-4 text-lg mt-8">Acompanhar uma campanha</h3>
