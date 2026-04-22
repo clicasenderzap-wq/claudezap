@@ -34,13 +34,22 @@ async function sendCampaign(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
 
-  const { name, message_template, contact_ids, delay_ms = 3000, account_ids = [], include_optout = true, rotate_every = 1 } = req.body;
+  const { name, message_template, contact_ids, tags, delay_ms = 3000, account_ids = [], include_optout = true, rotate_every = 1 } = req.body;
   const optoutText = include_optout ? '\n\nPara sair desta lista, responda: SAIR' : '';
   const rotateEvery = Math.max(1, Number(rotate_every));
 
-  const contacts = await Contact.findAll({
-    where: { id: contact_ids, user_id: req.user.id, opt_out: false },
-  });
+  let contacts;
+  if (Array.isArray(tags) && tags.length) {
+    const normalizedTags = tags.map((t) => String(t).trim().toUpperCase());
+    const allContacts = await Contact.findAll({ where: { user_id: req.user.id, opt_out: false } });
+    contacts = allContacts.filter((c) =>
+      (c.tags || []).some((t) => normalizedTags.includes(String(t).trim().toUpperCase()))
+    );
+  } else {
+    contacts = await Contact.findAll({
+      where: { id: contact_ids, user_id: req.user.id, opt_out: false },
+    });
+  }
 
   if (!contacts.length) return res.status(400).json({ error: 'Nenhum contato válido selecionado' });
 

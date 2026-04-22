@@ -8,7 +8,7 @@ import { z } from 'zod';
 import {
   Megaphone, Check, RefreshCw, Trash2, Plus, History,
   X, Smartphone, BarChart2, Send, CheckCircle2, XCircle, Clock,
-  ChevronRight, Timer, Repeat2,
+  ChevronRight, Timer, Repeat2, Tag, Users,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
@@ -58,7 +58,9 @@ const CAMPAIGN_LABEL: Record<string, string> = {
 export default function CampaignsPage() {
   const qc = useQueryClient();
   const [tab, setTab] = useState<Tab>('history');
+  const [contactMode, setContactMode] = useState<'individual' | 'tag'>('individual');
   const [selected, setSelected] = useState<string[]>([]);
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [histPage, setHistPage] = useState(1);
   const [detailCampaign, setDetailCampaign] = useState<any>(null);
@@ -77,6 +79,11 @@ export default function CampaignsPage() {
     queryFn: () => api.get('/contacts', { params: { limit: 1000 } }).then((r) => r.data.data),
   });
 
+  const { data: tagsData = [] } = useQuery<{ tag: string; count: number }[]>({
+    queryKey: ['contact-tags'],
+    queryFn: () => api.get('/contacts/tags').then((r) => r.data),
+  });
+
   const { data: campaigns, isLoading: loadingCampaigns } = useQuery({
     queryKey: ['campaigns', histPage],
     queryFn: () => api.get('/campaigns', { params: { page: histPage, limit: 10 } }).then((r) => r.data),
@@ -93,13 +100,13 @@ export default function CampaignsPage() {
   const rotateEvery = watch('rotate_every', 10);
 
   const sendMutation = useMutation({
-    mutationFn: (d: FormData & { contact_ids: string[]; account_ids: string[] }) =>
+    mutationFn: (d: FormData & { contact_ids?: string[]; tags?: string[]; account_ids: string[] }) =>
       api.post('/messages/campaign', d),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['campaigns'] });
       qc.invalidateQueries({ queryKey: ['dashboard'] });
       toast.success(`Campanha criada! ${res.data.queued} mensagens na fila.`);
-      reset(); setSelected([]); setSelectedAccounts([]); setTab('history');
+      reset(); setSelected([]); setSelectedTags([]); setSelectedAccounts([]); setTab('history');
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao criar campanha'),
   });
@@ -132,13 +139,30 @@ export default function CampaignsPage() {
     const active = filtered.filter((c: any) => !c.opt_out).map((c: any) => c.id);
     setSelected(selected.length === active.length ? [] : active);
   }
+  function toggleTag(tag: string) {
+    setSelectedTags((prev) => prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]);
+  }
   function toggleAccount(id: string) {
     setSelectedAccounts((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
   }
+
+  const tagContactCount = selectedTags.reduce((sum, tag) => {
+    const t = tagsData.find((d) => d.tag === tag);
+    return sum + (t?.count ?? 0);
+  }, 0);
+
   function onSubmit(data: FormData) {
-    if (!selected.length) return toast.error('Selecione pelo menos um contato');
+    if (contactMode === 'tag') {
+      if (!selectedTags.length) return toast.error('Selecione pelo menos uma tag');
+    } else {
+      if (!selected.length) return toast.error('Selecione pelo menos um contato');
+    }
     if (!connectedAccounts.length) return toast.error('Nenhum número WhatsApp conectado.');
-    sendMutation.mutate({ ...data, contact_ids: selected, account_ids: selectedAccounts, rotate_every: data.rotate_every });
+    const payload =
+      contactMode === 'tag'
+        ? { ...data, tags: selectedTags, account_ids: selectedAccounts, rotate_every: data.rotate_every }
+        : { ...data, contact_ids: selected, account_ids: selectedAccounts, rotate_every: data.rotate_every };
+    sendMutation.mutate(payload);
   }
 
   const filtered = (contacts ?? []).filter(
@@ -363,40 +387,104 @@ export default function CampaignsPage() {
                 </div>
               )}
             </div>
-            <button type="submit" disabled={isSubmitting || !selected.length} className="btn-primary w-full">
+            <button
+              type="submit"
+              disabled={isSubmitting || (contactMode === 'individual' ? !selected.length : !selectedTags.length)}
+              className="btn-primary w-full"
+            >
               <Megaphone size={16} />
-              {isSubmitting ? 'Criando...' : `Disparar para ${selected.length} contatos`}
+              {isSubmitting
+                ? 'Criando...'
+                : contactMode === 'tag'
+                  ? `Disparar para ~${tagContactCount} contatos (${selectedTags.length} tag${selectedTags.length !== 1 ? 's' : ''})`
+                  : `Disparar para ${selected.length} contatos`}
             </button>
           </div>
 
           <div className="card overflow-hidden">
-            <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-3">
-              <span className="text-sm font-semibold text-gray-800">{selected.length} selecionados</span>
-              <button type="button" onClick={toggleAll} className="btn-secondary py-1 px-3 text-xs">
-                {selected.length === activeFiltered.length ? 'Desmarcar todos' : 'Marcar todos'}
-              </button>
+            {/* Mode toggle */}
+            <div className="px-4 py-3 border-b border-gray-200">
+              <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm">
+                <button
+                  type="button"
+                  onClick={() => setContactMode('individual')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 font-medium transition-colors ${contactMode === 'individual' ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                >
+                  <Users size={14} /> Individual
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setContactMode('tag')}
+                  className={`flex-1 flex items-center justify-center gap-1.5 py-2 font-medium transition-colors ${contactMode === 'tag' ? 'bg-brand-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}
+                >
+                  <Tag size={14} /> Por tag
+                </button>
+              </div>
             </div>
-            <div className="px-3 py-2 border-b border-gray-100">
-              <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." className="input py-1.5 text-sm" />
-            </div>
-            <div className="overflow-y-auto max-h-[420px] divide-y divide-gray-100">
-              {filtered.map((c: any) => (
-                <label key={c.id} className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 ${c.opt_out ? 'opacity-40 pointer-events-none' : ''}`}>
-                  <div
-                    className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${selected.includes(c.id) ? 'bg-brand-600 border-brand-600' : 'border-gray-300'}`}
-                    onClick={() => !c.opt_out && toggleContact(c.id)}
-                  >
-                    {selected.includes(c.id) && <Check size={10} className="text-white" />}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-gray-800 truncate">{c.name}</p>
-                    <p className="text-xs text-gray-500">{c.phone}</p>
-                  </div>
-                  {c.opt_out && <span className="badge bg-red-100 text-red-600 ml-auto">Opt-out</span>}
-                </label>
-              ))}
-              {!filtered.length && <p className="px-4 py-8 text-center text-sm text-gray-400">Nenhum contato</p>}
-            </div>
+
+            {/* Tag mode */}
+            {contactMode === 'tag' && (
+              <div className="p-4 space-y-2">
+                {tagsData.length === 0 && (
+                  <p className="text-sm text-gray-400 text-center py-6">Nenhuma tag cadastrada nos contatos</p>
+                )}
+                {tagsData.map((t) => (
+                  <label key={t.tag} className="flex items-center gap-3 px-3 py-2.5 rounded-lg border-2 cursor-pointer transition-all hover:bg-gray-50 border-gray-200">
+                    <div
+                      onClick={() => toggleTag(t.tag)}
+                      className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 cursor-pointer ${selectedTags.includes(t.tag) ? 'bg-brand-600 border-brand-600' : 'border-gray-300'}`}
+                    >
+                      {selectedTags.includes(t.tag) && <Check size={10} className="text-white" />}
+                    </div>
+                    <span className="text-sm font-semibold text-gray-800 flex-1">{t.tag}</span>
+                    <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">{t.count} contatos</span>
+                  </label>
+                ))}
+                {selectedTags.length > 0 && (
+                  <p className="text-xs text-brand-600 font-semibold pt-1">
+                    ~{tagContactCount} contatos selecionados via {selectedTags.length} tag{selectedTags.length !== 1 ? 's' : ''}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Individual mode */}
+            {contactMode === 'individual' && (
+              <>
+                <div className="px-4 py-3 border-b border-gray-200 flex items-center justify-between gap-3">
+                  <span className="text-sm font-semibold text-gray-800">{selected.length} selecionados</span>
+                  <button type="button" onClick={toggleAll} className="btn-secondary py-1 px-3 text-xs">
+                    {selected.length === activeFiltered.length ? 'Desmarcar todos' : 'Marcar todos'}
+                  </button>
+                </div>
+                <div className="px-3 py-2 border-b border-gray-100">
+                  <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." className="input py-1.5 text-sm" />
+                </div>
+                <div className="overflow-y-auto max-h-[420px] divide-y divide-gray-100">
+                  {filtered.map((c: any) => (
+                    <label key={c.id} className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 ${c.opt_out ? 'opacity-40 pointer-events-none' : ''}`}>
+                      <div
+                        className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${selected.includes(c.id) ? 'bg-brand-600 border-brand-600' : 'border-gray-300'}`}
+                        onClick={() => !c.opt_out && toggleContact(c.id)}
+                      >
+                        {selected.includes(c.id) && <Check size={10} className="text-white" />}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-800 truncate">{c.name}</p>
+                        <p className="text-xs text-gray-500">{c.phone}</p>
+                      </div>
+                      {(c.tags || []).length > 0 && (
+                        <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full shrink-0 max-w-[80px] truncate">
+                          {c.tags[0]}
+                        </span>
+                      )}
+                      {c.opt_out && <span className="badge bg-red-100 text-red-600 ml-auto">Opt-out</span>}
+                    </label>
+                  ))}
+                  {!filtered.length && <p className="px-4 py-8 text-center text-sm text-gray-400">Nenhum contato</p>}
+                </div>
+              </>
+            )}
           </div>
         </form>
       )}

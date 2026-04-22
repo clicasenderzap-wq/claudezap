@@ -3,6 +3,8 @@ const { body } = require('express-validator');
 const ctrl = require('../controllers/contactController');
 const upload = require('../middleware/upload');
 
+router.get('/tags', ctrl.listTags);
+router.put('/bulk-tags', ctrl.bulkUpdateTags);
 router.get('/', ctrl.list);
 router.post('/', [
   body('name').notEmpty().trim(),

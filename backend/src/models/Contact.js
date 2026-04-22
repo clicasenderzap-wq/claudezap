@@ -27,6 +27,10 @@ const Contact = sequelize.define('Contact', {
     type: DataTypes.BOOLEAN,
     defaultValue: false,
   },
+  tags: {
+    type: DataTypes.JSON,
+    defaultValue: [],
+  },
 }, {
   tableName: 'contacts',
   underscored: true,
