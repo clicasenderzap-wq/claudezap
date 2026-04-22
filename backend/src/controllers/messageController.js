@@ -34,8 +34,9 @@ async function sendCampaign(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
 
-  const { name, message_template, contact_ids, delay_ms = 3000, account_ids = [], include_optout = true } = req.body;
+  const { name, message_template, contact_ids, delay_ms = 3000, account_ids = [], include_optout = true, rotate_every = 1 } = req.body;
   const optoutText = include_optout ? '\n\nPara sair desta lista, responda: SAIR' : '';
+  const rotateEvery = Math.max(1, Number(rotate_every));
 
   const contacts = await Contact.findAll({
     where: { id: contact_ids, user_id: req.user.id, opt_out: false },
@@ -64,6 +65,7 @@ async function sendCampaign(req, res) {
     status: 'running',
     total_contacts: contacts.length,
     delay_ms,
+    rotate_every: rotateEvery,
     account_ids: connectedAccounts.map((a) => a.id),
   });
 
@@ -72,7 +74,7 @@ async function sendCampaign(req, res) {
       user_id: req.user.id,
       contact_id: c.id,
       campaign_id: campaign.id,
-      account_id: connectedAccounts[i % connectedAccounts.length].id,
+      account_id: connectedAccounts[Math.floor(i / rotateEvery) % connectedAccounts.length].id,
       content: applyTemplate(message_template, c) + optoutText,
       status: 'queued',
     }))
@@ -81,7 +83,7 @@ async function sendCampaign(req, res) {
   const jobs = messages.map((m, i) => ({
     messageId: m.id,
     userId: req.user.id,
-    accountId: connectedAccounts[i % connectedAccounts.length].id,
+    accountId: connectedAccounts[Math.floor(i / rotateEvery) % connectedAccounts.length].id,
     phone: contacts[i].phone,
     content: m.content,
   }));

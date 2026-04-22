@@ -46,6 +46,11 @@ const Campaign = sequelize.define('Campaign', {
     allowNull: true,
     defaultValue: [],
   },
+  rotate_every: {
+    type: DataTypes.INTEGER,
+    defaultValue: 1,
+    comment: 'Switch to next account every N messages',
+  },
 }, {
   tableName: 'campaigns',
   underscored: true,

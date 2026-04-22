@@ -8,7 +8,7 @@ import { z } from 'zod';
 import {
   Megaphone, Check, RefreshCw, Trash2, Plus, History,
   X, Smartphone, BarChart2, Send, CheckCircle2, XCircle, Clock,
-  ChevronRight,
+  ChevronRight, Timer, Repeat2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
@@ -17,10 +17,20 @@ import { formatDate } from '@/lib/utils';
 const schema = z.object({
   name: z.string().min(1, 'Obrigatório'),
   message_template: z.string().min(1, 'Obrigatório'),
-  delay_ms: z.number().min(1000).default(3000),
+  delay_ms: z.number().min(1000).default(5000),
+  rotate_every: z.number().min(1).default(10),
   include_optout: z.boolean().default(true),
 });
 type FormData = z.infer<typeof schema>;
+
+const DELAY_PRESETS = [
+  { label: '3s', value: 3000 },
+  { label: '5s', value: 5000 },
+  { label: '10s', value: 10000 },
+  { label: '15s', value: 15000 },
+  { label: '30s', value: 30000 },
+  { label: '60s', value: 60000 },
+];
 
 type Tab = 'history' | 'new';
 
@@ -72,13 +82,15 @@ export default function CampaignsPage() {
     queryFn: () => api.get('/campaigns', { params: { page: histPage, limit: 10 } }).then((r) => r.data),
   });
 
-  const { register, handleSubmit, watch, reset, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, watch, reset, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { delay_ms: 3000, include_optout: true },
+    defaultValues: { delay_ms: 5000, rotate_every: 10, include_optout: true },
   });
 
   const template = watch('message_template', '');
   const includeOptout = watch('include_optout', true);
+  const delayMs = watch('delay_ms', 5000);
+  const rotateEvery = watch('rotate_every', 10);
 
   const sendMutation = useMutation({
     mutationFn: (d: FormData & { contact_ids: string[]; account_ids: string[] }) =>
@@ -126,7 +138,7 @@ export default function CampaignsPage() {
   function onSubmit(data: FormData) {
     if (!selected.length) return toast.error('Selecione pelo menos um contato');
     if (!connectedAccounts.length) return toast.error('Nenhum número WhatsApp conectado.');
-    sendMutation.mutate({ ...data, contact_ids: selected, account_ids: selectedAccounts });
+    sendMutation.mutate({ ...data, contact_ids: selected, account_ids: selectedAccounts, rotate_every: data.rotate_every });
   }
 
   const filtered = (contacts ?? []).filter(
@@ -257,11 +269,56 @@ export default function CampaignsPage() {
                 {errors.message_template && <p className="text-red-500 text-xs mt-1">{errors.message_template.message}</p>}
                 <p className="text-xs text-gray-400 mt-1">Variáveis: <code className="bg-gray-100 px-1 rounded">{'{{nome}}'}</code></p>
               </div>
+              {/* Delay entre mensagens */}
               <div>
-                <label className="label">Delay entre mensagens (ms)</label>
-                <input {...register('delay_ms', { valueAsNumber: true })} type="number" min={1000} step={500} className="input" />
-                <p className="text-xs text-gray-400 mt-1">Mínimo: 1000ms. Recomendado: 3000ms+</p>
+                <label className="label flex items-center gap-1.5"><Timer size={13} /> Tempo entre mensagens</label>
+                <div className="flex flex-wrap gap-2 mt-1">
+                  {DELAY_PRESETS.map((p) => (
+                    <button
+                      key={p.value}
+                      type="button"
+                      onClick={() => setValue('delay_ms', p.value)}
+                      className={`px-3 py-1.5 rounded-lg text-sm border transition-colors ${delayMs === p.value ? 'bg-brand-600 text-white border-brand-600' : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'}`}
+                    >
+                      {p.label}
+                    </button>
+                  ))}
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      {...register('delay_ms', { valueAsNumber: true })}
+                      type="number" min={1000} step={500}
+                      className="input w-24 py-1.5 text-sm"
+                      placeholder="custom"
+                    />
+                    <span className="text-xs text-gray-400">ms</span>
+                  </div>
+                </div>
+                <p className="text-xs text-gray-400 mt-1">
+                  Atual: <strong>{(delayMs / 1000).toFixed(1)}s</strong> entre cada mensagem. Recomendado: 5s+
+                </p>
               </div>
+
+              {/* Rotação de número */}
+              {connectedAccounts.length > 1 && (
+                <div>
+                  <label className="label flex items-center gap-1.5"><Repeat2 size={13} /> Trocar número a cada</label>
+                  <div className="flex items-center gap-3 mt-1">
+                    <input
+                      {...register('rotate_every', { valueAsNumber: true })}
+                      type="range" min={1} max={50} step={1}
+                      className="flex-1 accent-brand-600"
+                    />
+                    <span className="font-semibold text-gray-800 w-28 text-sm">
+                      {rotateEvery === 1 ? 'cada msg' : `${rotateEvery} mensagens`}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {rotateEvery === 1
+                      ? 'Alterna o número a cada mensagem enviada'
+                      : `Envia ${rotateEvery} mensagens pelo mesmo número antes de trocar`}
+                  </p>
+                </div>
+              )}
 
               {/* Opt-out */}
               <label className="flex items-center gap-2.5 cursor-pointer">
@@ -355,7 +412,11 @@ export default function CampaignsPage() {
                 <BarChart2 size={20} className="text-brand-600" />
                 <div>
                   <h2 className="font-semibold text-gray-900">{detailCampaign.name}</h2>
-                  <p className="text-xs text-gray-400">{formatDate(detailCampaign.createdAt ?? detailCampaign.created_at)}</p>
+                  <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
+                <span>{formatDate(detailCampaign.createdAt ?? detailCampaign.created_at)}</span>
+                {detailCampaign.delay_ms && <span className="flex items-center gap-1"><Timer size={11} /> {(detailCampaign.delay_ms / 1000).toFixed(0)}s entre msgs</span>}
+                {detailCampaign.rotate_every > 1 && <span className="flex items-center gap-1"><Repeat2 size={11} /> troca a cada {detailCampaign.rotate_every} msgs</span>}
+              </div>
                 </div>
               </div>
               <button onClick={() => setDetailCampaign(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>

@@ -55,6 +55,8 @@ async function resend(req, res) {
   if (!accountsToUse.length) accountsToUse = connectedAccounts;
   if (!accountsToUse.length) return res.status(400).json({ error: 'Nenhuma conta WhatsApp conectada' });
 
+  const rotateEvery = Math.max(1, original.rotate_every || 1);
+
   const newCampaign = await Campaign.create({
     user_id: req.user.id,
     name: `${original.name} (Reenvio)`,
@@ -62,6 +64,7 @@ async function resend(req, res) {
     status: 'running',
     total_contacts: contacts.length,
     delay_ms: original.delay_ms,
+    rotate_every: rotateEvery,
     account_ids: accountsToUse.map((a) => a.id),
   });
 
@@ -70,7 +73,7 @@ async function resend(req, res) {
       user_id: req.user.id,
       contact_id: c.id,
       campaign_id: newCampaign.id,
-      account_id: accountsToUse[i % accountsToUse.length].id,
+      account_id: accountsToUse[Math.floor(i / rotateEvery) % accountsToUse.length].id,
       content: applyTemplate(original.message_template, c) + '\n\nPara sair desta lista, responda: SAIR',
       status: 'queued',
     }))
@@ -79,7 +82,7 @@ async function resend(req, res) {
   const jobs = messages.map((m, i) => ({
     messageId: m.id,
     userId: req.user.id,
-    accountId: accountsToUse[i % accountsToUse.length].id,
+    accountId: accountsToUse[Math.floor(i / rotateEvery) % accountsToUse.length].id,
     phone: contacts[i].phone,
     content: m.content,
   }));
