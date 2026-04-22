@@ -7,6 +7,10 @@ interface User {
   id: string;
   name: string;
   email: string;
+  role?: 'user' | 'admin';
+  plan?: 'starter' | 'pro';
+  status?: 'trial' | 'active' | 'inactive';
+  trial_ends_at?: string | null;
 }
 
 interface AuthState {

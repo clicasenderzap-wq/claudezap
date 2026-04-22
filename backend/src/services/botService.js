@@ -1,0 +1,116 @@
+const { BotConfig, BotConversation, WhatsappAccount } = require('../models');
+const whatsapp = require('./whatsappService');
+
+const ESCALATION_SIGNALS = [
+  'transferir para atendente',
+  'falar com humano',
+  'atendente humano',
+  'falar com pessoa',
+  'precisa de atendimento humano',
+  '[[ESCALAR]]',
+];
+
+function needsEscalation(text) {
+  const lower = text.toLowerCase();
+  return ESCALATION_SIGNALS.some((s) => lower.includes(s));
+}
+
+async function callAI(config, messages) {
+  if (!config.ai_api_key) throw new Error('Chave de API não configurada');
+
+  if (config.ai_provider === 'anthropic') {
+    const Anthropic = require('@anthropic-ai/sdk');
+    const client = new Anthropic({ apiKey: config.ai_api_key });
+
+    const response = await client.messages.create({
+      model: config.ai_model || 'claude-haiku-4-5-20251001',
+      max_tokens: 500,
+      system: config.system_prompt + '\n\nSe o cliente precisar de atendimento humano especializado ou se você não conseguir resolver o problema, inclua exatamente [[ESCALAR]] na sua resposta.',
+      messages,
+    });
+    return response.content[0].text;
+  }
+
+  if (config.ai_provider === 'openai') {
+    const { default: OpenAI } = require('openai');
+    const client = new OpenAI({ apiKey: config.ai_api_key });
+
+    const response = await client.chat.completions.create({
+      model: config.ai_model || 'gpt-4o-mini',
+      max_tokens: 500,
+      messages: [
+        { role: 'system', content: config.system_prompt + '\n\nSe o cliente precisar de atendimento humano especializado ou se você não conseguir resolver o problema, inclua exatamente [[ESCALAR]] na sua resposta.' },
+        ...messages,
+      ],
+    });
+    return response.choices[0].message.content;
+  }
+
+  throw new Error('Provedor de IA não suportado');
+}
+
+async function handleMessage(accountId, fromPhone, text) {
+  const config = await BotConfig.findOne({ where: { account_id: accountId, enabled: true } });
+  if (!config) return;
+
+  // Horário comercial
+  if (config.business_hours_only) {
+    const hour = new Date().getHours();
+    if (hour < config.start_hour || hour >= config.end_hour) return;
+  }
+
+  // Busca ou cria conversa
+  let conv = await BotConversation.findOne({ where: { account_id: accountId, contact_phone: fromPhone } });
+
+  if (!conv) {
+    conv = await BotConversation.create({ account_id: accountId, contact_phone: fromPhone, messages: [] });
+    // Envia mensagem de boas-vindas
+    if (config.welcome_message) {
+      await whatsapp.sendText(accountId, fromPhone, config.welcome_message);
+      const msgs = [{ role: 'assistant', content: config.welcome_message, ts: Date.now() }];
+      await conv.update({ messages: msgs, last_message_at: new Date() });
+      conv.messages = msgs;
+    }
+  }
+
+  // Conversa já escalada ou fechada: ignora
+  if (conv.status === 'escalated' || conv.status === 'closed') return;
+
+  // Adiciona mensagem do cliente ao histórico
+  const history = [...(conv.messages || []), { role: 'user', content: text, ts: Date.now() }];
+
+  // Limite de turns: escala automaticamente
+  const userTurns = history.filter((m) => m.role === 'user').length;
+  if (userTurns > config.max_turns) {
+    await conv.update({ messages: history, status: 'escalated', last_message_at: new Date() });
+    await whatsapp.sendText(accountId, fromPhone, config.escalation_message);
+    return;
+  }
+
+  // Chama IA com o histórico (últimas 20 msgs para não estourar tokens)
+  const aiMessages = history.slice(-20).map((m) => ({ role: m.role, content: m.content }));
+  let reply;
+  try {
+    reply = await callAI(config, aiMessages);
+  } catch (err) {
+    console.error('[Bot] erro na IA:', err.message);
+    return;
+  }
+
+  // Verifica se precisa escalar
+  const shouldEscalate = needsEscalation(reply);
+  const cleanReply = reply.replace('[[ESCALAR]]', '').trim();
+
+  const newHistory = [...history, { role: 'assistant', content: cleanReply, ts: Date.now() }];
+
+  if (shouldEscalate) {
+    await conv.update({ messages: newHistory, status: 'escalated', last_message_at: new Date() });
+    if (cleanReply) await whatsapp.sendText(accountId, fromPhone, cleanReply);
+    await whatsapp.sendText(accountId, fromPhone, config.escalation_message);
+  } else {
+    await conv.update({ messages: newHistory, last_message_at: new Date() });
+    await whatsapp.sendText(accountId, fromPhone, cleanReply);
+  }
+}
+
+module.exports = { handleMessage };

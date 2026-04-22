@@ -18,10 +18,11 @@ async function register(req, res) {
     if (existing) return res.status(409).json({ error: 'Email já cadastrado' });
 
     const password_hash = await User.hashPassword(password);
-    const user = await User.create({ name, email, password_hash });
+    const trial_ends_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const user = await User.create({ name, email, password_hash, plan: 'starter', status: 'trial', trial_ends_at });
     const token = signToken(user.id);
 
-    res.status(201).json({ token, user: { id: user.id, name: user.name, email: user.email } });
+    res.status(201).json({ token, user: { id: user.id, name: user.name, email: user.email, plan: user.plan, status: user.status, role: user.role, trial_ends_at: user.trial_ends_at } });
   } catch (err) {
     res.status(500).json({ error: 'Erro interno' });
   }
@@ -40,7 +41,7 @@ async function login(req, res) {
     if (!valid) return res.status(401).json({ error: 'Credenciais inválidas' });
 
     const token = signToken(user.id);
-    res.json({ token, user: { id: user.id, name: user.name, email: user.email } });
+    res.json({ token, user: { id: user.id, name: user.name, email: user.email, plan: user.plan, status: user.status, role: user.role, trial_ends_at: user.trial_ends_at } });
   } catch {
     res.status(500).json({ error: 'Erro interno' });
   }

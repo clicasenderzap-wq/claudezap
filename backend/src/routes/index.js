@@ -8,5 +8,7 @@ router.use('/campaigns', auth, require('./campaigns'));
 router.use('/whatsapp', auth, require('./whatsapp'));
 router.use('/dashboard', auth, require('./dashboard'));
 router.use('/warmup', auth, require('./warmup'));
+router.use('/bot', auth, require('./bot'));
+router.use('/admin', auth, require('./admin'));
 
 module.exports = router;

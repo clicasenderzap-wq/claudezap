@@ -2,6 +2,7 @@ const QRCode = require('qrcode');
 const whatsapp = require('../services/whatsappService');
 const { WhatsappAccount } = require('../models');
 const optout = require('../services/optoutService');
+const bot = require('../services/botService');
 
 const pendingQR = new Map();
 
@@ -20,8 +21,16 @@ whatsapp.on('ready', async ({ accountId, phone }) => {
 whatsapp.on('message.received', async ({ accountId, from, text }) => {
   const account = await WhatsappAccount.findByPk(accountId).catch(() => null);
   if (!account) return;
+
   const removed = await optout.handleIncoming(account.user_id, from, text).catch(() => false);
-  if (removed) console.log(`[Optout] via conta ${account.label}: ${from} saiu da lista`);
+  if (removed) {
+    console.log(`[Optout] via conta ${account.label}: ${from} saiu da lista`);
+    return; // opt-out tem prioridade: não processa o bot
+  }
+
+  bot.handleMessage(accountId, from, text).catch((e) =>
+    console.error('[Bot] erro ao processar mensagem:', e.message)
+  );
 });
 
 whatsapp.on('disconnected', async ({ accountId }) => {
@@ -47,6 +56,15 @@ async function list(req, res) {
 }
 
 async function create(req, res) {
+  const { limitCheck } = require('../middleware/planGuard');
+  const { WhatsappAccount: WA } = require('../models');
+  const count = await WA.count({ where: { user_id: req.user.id } });
+  const limits = { starter: 3, pro: 6 };
+  const max = limits[req.user.plan] ?? 3;
+  if (count >= max) {
+    return res.status(403).json({ error: `Limite do seu plano atingido (${max} números). Faça upgrade para continuar.` });
+  }
+
   const { label = 'Novo número' } = req.body;
   const account = await WhatsappAccount.create({
     user_id: req.user.id,

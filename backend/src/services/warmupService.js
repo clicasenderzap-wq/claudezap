@@ -107,8 +107,11 @@ class WarmupService {
     });
     if (sentToday >= config.messages_per_day) return;
 
-    // Contas conectadas com número identificado
-    const accounts = await WhatsappAccount.findAll({ where: { user_id: config.user_id } });
+    // Contas conectadas com número identificado (filtra pelas selecionadas se houver)
+    const selectedIds = config.account_ids || [];
+    const where = { user_id: config.user_id };
+    if (selectedIds.length) where.id = selectedIds;
+    const accounts = await WhatsappAccount.findAll({ where });
     const connected = accounts.filter((a) => whatsapp.getStatus(a.id) === 'connected' && a.phone);
 
     if (connected.length < 2) {

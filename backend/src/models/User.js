@@ -22,6 +22,26 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: false,
   },
+  role: {
+    type: DataTypes.ENUM('user', 'admin'),
+    defaultValue: 'user',
+  },
+  plan: {
+    type: DataTypes.ENUM('starter', 'pro'),
+    defaultValue: 'starter',
+  },
+  status: {
+    type: DataTypes.ENUM('trial', 'active', 'inactive'),
+    defaultValue: 'trial',
+  },
+  trial_ends_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  whatsapp_support: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
 }, {
   tableName: 'users',
   underscored: true,
