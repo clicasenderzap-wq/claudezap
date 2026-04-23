@@ -3,6 +3,7 @@ const {
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
+  Browsers,
 } = require('@whiskeysockets/baileys');
 const { EventEmitter } = require('events');
 const { useRedisAuthState, deleteSession, hasSession } = require('./waSessionStore');
@@ -64,6 +65,9 @@ class WhatsAppService extends EventEmitter {
         creds: state.creds,
         keys: makeCacheableSignalKeyStore(state.keys, silentLogger),
       },
+      browser: Browsers.ubuntu('Chrome'),
+      syncFullHistory: false,
+      connectTimeoutMs: 60_000,
       printQRInTerminal: false,
       logger: silentLogger,
     });
