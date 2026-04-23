@@ -14,5 +14,6 @@ router.use('/dashboard', auth, require('./dashboard'));
 router.use('/warmup', auth, require('./warmup'));
 router.use('/bot', auth, require('./bot'));
 router.use('/admin', auth, require('./admin'));
+router.use('/media', auth, require('./media'));
 
 module.exports = router;

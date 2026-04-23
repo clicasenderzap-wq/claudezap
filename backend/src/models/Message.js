@@ -43,6 +43,18 @@ const Message = sequelize.define('Message', {
     type: DataTypes.UUID,
     allowNull: true,
   },
+  media_url: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+  },
+  media_type: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  media_filename: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
 }, {
   tableName: 'messages',
   underscored: true,

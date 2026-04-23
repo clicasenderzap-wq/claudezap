@@ -16,7 +16,7 @@ async function sendSingle(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
 
-  const { contact_id, content } = req.body;
+  const { contact_id, content, media_url, media_type, media_filename } = req.body;
   const contact = await Contact.findOne({ where: { id: contact_id, user_id: req.user.id } });
   if (!contact) return res.status(404).json({ error: 'Contato não encontrado' });
   if (contact.opt_out) return res.status(400).json({ error: 'Contato optou por não receber mensagens' });
@@ -26,6 +26,7 @@ async function sendSingle(req, res) {
     contact_id: contact.id,
     content: applyTemplate(content, contact),
     status: 'queued',
+    ...(media_url && { media_url, media_type, media_filename }),
   });
 
   await enqueueMessage(msg.id, req.user.id, contact.phone, msg.content);
@@ -41,6 +42,7 @@ async function sendCampaign(req, res) {
     include_optout = true, rotate_every = 1, scheduled_for,
     exclude_contacted = false,
     batch_mode = false, batch_size = 50, batch_interval_hours = 8,
+    media_url, media_type, media_filename,
   } = req.body;
   const optoutText = include_optout ? '\n\nPara sair desta lista, responda: SAIR' : '';
   const rotateEvery = Math.max(1, Number(rotate_every));
@@ -115,6 +117,7 @@ async function sendCampaign(req, res) {
       account_id: connectedAccounts[Math.floor(i / rotateEvery) % connectedAccounts.length].id,
       content: applyTemplate(message_template, c) + optoutText,
       status: 'queued',
+      ...(media_url && { media_url, media_type, media_filename }),
     }))
   );
 

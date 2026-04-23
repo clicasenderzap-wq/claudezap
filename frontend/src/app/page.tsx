@@ -6,6 +6,7 @@ import {
   Send, Flame, Bot, Smartphone, BarChart2, Check, ChevronDown, ChevronUp,
   Zap, Shield, Users, Star, ArrowRight, Menu, X, Sparkles,
   AlertTriangle, Lock, ShieldCheck, FileText, Link2, ClipboardCheck,
+  Layers, Paperclip, UserCheck,
 } from 'lucide-react';
 
 // ─── Contato WhatsApp ─────────────────────────────────────────────────────────
@@ -21,38 +22,65 @@ const FEATURES = [
   {
     icon: Send,
     title: 'Disparos em massa',
-    desc: 'Envie campanhas para milhares de contatos com delay inteligente entre mensagens — reduzindo drasticamente o risco de banimento.',
+    desc: 'Envie campanhas para milhares de contatos com delay inteligente entre mensagens — com texto, imagens, PDFs ou qualquer arquivo.',
     color: 'bg-green-100 text-green-600',
+    badge: null,
+  },
+  {
+    icon: Layers,
+    title: 'Envio em Lotes Anti-Bloqueio',
+    desc: 'Divida campanhas grandes em grupos de 50 com intervalo de horas entre eles. O Meta restringe quem envia demais de uma vez — aqui você fica protegido.',
+    color: 'bg-orange-100 text-orange-600',
+    badge: 'Novo',
+  },
+  {
+    icon: Paperclip,
+    title: 'Envio de arquivos',
+    desc: 'Anexe fotos, PDFs, planilhas Excel, documentos Word e vídeos direto na campanha. Todos os destinatários recebem o arquivo via WhatsApp.',
+    color: 'bg-teal-100 text-teal-600',
+    badge: 'Novo',
   },
   {
     icon: Flame,
-    title: 'Aquecimento de números',
-    desc: 'Seus números trocam mensagens automáticas entre si, construindo histórico de conversas e aumentando a reputação no WhatsApp.',
-    color: 'bg-orange-100 text-orange-600',
+    title: 'Aquecimento inteligente',
+    desc: 'Seus números simulam conversas reais sobre músicas, filmes, livros e mais — construindo reputação no WhatsApp sem padrões repetitivos.',
+    color: 'bg-red-100 text-red-600',
+    badge: null,
+  },
+  {
+    icon: UserCheck,
+    title: 'Rastreamento de contactados',
+    desc: 'O sistema marca quem já recebeu sua mensagem. Crie novas campanhas filtrando apenas quem ainda não foi atingido — zero reenvio acidental.',
+    color: 'bg-indigo-100 text-indigo-600',
+    badge: 'Novo',
   },
   {
     icon: Bot,
     title: 'Bot de atendimento com IA',
     desc: 'Configure um assistente virtual que responde clientes 24h por dia, entende o contexto e sabe quando chamar um humano.',
     color: 'bg-blue-100 text-blue-600',
+    badge: null,
   },
   {
     icon: Smartphone,
     title: 'Múltiplos números',
     desc: 'Conecte até 6 números WhatsApp e distribua envios automaticamente entre eles para escalar sem pausas.',
     color: 'bg-purple-100 text-purple-600',
+    badge: null,
   },
   {
     icon: BarChart2,
     title: 'Relatórios em tempo real',
-    desc: 'Acompanhe enviadas, entregues, falhas e opt-outs de cada campanha em um dashboard limpo e objetivo.',
+    desc: 'Acompanhe enviadas, entregues, falhas e opt-outs de cada campanha — inclusive progresso de cada lote de envio.',
     color: 'bg-yellow-100 text-yellow-600',
+    badge: null,
   },
   {
     icon: Users,
     title: 'Gestão de contatos',
-    desc: 'Importe planilhas Excel ou CSV, filtre opt-outs automaticamente e mantenha sua base sempre limpa e atualizada.',
+    desc: 'Importe planilhas Excel ou CSV, filtre por tags, visualize quem foi contactado e mantenha sua base sempre limpa e atualizada.',
     color: 'bg-pink-100 text-pink-600',
+    badge: null,
   },
 ];
 
@@ -128,6 +156,14 @@ const FAQS = [
   {
     q: 'Preciso pagar pela IA do bot separado?',
     a: 'Sim. O bot usa sua própria chave de API (Anthropic ou OpenAI). O custo é muito baixo — cerca de R$0,01 a R$0,07 por conversa completa — e você paga diretamente ao provedor de IA, sem taxas adicionais da nossa parte.',
+  },
+  {
+    q: 'O que é o envio em lotes e por que evita bloqueios?',
+    a: 'O Meta (WhatsApp) restringe números que enviam muitas mensagens para contatos diferentes de forma rápida — o número pode ficar limitado por 24h. O modo de envio em lotes divide a campanha em grupos (ex: 50 por vez) com um intervalo de horas entre cada grupo. Assim o comportamento parece mais natural e o risco de restrição cai drasticamente.',
+  },
+  {
+    q: 'Que tipos de arquivo posso enviar em uma campanha?',
+    a: 'Você pode anexar imagens (JPG, PNG, WebP), PDFs, documentos Word (.docx), planilhas Excel (.xlsx), apresentações PowerPoint, vídeos (MP4, AVI) e áudios (MP3, OGG). Os arquivos são hospedados em nuvem e entregues via WhatsApp para todos os destinatários da campanha.',
   },
   {
     q: 'Posso cancelar a qualquer momento?',
@@ -356,10 +392,10 @@ export default function LandingPage() {
               {/* BAB: AFTER (bullets) */}
               <ul className="space-y-3 mb-10">
                 {[
-                  'Envios em massa com delay inteligente entre mensagens',
+                  'Envios em lotes anti-bloqueio — até 50 por vez com intervalo configurável',
+                  'Envie fotos, PDFs, planilhas e documentos Word para toda a lista',
                   'Bot de IA que vende e atende enquanto você dorme',
-                  'Múltiplos números gerenciados num único painel',
-                  'Relatórios completos de entrega e engajamento',
+                  'Rastreamento de quem já recebeu — nunca reenvie acidentalmente',
                 ].map((b) => (
                   <li key={b} className="flex items-start gap-3 text-sm text-gray-700">
                     <span className="mt-0.5 w-5 h-5 bg-green-600 rounded-full flex items-center justify-center shrink-0">
@@ -445,7 +481,12 @@ export default function LandingPage() {
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {FEATURES.map((f) => (
-                <div key={f.title} className="bg-white border border-gray-100 rounded-3xl p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
+                <div key={f.title} className="relative bg-white border border-gray-100 rounded-3xl p-7 shadow-sm hover:shadow-lg hover:-translate-y-1 transition-all duration-200">
+                  {f.badge && (
+                    <span className="absolute top-5 right-5 bg-green-600 text-white text-[10px] font-black px-2.5 py-0.5 rounded-full uppercase tracking-wide">
+                      {f.badge}
+                    </span>
+                  )}
                   <div className={`w-12 h-12 rounded-2xl ${f.color} flex items-center justify-center mb-5`}>
                     <f.icon size={22} />
                   </div>

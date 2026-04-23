@@ -26,7 +26,12 @@ const worker = new Worker(
     }
 
     try {
-      const waId = await whatsapp.sendText(senderId, phone, content);
+      let waId;
+      if (message.media_url) {
+        waId = await whatsapp.sendMedia(senderId, phone, message.media_url, message.media_type, message.media_filename, content);
+      } else {
+        waId = await whatsapp.sendText(senderId, phone, content);
+      }
       await message.update({ status: 'sent', wa_message_id: waId, sent_at: new Date(), account_id: senderId });
       if (message.campaign_id) {
         await Campaign.increment('sent_count', { where: { id: message.campaign_id } }).catch(() => {});

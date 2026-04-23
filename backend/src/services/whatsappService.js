@@ -107,6 +107,34 @@ class WhatsAppService extends EventEmitter {
     return result.key.id;
   }
 
+  async sendMedia(accountId, phone, mediaUrl, mediaType, fileName, caption = '') {
+    const sock = this.sockets.get(accountId);
+    if (!sock) throw new Error('WhatsApp não conectado');
+
+    const jid = this._toJid(phone);
+
+    // Download file buffer from storage URL
+    const response = await fetch(mediaUrl);
+    if (!response.ok) throw new Error(`Falha ao baixar arquivo de mídia: ${response.status}`);
+    const buffer = Buffer.from(await response.arrayBuffer());
+
+    if (mediaType.startsWith('image/')) {
+      const result = await sock.sendMessage(jid, { image: buffer, caption });
+      return result.key.id;
+    }
+    if (mediaType.startsWith('video/')) {
+      const result = await sock.sendMessage(jid, { video: buffer, caption });
+      return result.key.id;
+    }
+    if (mediaType.startsWith('audio/')) {
+      const result = await sock.sendMessage(jid, { audio: buffer, mimetype: mediaType, ptt: false });
+      return result.key.id;
+    }
+    // Default: document (PDF, Word, Excel, etc.)
+    const result = await sock.sendMessage(jid, { document: buffer, mimetype: mediaType, fileName: fileName || 'arquivo' });
+    return result.key.id;
+  }
+
   async disconnect(accountId) {
     const sock = this.sockets.get(accountId);
     if (sock) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,7 +9,7 @@ import {
   Megaphone, Check, RefreshCw, Trash2, Plus, History,
   X, Smartphone, BarChart2, Send, CheckCircle2, XCircle, Clock,
   ChevronRight, Timer, Repeat2, Tag, Users, CalendarClock, ShieldCheck,
-  Layers, AlertTriangle, UserX,
+  Layers, AlertTriangle, UserX, Paperclip, FileText, Image, Film, Music, Loader2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
@@ -74,6 +74,9 @@ export default function CampaignsPage() {
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [msgFilter, setMsgFilter] = useState<string>('all');
   const [consentConfirmed, setConsentConfirmed] = useState(false);
+  const [mediaFile, setMediaFile] = useState<{ url: string; name: string; type: string; size: number; category: string } | null>(null);
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
 
   const { data: waAccounts = [] } = useQuery<any[]>({
     queryKey: ['wa-accounts'],
@@ -123,7 +126,7 @@ export default function CampaignsPage() {
       } else {
         toast.success(`Campanha criada! ${res.data.queued} mensagens na fila.`);
       }
-      reset(); setSelected([]); setSelectedTags([]); setSelectedAccounts([]); setTab('history');
+      reset(); setSelected([]); setSelectedTags([]); setSelectedAccounts([]); setMediaFile(null); setTab('history');
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao criar campanha'),
   });
@@ -168,6 +171,31 @@ export default function CampaignsPage() {
     return sum + (t?.count ?? 0);
   }, 0);
 
+  async function handleMediaUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = '';
+    setUploadingMedia(true);
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      const res = await api.post('/media/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      setMediaFile(res.data);
+      toast.success('Arquivo anexado com sucesso!');
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || 'Erro ao enviar arquivo');
+    } finally {
+      setUploadingMedia(false);
+    }
+  }
+
+  function mediaIcon(category: string) {
+    if (category === 'image') return <Image size={14} className="text-blue-500" />;
+    if (category === 'video') return <Film size={14} className="text-purple-500" />;
+    if (category === 'audio') return <Music size={14} className="text-green-500" />;
+    return <FileText size={14} className="text-orange-500" />;
+  }
+
   function onSubmit(data: FormData) {
     if (contactMode === 'tag') {
       if (!selectedTags.length) return toast.error('Selecione pelo menos uma tag');
@@ -179,10 +207,13 @@ export default function CampaignsPage() {
     if (data.scheduled_for && new Date(data.scheduled_for) <= new Date()) {
       return toast.error('O horário agendado deve ser no futuro');
     }
+    const mediaPayload = mediaFile
+      ? { media_url: mediaFile.url, media_type: mediaFile.type, media_filename: mediaFile.name }
+      : {};
     const payload =
       contactMode === 'tag'
-        ? { ...data, tags: selectedTags, account_ids: selectedAccounts, rotate_every: data.rotate_every }
-        : { ...data, contact_ids: selected, account_ids: selectedAccounts, rotate_every: data.rotate_every };
+        ? { ...data, tags: selectedTags, account_ids: selectedAccounts, rotate_every: data.rotate_every, ...mediaPayload }
+        : { ...data, contact_ids: selected, account_ids: selectedAccounts, rotate_every: data.rotate_every, ...mediaPayload };
     sendMutation.mutate(payload);
   }
 
@@ -323,6 +354,41 @@ export default function CampaignsPage() {
                 {errors.message_template && <p className="text-red-500 text-xs mt-1">{errors.message_template.message}</p>}
                 <p className="text-xs text-gray-400 mt-1">Variáveis: <code className="bg-gray-100 px-1 rounded">{'{{nome}}'}</code></p>
               </div>
+
+              {/* Anexo de mídia */}
+              <div>
+                <label className="label flex items-center gap-1.5"><Paperclip size={13} /> Anexar arquivo (opcional)</label>
+                <input
+                  ref={mediaInputRef}
+                  type="file"
+                  className="hidden"
+                  accept="image/*,video/mp4,audio/mpeg,audio/ogg,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt"
+                  onChange={handleMediaUpload}
+                />
+                {!mediaFile ? (
+                  <button
+                    type="button"
+                    onClick={() => mediaInputRef.current?.click()}
+                    disabled={uploadingMedia}
+                    className="mt-1 w-full flex items-center justify-center gap-2 px-3 py-2.5 border-2 border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-brand-400 hover:text-brand-600 transition-colors disabled:opacity-50"
+                  >
+                    {uploadingMedia ? <><Loader2 size={15} className="animate-spin" /> Enviando...</> : <><Paperclip size={15} /> Foto, PDF, Excel, Word, Vídeo...</>}
+                  </button>
+                ) : (
+                  <div className="mt-1 flex items-center gap-2 px-3 py-2 bg-gray-50 border border-gray-200 rounded-xl">
+                    {mediaIcon(mediaFile.category)}
+                    <span className="text-sm text-gray-700 flex-1 truncate">{mediaFile.name}</span>
+                    <span className="text-xs text-gray-400 shrink-0">{(mediaFile.size / 1024).toFixed(0)} KB</span>
+                    <button type="button" onClick={() => setMediaFile(null)} className="text-gray-400 hover:text-red-500 shrink-0">
+                      <X size={15} />
+                    </button>
+                  </div>
+                )}
+                <p className="text-xs text-gray-400 mt-1">
+                  Imagens até 16 MB · Documentos até 100 MB · Todos os destinatários recebem o mesmo arquivo
+                </p>
+              </div>
+
               {/* Delay entre mensagens */}
               <div>
                 <label className="label flex items-center gap-1.5"><Timer size={13} /> Tempo entre mensagens</label>
@@ -747,7 +813,10 @@ export default function CampaignsPage() {
                   {filteredMessages.map((m: any) => (
                     <div key={m.id} className="px-6 py-3 flex items-center gap-4">
                       <div className="min-w-0 flex-1">
-                        <p className="font-medium text-gray-800">{m.Contact?.name ?? '—'}</p>
+                        <p className="font-medium text-gray-800 flex items-center gap-1.5">
+                          {m.Contact?.name ?? '—'}
+                          {m.media_url && <Paperclip size={11} className="text-gray-400 shrink-0" title={m.media_filename} />}
+                        </p>
                         <p className="text-xs text-gray-500">{m.Contact?.phone}</p>
                       </div>
                       <div className="text-right shrink-0">
