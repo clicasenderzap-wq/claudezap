@@ -17,6 +17,8 @@
     --yellow-light: #fef3c7;
     --red: #dc2626;
     --red-light: #fee2e2;
+    --orange: #ea580c;
+    --orange-light: #ffedd5;
     --gray-50: #f9fafb;
     --gray-100: #f3f4f6;
     --gray-200: #e5e7eb;
@@ -293,6 +295,8 @@
   .callout.warn .callout-title { color: #92400e; }
   .callout.info { background: var(--blue-light); border: 1px solid #93c5fd; }
   .callout.info .callout-title { color: #1e40af; }
+  .callout.new { background: var(--orange-light); border: 1px solid #fdba74; }
+  .callout.new .callout-title { color: #9a3412; }
 
   /* Table */
   table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
@@ -358,6 +362,55 @@
     margin: 12px 0;
   }
 
+  /* Feature section (Como usar) */
+  .feature-block {
+    background: var(--gray-50);
+    border: 1px solid var(--gray-200);
+    border-radius: 14px;
+    padding: 24px 28px;
+    margin-bottom: 24px;
+  }
+  .feature-block-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--green-dark);
+    margin-bottom: 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .feature-block-icon {
+    width: 36px;
+    height: 36px;
+    background: var(--green);
+    color: white;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .feature-steps { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+  .feature-step {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 8px 12px;
+    background: white;
+    border-radius: 8px;
+    border-left: 3px solid var(--green);
+  }
+  .feature-step-num {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--green);
+    width: 18px;
+    flex-shrink: 0;
+    padding-top: 1px;
+  }
+  .feature-step-text { font-size: 13px; color: var(--gray-700); line-height: 1.5; }
+
   /* Final page */
   .final-page {
     min-height: 100vh;
@@ -408,31 +461,37 @@
 
   <div class="cover-badges">
     <span class="cover-badge">✅ 100% Gratuito</span>
-    <span class="cover-badge">⏱ Tempo estimado: 45 min</span>
+    <span class="cover-badge">⏱ Tempo estimado: ~55 min</span>
     <span class="cover-badge">🟢 Nível: Iniciante</span>
     <span class="cover-badge">🌐 Domínio próprio</span>
+    <span class="cover-badge">📎 Envio de Arquivos</span>
+    <span class="cover-badge">🔒 Segurança Reforçada</span>
   </div>
 
-  <div style="display:flex; gap:32px; flex-wrap:wrap; justify-content:center; margin-bottom:48px;">
-    <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:20px 28px; text-align:center;">
-      <div style="font-size:28px; font-weight:800; color:#86efac;">Vercel</div>
+  <div style="display:flex; gap:24px; flex-wrap:wrap; justify-content:center; margin-bottom:48px;">
+    <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:20px 24px; text-align:center;">
+      <div style="font-size:24px; font-weight:800; color:#86efac;">Vercel</div>
       <div style="font-size:12px; color:#bbf7d0;">Frontend</div>
     </div>
-    <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:20px 28px; text-align:center;">
-      <div style="font-size:28px; font-weight:800; color:#86efac;">Render</div>
+    <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:20px 24px; text-align:center;">
+      <div style="font-size:24px; font-weight:800; color:#86efac;">Render</div>
       <div style="font-size:12px; color:#bbf7d0;">Backend</div>
     </div>
-    <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:20px 28px; text-align:center;">
-      <div style="font-size:28px; font-weight:800; color:#86efac;">Neon</div>
+    <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:20px 24px; text-align:center;">
+      <div style="font-size:24px; font-weight:800; color:#86efac;">Neon</div>
       <div style="font-size:12px; color:#bbf7d0;">Banco de Dados</div>
     </div>
-    <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:20px 28px; text-align:center;">
-      <div style="font-size:28px; font-weight:800; color:#86efac;">Upstash</div>
+    <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:20px 24px; text-align:center;">
+      <div style="font-size:24px; font-weight:800; color:#86efac;">Upstash</div>
       <div style="font-size:12px; color:#bbf7d0;">Redis</div>
+    </div>
+    <div style="background:rgba(255,255,255,0.1); border-radius:12px; padding:20px 24px; text-align:center;">
+      <div style="font-size:24px; font-weight:800; color:#f97316;">Cloudflare</div>
+      <div style="font-size:12px; color:#bbf7d0;">Arquivos R2</div>
     </div>
   </div>
 
-  <div class="cover-footer">Versão 1.0 &nbsp;·&nbsp; ClaudeZap 2025</div>
+  <div class="cover-footer">Versão 2.0 &nbsp;·&nbsp; ClaudeZap 2026</div>
 </div>
 
 <!-- ═══════════════════════════════════ ÍNDICE ═══════════════════════════════════ -->
@@ -457,28 +516,38 @@
     </li>
     <li class="toc-item">
       <div class="toc-num">4</div>
+      <div class="toc-item-title">Armazenamento de arquivos — Cloudflare R2 <span style="background:#ea580c;color:white;font-size:10px;padding:1px 8px;border-radius:999px;margin-left:6px;">NOVO</span></div>
+      <div class="toc-item-time">~8 min</div>
+    </li>
+    <li class="toc-item">
+      <div class="toc-num">5</div>
       <div class="toc-item-title">Backend — Render</div>
       <div class="toc-item-time">~10 min</div>
     </li>
     <li class="toc-item">
-      <div class="toc-num">5</div>
+      <div class="toc-num">6</div>
       <div class="toc-item-title">Frontend — Vercel</div>
       <div class="toc-item-time">~8 min</div>
     </li>
     <li class="toc-item">
-      <div class="toc-num">6</div>
+      <div class="toc-num">7</div>
       <div class="toc-item-title">Conectar domínio clicaai.ai.br (Hostinger)</div>
       <div class="toc-item-time">~10 min</div>
     </li>
     <li class="toc-item">
-      <div class="toc-num">7</div>
+      <div class="toc-num">8</div>
       <div class="toc-item-title">Conectar WhatsApp via QR Code</div>
       <div class="toc-item-time">~3 min</div>
     </li>
     <li class="toc-item">
-      <div class="toc-num">8</div>
+      <div class="toc-num">9</div>
       <div class="toc-item-title">Teste final e validação</div>
       <div class="toc-item-time">~5 min</div>
+    </li>
+    <li class="toc-item" style="border-bottom:none;">
+      <div class="toc-num" style="background:#ea580c;">✦</div>
+      <div class="toc-item-title">Como usar as novas funcionalidades <span style="background:#ea580c;color:white;font-size:10px;padding:1px 8px;border-radius:999px;margin-left:6px;">NOVO</span></div>
+      <div class="toc-item-time">referência</div>
     </li>
   </ul>
 
@@ -489,7 +558,7 @@
       <li>Acesso ao painel da Hostinger (onde seu domínio está)</li>
       <li>Um celular com WhatsApp instalado para escanear o QR Code</li>
       <li>Conexão com a internet</li>
-      <li>Aproximadamente 45 minutos disponíveis</li>
+      <li>Aproximadamente 55 minutos disponíveis</li>
     </ul>
   </div>
 
@@ -714,9 +783,8 @@
         <div class="substeps">
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Clique no banco criado para abrir os detalhes</div></div>
           <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Role até a seção <strong>"Connect to your database"</strong></div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Procure o campo <strong>"UPSTASH_REDIS_REST_URL"</strong> — não! Procure a aba <strong>"Redis CLI"</strong> ou o campo chamado <strong>"Endpoint"</strong></div></div>
-          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Na seção <strong>"Connect your client"</strong>, selecione <strong>"ioredis"</strong> ou copie a URL no campo <code>REDIS_URL</code> (começa com <code>rediss://</code>)</div></div>
-          <div class="substep"><div class="substep-letter">e)</div><div class="substep-text">Cole no bloco de notas com o rótulo <strong>REDIS_URL</strong></div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Na seção <strong>"Connect your client"</strong>, selecione <strong>"ioredis"</strong> ou copie a URL no campo <code>REDIS_URL</code> (começa com <code>rediss://</code>)</div></div>
+          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Cole no bloco de notas com o rótulo <strong>REDIS_URL</strong></div></div>
         </div>
         <div class="code-block"><span class="comment"># Exemplo de como vai parecer:</span>
 <span class="key">REDIS_URL</span>=<span class="val">rediss://default:AaBbCcDd@us1-warm-robin-12345.upstash.io:6380</span></div>
@@ -733,10 +801,155 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ PASSO 4 ═══════════════════════════════════ -->
+<!-- ═══════════════════════════════════ PASSO 4 (NOVO) ═══════════════════════════════════ -->
 <div class="page">
   <div class="section-header">
     <div class="section-num">4</div>
+    <div class="section-info">
+      <div class="section-title">Armazenamento de Arquivos — Cloudflare R2</div>
+      <div class="section-meta">Onde as imagens, PDFs e documentos das campanhas ficam guardados &nbsp;·&nbsp; ⏱ ~8 min</div>
+    </div>
+  </div>
+
+  <div class="callout new">
+    <div class="callout-icon">🆕</div>
+    <div class="callout-body">
+      <div class="callout-title">Novidade na versão 2.0</div>
+      <div class="callout-text">O ClaudeZap agora permite enviar imagens, PDFs, documentos Word, planilhas e muito mais nas campanhas. Para isso, os arquivos precisam de um lugar na internet para ficarem guardados. O Cloudflare R2 é esse lugar — gratuito para os nossos volumes de uso.</div>
+    </div>
+  </div>
+
+  <div class="callout info">
+    <div class="callout-icon">ℹ️</div>
+    <div class="callout-body">
+      <div class="callout-title">O que é o Cloudflare R2?</div>
+      <div class="callout-text">O R2 é um serviço de armazenamento de arquivos em nuvem da Cloudflare. Pense nele como um "Google Drive" que o sistema usa para guardar os arquivos antes de enviá-los pelo WhatsApp. O plano gratuito inclui <strong>10 GB de espaço</strong> e <strong>1 milhão de operações por mês</strong> — mais que suficiente para uso normal. E o melhor: <strong>sem custo de transferência de dados</strong>.</div>
+    </div>
+  </div>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">1</div>
+      <div class="step-body">
+        <div class="step-title">Crie uma conta na Cloudflare</div>
+        <div class="step-desc">Acesse o site e crie uma conta gratuita:</div>
+        <div class="url-box">https://dash.cloudflare.com/sign-up</div>
+        <div class="substeps" style="margin-top:8px;">
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Preencha e-mail e senha e clique em <strong>"Create Account"</strong></div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Confirme o e-mail clicando no link que a Cloudflare enviar</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Faça login no painel em <strong>dash.cloudflare.com</strong></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">2</div>
+      <div class="step-body">
+        <div class="step-title">Ative o R2 Object Storage</div>
+        <div class="substeps">
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">No painel da Cloudflare, clique em <strong>"R2 Object Storage"</strong> no menu lateral esquerdo</div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Se aparecer uma tela de ativação, clique em <strong>"Purchase R2 Plan"</strong> — não se preocupe, o plano gratuito é selecionado automaticamente, sem custo</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Pode ser necessário adicionar um cartão de crédito como garantia (a Cloudflare não cobra nada enquanto você estiver dentro do plano gratuito)</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">3</div>
+      <div class="step-body">
+        <div class="step-title">Crie o bucket (pasta de armazenamento)</div>
+        <div class="substeps">
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Na tela do R2, clique em <strong>"Create bucket"</strong></div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Nome do bucket: <code>claudezap-media</code> (exatamente assim, em minúsculas com hífen)</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Location: deixe em <strong>"Automatic"</strong></div></div>
+          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Clique em <strong>"Create bucket"</strong></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">4</div>
+      <div class="step-body">
+        <div class="step-title">Ative o acesso público ao bucket</div>
+        <div class="step-desc">Para que as mensagens do WhatsApp consigam exibir os arquivos, o bucket precisa ser público.</div>
+        <div class="substeps">
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Clique no bucket <strong>claudezap-media</strong> para abri-lo</div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Clique na aba <strong>"Settings"</strong></div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Role até a seção <strong>"Public access"</strong></div></div>
+          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Clique em <strong>"Allow Access"</strong> e confirme. Isso vai gerar uma URL pública no formato <code>pub-XXXXX.r2.dev</code> — anote essa URL com o rótulo <strong>R2_PUBLIC_URL</strong></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">5</div>
+      <div class="step-body">
+        <div class="step-title">Anote o Account ID da Cloudflare</div>
+        <div class="step-desc">Você vai precisar do ID da sua conta Cloudflare. Ele fica visível na URL do painel e também na página inicial do R2.</div>
+        <div class="substeps">
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Olhe a URL do navegador enquanto está no painel. Ela tem o formato: <code>dash.cloudflare.com/<strong>SEU_ACCOUNT_ID</strong>/r2/...</code></div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Copie essa sequência de letras e números (é um código hexadecimal de 32 caracteres, como: <code>a1b2c3d4e5f6...</code>)</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Anote no bloco de notas com o rótulo <strong>R2_ACCOUNT_ID</strong></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">6</div>
+      <div class="step-body">
+        <div class="step-title">Crie um token de API do R2</div>
+        <div class="step-desc">Agora vamos criar as "chaves" que permitem o sistema fazer upload de arquivos.</div>
+        <div class="substeps">
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Na tela principal do R2, clique em <strong>"Manage R2 API Tokens"</strong> (canto superior direito)</div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Clique em <strong>"Create API token"</strong></div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Nome do token: <code>claudezap-token</code></div></div>
+          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Permissões: selecione <strong>"Object Read &amp; Write"</strong></div></div>
+          <div class="substep"><div class="substep-letter">e)</div><div class="substep-text">Specify bucket (opcional): selecione <strong>claudezap-media</strong> para restringir apenas a este bucket</div></div>
+          <div class="substep"><div class="substep-letter">f)</div><div class="substep-text">Clique em <strong>"Create API Token"</strong></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="step">
+      <div class="step-num">7</div>
+      <div class="step-body">
+        <div class="step-title">Copie o Access Key ID e o Secret Access Key</div>
+        <div class="step-desc">Após criar o token, a Cloudflare vai mostrar <strong>uma única vez</strong> as duas chaves. Copie <strong>agora</strong> — depois não será possível ver o Secret novamente.</div>
+        <div class="substeps">
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Copie o <strong>Access Key ID</strong> (uma sequência de 32 letras e números) — anote com o rótulo <strong>R2_ACCESS_KEY_ID</strong></div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Copie o <strong>Secret Access Key</strong> — anote com o rótulo <strong>R2_SECRET_ACCESS_KEY</strong></div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Clique em <strong>"Finish"</strong> apenas depois de ter copiado os dois valores</div></div>
+        </div>
+        <div class="callout warn" style="margin-top:12px;">
+          <div class="callout-icon">⚠️</div>
+          <div class="callout-body">
+            <div class="callout-title">ATENÇÃO: o Secret Access Key aparece só uma vez!</div>
+            <div class="callout-text">Depois de fechar essa tela, a Cloudflare não mostra mais o Secret Access Key. Se perder, será necessário deletar o token e criar um novo. Não feche a página antes de copiar os dois valores.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout tip">
+    <div class="callout-icon">✅</div>
+    <div class="callout-body">
+      <div class="callout-title">Resumo: você deve ter anotado 5 valores do R2</div>
+      <div class="callout-text">
+        <strong>R2_ACCOUNT_ID</strong> — ID da conta Cloudflare (32 chars hex)<br>
+        <strong>R2_ACCESS_KEY_ID</strong> — Chave de acesso do token (32 chars)<br>
+        <strong>R2_SECRET_ACCESS_KEY</strong> — Senha secreta do token<br>
+        <strong>R2_BUCKET</strong> — nome do bucket: <code>claudezap-media</code><br>
+        <strong>R2_PUBLIC_URL</strong> — URL pública do bucket (ex: <code>https://pub-abc123.r2.dev</code>)
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ PASSO 5 ═══════════════════════════════════ -->
+<div class="page">
+  <div class="section-header">
+    <div class="section-num">5</div>
     <div class="section-info">
       <div class="section-title">Backend — Render</div>
       <div class="section-meta">Servidor que processa os envios e a lógica do sistema &nbsp;·&nbsp; ⏱ ~10 min</div>
@@ -818,7 +1031,12 @@
           <tr><td><code>WA_SESSION_DIR</code></td><td><code>./wa_sessions</code></td></tr>
           <tr><td><code>DATABASE_URL</code></td><td>Cole a string do Neon (passo 2)</td></tr>
           <tr><td><code>REDIS_URL</code></td><td>Cole a URL do Upstash (passo 3)</td></tr>
-          <tr><td><code>CORS_ORIGIN</code></td><td><em>Deixe vazio por enquanto — preencher no passo 5</em></td></tr>
+          <tr><td><code>R2_ACCOUNT_ID</code></td><td>Cole o Account ID da Cloudflare (passo 4)</td></tr>
+          <tr><td><code>R2_ACCESS_KEY_ID</code></td><td>Cole o Access Key ID do token R2 (passo 4)</td></tr>
+          <tr><td><code>R2_SECRET_ACCESS_KEY</code></td><td>Cole o Secret Access Key do token R2 (passo 4)</td></tr>
+          <tr><td><code>R2_BUCKET</code></td><td><code>claudezap-media</code></td></tr>
+          <tr><td><code>R2_PUBLIC_URL</code></td><td>Cole a URL pública do bucket (ex: <code>https://pub-abc123.r2.dev</code>)</td></tr>
+          <tr><td><code>CORS_ORIGIN</code></td><td><em>Deixe vazio por enquanto — preencher no passo 6</em></td></tr>
         </table>
         <div class="callout warn" style="margin-top:12px;">
           <div class="callout-icon">⚠️</div>
@@ -864,10 +1082,10 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ PASSO 5 ═══════════════════════════════════ -->
+<!-- ═══════════════════════════════════ PASSO 6 ═══════════════════════════════════ -->
 <div class="page">
   <div class="section-header">
-    <div class="section-num">5</div>
+    <div class="section-num">6</div>
     <div class="section-info">
       <div class="section-title">Frontend — Vercel</div>
       <div class="section-meta">A tela visual que você vai usar no dia a dia &nbsp;·&nbsp; ⏱ ~8 min</div>
@@ -981,10 +1199,10 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ PASSO 6 ═══════════════════════════════════ -->
+<!-- ═══════════════════════════════════ PASSO 7 ═══════════════════════════════════ -->
 <div class="page">
   <div class="section-header">
-    <div class="section-num">6</div>
+    <div class="section-num">7</div>
     <div class="section-info">
       <div class="section-title">Conectar Domínio — clicaai.ai.br</div>
       <div class="section-meta">Apontar seu domínio para o Vercel e Render via Hostinger &nbsp;·&nbsp; ⏱ ~10 min</div>
@@ -1110,10 +1328,10 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ PASSO 7 ═══════════════════════════════════ -->
+<!-- ═══════════════════════════════════ PASSO 8 ═══════════════════════════════════ -->
 <div class="page">
   <div class="section-header">
-    <div class="section-num">7</div>
+    <div class="section-num">8</div>
     <div class="section-info">
       <div class="section-title">Conectar o WhatsApp via QR Code</div>
       <div class="section-meta">Vincular seu número ao sistema &nbsp;·&nbsp; ⏱ ~3 min</div>
@@ -1145,8 +1363,9 @@
         <div class="step-title">Crie sua conta no sistema</div>
         <div class="substeps">
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Clique em <strong>"Cadastre-se"</strong></div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Preencha nome, e-mail e senha</div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Clique em <strong>"Criar conta"</strong></div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Preencha nome completo, e-mail e senha</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Aceite os Termos de Uso e clique em <strong>"Criar conta"</strong></div></div>
+          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Verifique seu e-mail e clique no link de confirmação enviado pelo sistema</div></div>
         </div>
       </div>
     </div>
@@ -1195,10 +1414,10 @@
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ PASSO 8 ═══════════════════════════════════ -->
+<!-- ═══════════════════════════════════ PASSO 9 ═══════════════════════════════════ -->
 <div class="page">
   <div class="section-header">
-    <div class="section-num">8</div>
+    <div class="section-num">9</div>
     <div class="section-info">
       <div class="section-title">Teste Final e Validação</div>
       <div class="section-meta">Verificar se tudo está funcionando corretamente &nbsp;·&nbsp; ⏱ ~5 min</div>
@@ -1273,6 +1492,7 @@
       <tr><td>Conta GitHub criada e fork feito</td><td>☐</td></tr>
       <tr><td>Banco de dados Neon criado e DATABASE_URL copiada</td><td>☐</td></tr>
       <tr><td>Redis Upstash criado e REDIS_URL copiada</td><td>☐</td></tr>
+      <tr><td>Cloudflare R2 configurado e variáveis R2_* adicionadas no Render</td><td>☐</td></tr>
       <tr><td>Backend no Render funcionando (<code>/health</code> retorna ok)</td><td>☐</td></tr>
       <tr><td>Frontend no Vercel acessível pelo navegador</td><td>☐</td></tr>
       <tr><td>CORS_ORIGIN atualizado no Render</td><td>☐</td></tr>
@@ -1283,26 +1503,224 @@
   </div>
 </div>
 
+<!-- ═══════════════════════════════════ COMO USAR AS NOVAS FUNCIONALIDADES ═══════════════════════════════════ -->
+<div class="page">
+  <div class="section-header">
+    <div class="section-num" style="background:#ea580c; font-size:18px;">✦</div>
+    <div class="section-info">
+      <div class="section-title" style="color:#9a3412;">Como usar as novas funcionalidades</div>
+      <div class="section-meta">Guia prático para aproveitar ao máximo o ClaudeZap v2.0</div>
+    </div>
+  </div>
+
+  <!-- ENVIO EM LOTES -->
+  <div class="feature-block">
+    <div class="feature-block-title">
+      <div class="feature-block-icon">📦</div>
+      Envio em Lotes Anti-Bloqueio
+    </div>
+    <p style="font-size:13px; color:var(--gray-700); margin-bottom:12px;">
+      O WhatsApp pode restringir números que enviam muitas mensagens de uma vez para contatos diferentes. O <strong>modo de envio em lotes</strong> divide sua campanha em grupos menores com um intervalo de horas entre cada grupo, imitando um comportamento mais natural e reduzindo drasticamente o risco de bloqueio.
+    </p>
+    <div class="feature-steps">
+      <div class="feature-step">
+        <div class="feature-step-num">1.</div>
+        <div class="feature-step-text">Na criação de uma campanha, role até a seção <strong>"Configurações de Envio"</strong></div>
+      </div>
+      <div class="feature-step">
+        <div class="feature-step-num">2.</div>
+        <div class="feature-step-text">Ative a chave <strong>"Envio em Lotes"</strong></div>
+      </div>
+      <div class="feature-step">
+        <div class="feature-step-num">3.</div>
+        <div class="feature-step-text">Defina o <strong>Tamanho do lote</strong> — recomendamos entre 30 e 50 mensagens por lote</div>
+      </div>
+      <div class="feature-step">
+        <div class="feature-step-num">4.</div>
+        <div class="feature-step-text">Defina o <strong>Intervalo entre lotes</strong> — recomendamos 8 horas para máxima segurança (mínimo 1 hora)</div>
+      </div>
+      <div class="feature-step">
+        <div class="feature-step-num">5.</div>
+        <div class="feature-step-text">Crie a campanha. O sistema vai enviar o 1º lote imediatamente, depois aguardar o intervalo configurado antes do 2º lote, e assim por diante</div>
+      </div>
+    </div>
+    <div class="callout tip" style="margin-top:12px; margin-bottom:0;">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body">
+        <div class="callout-title">Exemplo prático</div>
+        <div class="callout-text">Para enviar para 200 contatos com lotes de 50 e intervalo de 8h: o sistema vai enviar 50 mensagens agora, mais 50 daqui a 8h, mais 50 daqui a 16h, e os últimos 50 daqui a 24h. Muito mais seguro do que enviar tudo de uma vez!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ENVIO DE ARQUIVOS -->
+  <div class="feature-block">
+    <div class="feature-block-title">
+      <div class="feature-block-icon">📎</div>
+      Envio de Arquivos (Imagens, PDFs, Documentos)
+    </div>
+    <p style="font-size:13px; color:var(--gray-700); margin-bottom:12px;">
+      Agora você pode anexar imagens, PDFs, documentos Word, planilhas Excel e outros tipos de arquivo às suas mensagens e campanhas.
+    </p>
+    <div style="font-size:13px; color:var(--gray-700); margin-bottom:10px;"><strong>Tipos de arquivo suportados:</strong></div>
+    <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
+      <span style="background:#dcfce7; color:#14532d; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600;">Imagens (JPG, PNG, WebP)</span>
+      <span style="background:#dcfce7; color:#14532d; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600;">PDF</span>
+      <span style="background:#dcfce7; color:#14532d; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600;">Word (.docx)</span>
+      <span style="background:#dcfce7; color:#14532d; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600;">Excel (.xlsx)</span>
+      <span style="background:#dcfce7; color:#14532d; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600;">PowerPoint</span>
+      <span style="background:#dcfce7; color:#14532d; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600;">Vídeo (MP4)</span>
+      <span style="background:#dcfce7; color:#14532d; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600;">Áudio (MP3, OGG)</span>
+    </div>
+    <div class="feature-steps">
+      <div class="feature-step">
+        <div class="feature-step-num">1.</div>
+        <div class="feature-step-text">Ao criar uma mensagem individual ou campanha, procure o ícone de clipe 📎 na área de composição</div>
+      </div>
+      <div class="feature-step">
+        <div class="feature-step-num">2.</div>
+        <div class="feature-step-text">Clique em <strong>"Anexar arquivo"</strong> e selecione o arquivo do seu computador (limite: 10 MB por arquivo)</div>
+      </div>
+      <div class="feature-step">
+        <div class="feature-step-num">3.</div>
+        <div class="feature-step-text">Aguarde o upload. Quando aparecer uma confirmação, o arquivo está salvo na nuvem (Cloudflare R2)</div>
+      </div>
+      <div class="feature-step">
+        <div class="feature-step-num">4.</div>
+        <div class="feature-step-text">Escreva sua mensagem de texto normalmente (o arquivo será enviado junto com o texto)</div>
+      </div>
+      <div class="feature-step">
+        <div class="feature-step-num">5.</div>
+        <div class="feature-step-text">Envie. Todos os destinatários receberão o arquivo via WhatsApp</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════ COMO USAR (continuação) ═══════════════════════════════════ -->
+<div class="page">
+  <div style="font-size:20px; font-weight:700; color:#9a3412; margin-bottom:28px; padding-bottom:14px; border-bottom:3px solid #ffedd5;">Como usar as novas funcionalidades (continuação)</div>
+
+  <!-- RASTREAMENTO DE CONTACTADOS -->
+  <div class="feature-block">
+    <div class="feature-block-title">
+      <div class="feature-block-icon">🎯</div>
+      Rastreamento de Contactados
+    </div>
+    <p style="font-size:13px; color:var(--gray-700); margin-bottom:12px;">
+      O sistema agora registra automaticamente quando um contato foi incluído em uma campanha. Isso permite filtrar e evitar enviar para as mesmas pessoas repetidamente, o que reduz reclamações e o risco de bloqueio.
+    </p>
+    <div class="feature-steps">
+      <div class="feature-step">
+        <div class="feature-step-num">1.</div>
+        <div class="feature-step-text">Na lista de contatos, contatos que já receberam uma campanha mostram um badge <strong>"Enviado"</strong> em verde ao lado do nome</div>
+      </div>
+      <div class="feature-step">
+        <div class="feature-step-num">2.</div>
+        <div class="feature-step-text">Use o filtro <strong>"Apenas não contactados"</strong> para ver somente quem ainda não recebeu nenhuma campanha</div>
+      </div>
+      <div class="feature-step">
+        <div class="feature-step-num">3.</div>
+        <div class="feature-step-text">Ao criar uma nova campanha, ative a opção <strong>"Excluir já contactados"</strong> — o sistema vai automaticamente pular os contatos que já foram alcançados por campanhas anteriores</div>
+      </div>
+      <div class="feature-step">
+        <div class="feature-step-num">4.</div>
+        <div class="feature-step-text">Para reiniciar o rastreamento de um contato (quero enviar novamente para ele), acesse o contato e clique em <strong>"Limpar histórico de campanhas"</strong></div>
+      </div>
+    </div>
+    <div class="callout tip" style="margin-top:12px; margin-bottom:0;">
+      <div class="callout-icon">💡</div>
+      <div class="callout-body">
+        <div class="callout-title">Estratégia recomendada</div>
+        <div class="callout-text">Importe toda a sua lista de contatos e use <strong>"Excluir já contactados"</strong> em todas as campanhas. Assim cada pessoa recebe a mensagem uma única vez, o sistema vai gradualmente "consumindo" a lista sem repetições.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PLANOS CORTESIA -->
+  <div class="feature-block">
+    <div class="feature-block-title">
+      <div class="feature-block-icon">🎁</div>
+      Planos Cortesia
+    </div>
+    <p style="font-size:13px; color:var(--gray-700); margin-bottom:12px;">
+      Planos cortesia são planos especiais que o administrador do sistema pode ativar manualmente para usuários específicos. Eles têm os mesmos limites dos planos pagos (Starter ou Pro), mas sem cobrança.
+    </p>
+    <div class="feature-steps">
+      <div class="feature-step">
+        <div class="feature-step-num">1.</div>
+        <div class="feature-step-text">Acesse o painel administrativo em <code>/admin</code> com sua conta de administrador</div>
+      </div>
+      <div class="feature-step">
+        <div class="feature-step-num">2.</div>
+        <div class="feature-step-text">Encontre o usuário que deseja beneficiar e clique em <strong>"Editar"</strong></div>
+      </div>
+      <div class="feature-step">
+        <div class="feature-step-num">3.</div>
+        <div class="feature-step-text">No campo <strong>"Plano"</strong>, selecione <strong>"Starter Cortesia"</strong> ou <strong>"Pro Cortesia"</strong></div>
+      </div>
+      <div class="feature-step">
+        <div class="feature-step-num">4.</div>
+        <div class="feature-step-text">Salve. O usuário agora tem acesso completo ao plano selecionado sem restrições de trial</div>
+      </div>
+    </div>
+    <table style="margin-top:14px;">
+      <tr><th>Plano</th><th>Mensagens/dia</th><th>Números WhatsApp</th><th>Contatos</th></tr>
+      <tr><td><strong>Starter Cortesia</strong></td><td>500</td><td>3 números</td><td>Ilimitados</td></tr>
+      <tr><td><strong>Pro Cortesia</strong></td><td>2.000</td><td>6 números</td><td>Ilimitados</td></tr>
+    </table>
+  </div>
+
+  <!-- SEGURANÇA -->
+  <div class="feature-block" style="border-color:#fca5a5; background:#fff5f5;">
+    <div class="feature-block-title" style="color:#991b1b;">
+      <div class="feature-block-icon" style="background:#dc2626;">🔒</div>
+      Melhorias de Segurança (v2.0)
+    </div>
+    <p style="font-size:13px; color:var(--gray-700); margin-bottom:12px;">
+      A versão 2.0 inclui várias melhorias de segurança transparentes ao usuário. Você não precisa configurar nada — elas funcionam automaticamente.
+    </p>
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div style="display:flex; gap:10px; align-items:flex-start; padding:8px 12px; background:white; border-radius:8px; border-left:3px solid #dc2626;">
+        <div style="font-size:13px; color:var(--gray-700); line-height:1.5;"><strong>Bloqueio por tentativas de login:</strong> Após 5 tentativas erradas de senha, a conta é bloqueada por 30 minutos automaticamente. Protege contra ataques de força bruta.</div>
+      </div>
+      <div style="display:flex; gap:10px; align-items:flex-start; padding:8px 12px; background:white; border-radius:8px; border-left:3px solid #dc2626;">
+        <div style="font-size:13px; color:var(--gray-700); line-height:1.5;"><strong>Proteção de origem (CORS):</strong> O servidor só aceita requisições vindas do seu domínio. Nenhum outro site pode usar sua API.</div>
+      </div>
+      <div style="display:flex; gap:10px; align-items:flex-start; padding:8px 12px; background:white; border-radius:8px; border-left:3px solid #dc2626;">
+        <div style="font-size:13px; color:var(--gray-700); line-height:1.5;"><strong>Planos verificados em cada requisição:</strong> Usuários com trial expirado ou conta inativa são bloqueados automaticamente em qualquer operação.</div>
+      </div>
+      <div style="display:flex; gap:10px; align-items:flex-start; padding:8px 12px; background:white; border-radius:8px; border-left:3px solid #dc2626;">
+        <div style="font-size:13px; color:var(--gray-700); line-height:1.5;"><strong>Limite de tamanho de requisições:</strong> Requests são limitados a 1 MB para evitar ataques de sobrecarga.</div>
+      </div>
+      <div style="display:flex; gap:10px; align-items:flex-start; padding:8px 12px; background:white; border-radius:8px; border-left:3px solid #dc2626;">
+        <div style="font-size:13px; color:var(--gray-700); line-height:1.5;"><strong>Rate limiting no formulário de opt-in:</strong> O link de cadastro público é limitado a 20 submissões/hora por usuário, evitando spam na sua lista de contatos.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════ PÁGINA FINAL ═══════════════════════════════════ -->
 <div class="final-page">
   <div class="final-check">🚀</div>
   <div class="final-title">Tudo pronto!</div>
-  <div class="final-sub">Seu ClaudeZap está no ar e pronto para disparar mensagens via WhatsApp.</div>
+  <div class="final-sub">Seu ClaudeZap v2.0 está no ar e pronto para disparar mensagens, arquivos e campanhas em lote via WhatsApp.</div>
 
-  <div style="margin-bottom:40px; text-align:left; background:rgba(255,255,255,0.1); border-radius:16px; padding:28px 36px; max-width:480px;">
+  <div style="margin-bottom:40px; text-align:left; background:rgba(255,255,255,0.1); border-radius:16px; padding:28px 36px; max-width:500px;">
     <div style="font-size:14px; font-weight:700; color:#86efac; margin-bottom:16px;">LINKS DO SEU SISTEMA</div>
     <div style="font-size:13px; color:#dcfce7; line-height:2.2;">
       🌐 <strong>Frontend:</strong> https://clicaai.ai.br<br>
       ⚙️ <strong>Backend:</strong> https://api.clicaai.ai.br<br>
       🗄️ <strong>Banco:</strong> Neon Dashboard<br>
       📦 <strong>Cache:</strong> Upstash Dashboard<br>
+      ☁️ <strong>Arquivos:</strong> Cloudflare R2 Dashboard<br>
       📁 <strong>Código:</strong> github.com/clicasenderzap-wq/claudezap
     </div>
   </div>
 
   <div class="final-links">
     <div class="final-link">📧 Suporte: clicaclaude@gmail.com</div>
-    <div class="final-link">📄 ClaudeZap v1.0 — 2025</div>
+    <div class="final-link">📄 ClaudeZap v2.0 — 2026</div>
   </div>
 </div>
 
