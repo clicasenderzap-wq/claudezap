@@ -85,10 +85,18 @@ async function verifyEmail(req, res) {
   const user = await User.findOne({ where: { email_verification_token: token } });
   if (!user) return res.status(400).json({ error: 'Token inválido ou expirado' });
 
-  await user.update({ email_verified: true, email_verification_token: null });
+  const trial_ends_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  await user.update({
+    email_verified: true,
+    email_verification_token: null,
+    status: 'trial',
+    trial_ends_at,
+  });
   await audit(user.id, 'email_verified', req);
 
-  res.json({ message: 'Email confirmado! Sua conta está em análise. Você receberá um email assim que o acesso for liberado.' });
+  emailSvc.sendApprovalEmail(user).catch((e) => console.error('[VerifyEmail] Falha ao enviar email de boas-vindas:', e.message));
+
+  res.json({ message: 'Email confirmado! Você já pode fazer login e usar a plataforma. Bom proveito!' });
 }
 
 async function login(req, res) {
@@ -111,13 +119,6 @@ async function login(req, res) {
       return res.status(403).json({
         error: 'Confirme seu email antes de fazer login. Verifique sua caixa de entrada.',
         code: 'EMAIL_UNVERIFIED',
-      });
-    }
-
-    if (user.status === 'pending') {
-      return res.status(403).json({
-        error: 'Sua conta está em análise. Você receberá um email quando o acesso for liberado.',
-        code: 'PENDING_APPROVAL',
       });
     }
 

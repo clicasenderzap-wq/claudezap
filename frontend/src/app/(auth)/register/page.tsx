@@ -55,10 +55,10 @@ export default function RegisterPage() {
         <h2 className="text-xl font-bold text-gray-900">Verifique seu email!</h2>
         <p className="text-gray-600 text-sm leading-relaxed">
           Enviamos um link de confirmação para <strong>{submittedEmail}</strong>.
-          Clique no link para confirmar sua conta.
+          Clique no link para ativar sua conta.
         </p>
-        <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-left text-xs text-blue-800 leading-relaxed">
-          Após confirmar o email, nossa equipe analisará seu cadastro e você receberá outro email com a liberação do acesso em até 24h.
+        <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-left text-xs text-green-800 leading-relaxed">
+          Após confirmar o email, você já poderá fazer login e usar a plataforma com <strong>7 dias grátis</strong>.
         </div>
         <p className="text-sm text-gray-500">
           Já tem conta?{' '}

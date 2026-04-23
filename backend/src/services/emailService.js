@@ -1,13 +1,14 @@
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'Clica Aí <noreply@clicaai.ia.br>';
-const APP_URL = process.env.APP_URL || 'https://app.clicaai.ia.br';
+const APP_URL = process.env.APP_URL || 'https://clicaai.ia.br';
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFY_EMAIL || 'clicasenderzap@gmail.com';
 
 async function sendEmail({ to, subject, html }) {
   if (!RESEND_API_KEY) {
-    console.warn('[Email] RESEND_API_KEY não configurado — email não enviado:', subject, '->', to);
+    console.error('[Email] RESEND_API_KEY não configurado — email NÃO enviado para:', to, '| assunto:', subject);
     return;
   }
+  console.log('[Email] Enviando para:', to, '| assunto:', subject, '| from:', FROM_EMAIL);
   try {
     const res = await fetch('https://api.resend.com/emails', {
       method: 'POST',
@@ -17,12 +18,14 @@ async function sendEmail({ to, subject, html }) {
       },
       body: JSON.stringify({ from: FROM_EMAIL, to, subject, html }),
     });
+    const body = await res.json().catch(() => ({}));
     if (!res.ok) {
-      const err = await res.text();
-      console.error('[Email] Erro ao enviar:', err);
+      console.error('[Email] Erro Resend HTTP', res.status, JSON.stringify(body));
+    } else {
+      console.log('[Email] Enviado com sucesso. ID:', body.id);
     }
   } catch (e) {
-    console.error('[Email] Falha na requisição:', e.message);
+    console.error('[Email] Falha na requisição fetch:', e.message);
   }
 }
 
