@@ -16,20 +16,17 @@ const silentLogger = {
   child: () => silentLogger,
 };
 
-// Backoff delays (ms): 5s, 10s, 30s, 60s, 2min, 5min, 5min, ...
 const RECONNECT_DELAYS = [5_000, 10_000, 30_000, 60_000, 120_000, 300_000];
 const MAX_RECONNECT_ATTEMPTS = 12;
 
-// Codes that indicate permanent failure — don't reconnect, clear session
 const PERMANENT_FAILURES = new Set([
-  DisconnectReason.loggedOut,   // 401 — user logged out from phone
-  DisconnectReason.forbidden,   // 403 — account banned
+  DisconnectReason.loggedOut,
+  DisconnectReason.forbidden,
 ]);
 
-// Codes that need a clean session before retrying
 const BAD_SESSION_CODES = new Set([
-  DisconnectReason.badSession,        // 500
-  DisconnectReason.restartRequired,   // 515
+  DisconnectReason.badSession,
+  DisconnectReason.restartRequired,
 ]);
 
 class WhatsAppService extends EventEmitter {
@@ -39,15 +36,14 @@ class WhatsAppService extends EventEmitter {
     this.reconnectAttempts = new Map();
   }
 
-  async connect(accountId) {
-    if (this.sockets.has(accountId)) return;
-
+  // Shared socket factory used by both connect() and requestPairingCode()
+  async _createSocket(accountId) {
     let authState;
     try {
       authState = await useRedisAuthState(accountId);
     } catch (err) {
       console.error(`[WA] ${accountId}: erro ao carregar sessão do Redis:`, err.message);
-      return;
+      throw err;
     }
 
     const { state, saveCreds } = authState;
@@ -56,7 +52,7 @@ class WhatsAppService extends EventEmitter {
     try {
       ({ version } = await fetchLatestBaileysVersion());
     } catch {
-      version = [2, 3000, 1015901307]; // known stable fallback
+      version = [2, 3000, 1015901307];
     }
 
     const sock = makeWASocket({
@@ -105,11 +101,9 @@ class WhatsAppService extends EventEmitter {
           this.reconnectAttempts.delete(accountId);
         }
 
-        // Só reconecta automaticamente se há sessão salva no Redis
-        // (sem sessão = conta nova, aguarda QR scan manual)
         const sessionSaved = await hasSession(accountId).catch(() => false);
         if (!sessionSaved) {
-          console.log(`[WA] ${accountId}: sem sessão no Redis — aguardando QR scan manual`);
+          console.log(`[WA] ${accountId}: sem sessão no Redis — aguardando emparelhamento manual`);
           return;
         }
 
@@ -147,7 +141,42 @@ class WhatsAppService extends EventEmitter {
       this.emit('message.update', { accountId, updates });
     });
 
+    return sock;
+  }
+
+  // Close socket without touching Redis session (for forced reset before re-pairing)
+  _closeSocket(accountId) {
+    const sock = this.sockets.get(accountId);
+    if (sock) {
+      this.sockets.delete(accountId);
+      try { sock.ws?.close(); } catch {}
+    }
+  }
+
+  async connect(accountId) {
+    if (this.sockets.has(accountId)) return;
+    try {
+      const sock = await this._createSocket(accountId);
+      this.sockets.set(accountId, sock);
+    } catch (err) {
+      console.error(`[WA] ${accountId}: falha ao criar socket:`, err.message);
+    }
+  }
+
+  // Code-based pairing — works on cloud IPs where QR scan fails.
+  // Closes any existing socket, creates a fresh one, and immediately
+  // requests a pairing code before WhatsApp can generate a QR.
+  async requestPairingCode(accountId, phone) {
+    this._closeSocket(accountId);
+    const digits = String(phone).replace(/\D/g, '');
+    if (!digits) throw new Error('Número de telefone inválido');
+
+    const sock = await this._createSocket(accountId);
     this.sockets.set(accountId, sock);
+
+    const code = await sock.requestPairingCode(digits);
+    console.log(`[WA] ${accountId}: código de emparelhamento gerado para ${digits}`);
+    return code; // e.g. 'ABCD-1234'
   }
 
   async sendText(accountId, phone, text) {
@@ -184,8 +213,6 @@ class WhatsAppService extends EventEmitter {
   }
 
   async disconnect(accountId) {
-    // Delete session and remove from map BEFORE logout to prevent the
-    // connection.update 'close' handler from scheduling an auto-reconnect.
     await deleteSession(accountId).catch(() => {});
     this.reconnectAttempts.delete(accountId);
     const sock = this.sockets.get(accountId);

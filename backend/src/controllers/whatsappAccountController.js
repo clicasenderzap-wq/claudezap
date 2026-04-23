@@ -132,6 +132,22 @@ async function getQR(req, res) {
   res.json({ status: 'qr', qr: qrImage });
 }
 
+async function requestPairingCode(req, res) {
+  const { phone } = req.body;
+  if (!phone) return res.status(400).json({ error: 'Informe o número de telefone da conta WhatsApp (com DDD e código do país)' });
+
+  const account = await WhatsappAccount.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+  if (!account) return res.status(404).json({ error: 'Conta não encontrada' });
+
+  if (whatsapp.getStatus(account.id) === 'connected') {
+    return res.json({ status: 'connected' });
+  }
+
+  await account.update({ status: 'connecting' });
+  const code = await whatsapp.requestPairingCode(account.id, phone);
+  res.json({ code });
+}
+
 async function remove(req, res) {
   const account = await WhatsappAccount.findOne({ where: { id: req.params.id, user_id: req.user.id } });
   if (!account) return res.status(404).json({ error: 'Conta não encontrada' });
@@ -157,4 +173,4 @@ async function inbox(req, res) {
   res.json({ total: count, page: Number(page), data: rows });
 }
 
-module.exports = { list, create, updateLabel, getQR, remove, inbox };
+module.exports = { list, create, updateLabel, getQR, requestPairingCode, remove, inbox };
