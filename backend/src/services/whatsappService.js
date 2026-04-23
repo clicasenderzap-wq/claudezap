@@ -73,14 +73,21 @@ class WhatsAppService extends EventEmitter {
     });
 
     sock.ev.on('messages.upsert', ({ messages: msgs, type }) => {
-      if (type !== 'notify') return;
+      // 'notify' = tempo real | 'append' = sync de mensagens perdidas durante desconexão
+      if (type !== 'notify' && type !== 'append') return;
+      const isSync = type === 'append';
       for (const msg of msgs) {
         if (msg.key.fromMe) continue;
-        const from = msg.key.remoteJid?.replace('@s.whatsapp.net', '').replace('@g.us', '') ?? '';
+        const remoteJid = msg.key.remoteJid ?? '';
+        // Ignora grupos
+        if (remoteJid.includes('@g.us')) continue;
+        const from = remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '');
         const text = msg.message?.conversation
           || msg.message?.extendedTextMessage?.text
+          || msg.message?.imageMessage?.caption
+          || msg.message?.videoMessage?.caption
           || '';
-        if (from && text) this.emit('message.received', { accountId, from, text });
+        if (from && text) this.emit('message.received', { accountId, from, text, isSync });
       }
     });
 

@@ -1,6 +1,6 @@
 const QRCode = require('qrcode');
 const whatsapp = require('../services/whatsappService');
-const { WhatsappAccount } = require('../models');
+const { WhatsappAccount, IncomingMessage, Contact } = require('../models');
 const optout = require('../services/optoutService');
 const bot = require('../services/botService');
 
@@ -18,15 +18,37 @@ whatsapp.on('ready', async ({ accountId, phone }) => {
   ).catch(() => {});
 });
 
-whatsapp.on('message.received', async ({ accountId, from, text }) => {
+whatsapp.on('message.received', async ({ accountId, from, text, isSync }) => {
   const account = await WhatsappAccount.findByPk(accountId).catch(() => null);
   if (!account) return;
 
-  const removed = await optout.handleIncoming(account.user_id, from, text).catch(() => false);
-  if (removed) {
+  const isOptout = await optout.handleIncoming(account.user_id, from, text).catch(() => false);
+  if (isOptout) {
     console.log(`[Optout] via conta ${account.label}: ${from} saiu da lista`);
-    return; // opt-out tem prioridade: não processa o bot
   }
+
+  // Salva mensagem recebida para a caixa de entrada
+  try {
+    const digits = String(from).replace(/\D/g, '');
+    const variants = [digits, digits.startsWith('55') ? digits.slice(2) : `55${digits}`];
+    const contact = await Contact.findOne({
+      where: { user_id: account.user_id, phone: variants },
+    }).catch(() => null);
+
+    await IncomingMessage.create({
+      account_id: accountId,
+      user_id: account.user_id,
+      from_phone: from,
+      from_name: contact?.name || null,
+      text,
+      is_optout: isOptout,
+    });
+  } catch { /* não deve parar o fluxo */ }
+
+  if (isOptout) return;
+
+  // Mensagens sincronizadas (perdidas durante desconexão) não ativam o bot
+  if (isSync) return;
 
   bot.handleMessage(accountId, from, text).catch((e) =>
     console.error('[Bot] erro ao processar mensagem:', e.message)
@@ -114,4 +136,21 @@ async function remove(req, res) {
   res.status(204).send();
 }
 
-module.exports = { list, create, updateLabel, getQR, remove };
+async function inbox(req, res) {
+  const { page = 1, limit = 50, account_id, only_optout } = req.query;
+  const where = { user_id: req.user.id };
+  if (account_id) where.account_id = account_id;
+  if (only_optout === 'true') where.is_optout = true;
+
+  const { count, rows } = await IncomingMessage.findAndCountAll({
+    where,
+    order: [['created_at', 'DESC']],
+    limit: Number(limit),
+    offset: (Number(page) - 1) * Number(limit),
+    include: [{ model: WhatsappAccount, attributes: ['label', 'phone'], as: 'account' }],
+  });
+
+  res.json({ total: count, page: Number(page), data: rows });
+}
+
+module.exports = { list, create, updateLabel, getQR, remove, inbox };
