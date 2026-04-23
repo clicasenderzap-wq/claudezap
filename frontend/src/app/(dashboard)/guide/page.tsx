@@ -6,7 +6,7 @@ import {
   MessageSquare, BookOpen, ChevronRight, Info, AlertTriangle,
   CheckCircle, Lightbulb, ArrowRight, Key, Clock, Zap, Shield,
   FileSpreadsheet, Send, BarChart2, RefreshCw, Settings, Star, Tag, Moon,
-  UserCheck, MailCheck,
+  UserCheck, MailCheck, Paperclip, Package, Target,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -25,6 +25,7 @@ const SECTIONS: Section[] = [
   { id: 'dashboard',       label: 'Dashboard',              icon: LayoutDashboard, color: 'text-blue-600 bg-blue-100' },
   { id: 'contacts',        label: 'Importar Contatos',      icon: Users,           color: 'text-green-600 bg-green-100' },
   { id: 'campaigns',       label: 'Mensagens e Campanhas',  icon: Megaphone,       color: 'text-purple-600 bg-purple-100' },
+  { id: 'batch-files',     label: 'Lotes e Arquivos',       icon: Package,         color: 'text-orange-600 bg-orange-100' },
   { id: 'whatsapp',        label: 'Conectar WhatsApp',      icon: Smartphone,      color: 'text-emerald-600 bg-emerald-100' },
   { id: 'warmup',          label: 'Aquecimento',            icon: Flame,           color: 'text-orange-600 bg-orange-100' },
   { id: 'bots',            label: 'Bot de Atendimento',     icon: Bot,             color: 'text-indigo-600 bg-indigo-100' },
@@ -309,6 +310,33 @@ function ContactsSection() {
         O opt-out automático protege você de enviar mensagens para quem não quer receber, reduzindo o risco de banimento e estando em conformidade com a LGPD.
       </Success>
 
+      {/* ── Rastreamento de Contactados ── */}
+      <h3 className="font-bold text-gray-800 mb-4 text-lg mt-10 flex items-center gap-2">
+        <Target size={18} className="text-teal-600" /> Rastreamento de Contactados
+        <span className="bg-teal-100 text-teal-700 text-xs font-bold px-2 py-0.5 rounded-full">Novo</span>
+      </h3>
+      <p className="text-gray-600 text-sm leading-relaxed mb-4">
+        O sistema registra automaticamente quando um contato foi incluído em uma campanha. Isso permite evitar enviar para as mesmas pessoas repetidamente, reduzindo reclamações e risco de bloqueio.
+      </p>
+      <div className="grid sm:grid-cols-3 gap-3 mb-5">
+        {[
+          { icon: CheckCircle, color: 'text-teal-600', bg: 'bg-teal-50 border-teal-200', title: 'Badge "Enviado"', desc: 'Contatos que já receberam uma campanha mostram um indicador verde ao lado do nome na lista.' },
+          { icon: Tag, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-200', title: 'Filtro "Não contactados"', desc: 'Use o filtro na lista de contatos para ver apenas quem ainda não recebeu nenhuma campanha.' },
+          { icon: RefreshCw, color: 'text-purple-600', bg: 'bg-purple-50 border-purple-200', title: 'Limpar histórico', desc: 'Quer enviar novamente para alguém? Acesse o contato e clique em "Limpar histórico de campanhas".' },
+        ].map((c) => (
+          <div key={c.title} className={`border rounded-xl p-4 ${c.bg}`}>
+            <div className="flex items-center gap-2 mb-2">
+              <c.icon size={15} className={c.color} />
+              <p className={`font-semibold text-sm ${c.color.replace('text-', 'text-').replace('600', '900')}`}>{c.title}</p>
+            </div>
+            <p className="text-xs text-gray-600 leading-relaxed">{c.desc}</p>
+          </div>
+        ))}
+      </div>
+      <Tip>
+        <strong>Estratégia recomendada:</strong> Ative <strong>"Excluir já contactados"</strong> em todas as campanhas. Assim cada pessoa recebe a mensagem uma única vez, e o sistema vai gradualmente consumindo a lista sem repetições — você trabalha com eficiência e sem irritar seus contatos.
+      </Tip>
+
       <h3 className="font-bold text-gray-800 mb-4 text-lg mt-8">Plano e limites de contatos</h3>
       <div className="grid sm:grid-cols-2 gap-3">
         {[
@@ -377,6 +405,9 @@ function CampaignsSection() {
             <div className="text-sm text-brand-700">Selecione uma ou mais tags. O sistema mostra quantos contatos cada tag tem e calcula automaticamente o total de destinatários. Contatos com opt-out são sempre excluídos.</div>
           </div>
         </div>
+        <div className="mt-3 bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-800">
+          <strong>Dica — Excluir já contactados:</strong> Marque a opção <strong>"Excluir já contactados"</strong> para o sistema pular automaticamente contatos que já receberam alguma campanha anterior. Ótimo para não repetir o mesmo contato em disparos consecutivos.
+        </div>
         <p className="mt-3 text-sm text-gray-600">Clique em <strong>Disparar</strong> para criar a campanha e colocar as mensagens na fila.</p>
       </Step>
 
@@ -408,6 +439,66 @@ function CampaignsSection() {
       <Warning>
         Toda campanha inclui automaticamente ao final da mensagem a instrução: <em>"Para sair desta lista, responda: SAIR"</em>. Isso é obrigatório e não pode ser removido — protege você e seus contatos.
       </Warning>
+
+      <div id="batch-files">
+      {/* ── Envio em Lotes ── */}
+      <h3 className="font-bold text-gray-800 mb-4 text-lg mt-10 flex items-center gap-2">
+        <Package size={18} className="text-orange-500" /> Envio em Lotes Anti-Bloqueio
+        <span className="bg-orange-100 text-orange-700 text-xs font-bold px-2 py-0.5 rounded-full">Novo</span>
+      </h3>
+      <p className="text-gray-600 text-sm leading-relaxed mb-4">
+        O WhatsApp pode restringir números que enviam muitas mensagens de forma contínua para contatos diferentes. O <strong>modo de envio em lotes</strong> divide sua campanha em grupos menores com intervalo de horas entre cada grupo — imitando um comportamento mais natural e reduzindo drasticamente o risco de bloqueio.
+      </p>
+      <div className="bg-orange-50 border border-orange-200 rounded-2xl p-5 mb-5 text-sm text-orange-900 space-y-2">
+        <p className="font-semibold">Como ativar:</p>
+        {[
+          'Na criação de campanha, role até "Configurações de Envio".',
+          'Ative a chave "Envio em Lotes".',
+          'Defina o Tamanho do lote — recomendamos entre 30 e 50 mensagens por vez.',
+          'Defina o Intervalo entre lotes — recomendamos 8 horas para máxima segurança.',
+          'Crie a campanha normalmente. O 1º lote dispara imediatamente; os demais aguardam o intervalo.',
+        ].map((s, i) => (
+          <div key={i} className="flex gap-2.5">
+            <span className="w-5 h-5 bg-orange-200 rounded-full text-orange-800 text-xs font-black flex items-center justify-center shrink-0">{i + 1}</span>
+            <span>{s}</span>
+          </div>
+        ))}
+      </div>
+      <Tip>
+        <strong>Exemplo prático:</strong> 200 contatos, lote de 50, intervalo de 8h → 50 mensagens agora + 50 daqui a 8h + 50 daqui a 16h + 50 daqui a 24h. Muito mais seguro do que enviar tudo de uma vez!
+      </Tip>
+
+      {/* ── Envio de Arquivos ── */}
+      <h3 className="font-bold text-gray-800 mb-4 text-lg mt-10 flex items-center gap-2">
+        <Paperclip size={18} className="text-blue-500" /> Envio de Arquivos (Imagens, PDFs, Documentos)
+        <span className="bg-blue-100 text-blue-700 text-xs font-bold px-2 py-0.5 rounded-full">Novo</span>
+      </h3>
+      <p className="text-gray-600 text-sm leading-relaxed mb-4">
+        Você pode anexar um arquivo à mensagem individual ou à campanha. Todos os destinatários receberão o mesmo arquivo via WhatsApp — ideal para catálogos, boletos, cardápios, contratos e muito mais.
+      </p>
+      <div className="flex flex-wrap gap-2 mb-4">
+        {['Imagem (JPG, PNG, WebP)', 'PDF', 'Word (.docx)', 'Excel (.xlsx)', 'PowerPoint', 'Vídeo (MP4)', 'Áudio (MP3, OGG)'].map((t) => (
+          <span key={t} className="bg-blue-50 border border-blue-200 text-blue-700 text-xs font-semibold px-2.5 py-1 rounded-full">{t}</span>
+        ))}
+      </div>
+      <div className="space-y-2 mb-4">
+        {[
+          'Na tela de mensagem ou campanha, clique no ícone de clipe 📎 (Anexar arquivo).',
+          'Selecione o arquivo no seu computador (limite: 10 MB por arquivo).',
+          'Aguarde o upload. Quando a confirmação aparecer, o arquivo está salvo na nuvem.',
+          'Escreva normalmente o texto da mensagem. O arquivo será enviado junto.',
+          'Envie. Cada destinatário receberá o texto + o arquivo pelo WhatsApp.',
+        ].map((s, i) => (
+          <div key={i} className="flex gap-2.5 text-sm text-gray-700">
+            <span className="w-5 h-5 bg-blue-100 rounded-full text-blue-700 text-xs font-black flex items-center justify-center shrink-0">{i + 1}</span>
+            <span>{s}</span>
+          </div>
+        ))}
+      </div>
+      <Warning>
+        <strong>Importante:</strong> O arquivo precisa estar configurado no servidor (Cloudflare R2) para o envio funcionar. Se você for o dono da plataforma, consulte o Guia de Deploy para configurar o armazenamento de arquivos.
+      </Warning>
+      </div>{/* end batch-files */}
     </div>
   );
 }
