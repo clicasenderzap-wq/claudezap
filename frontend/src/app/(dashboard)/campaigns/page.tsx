@@ -815,7 +815,7 @@ export default function CampaignsPage() {
                       <div className="min-w-0 flex-1">
                         <p className="font-medium text-gray-800 flex items-center gap-1.5">
                           {m.Contact?.name ?? '—'}
-                          {m.media_url && <Paperclip size={11} className="text-gray-400 shrink-0" title={m.media_filename} />}
+                          {m.media_url && <span title={m.media_filename}><Paperclip size={11} className="text-gray-400 shrink-0" /></span>}
                         </p>
                         <p className="text-xs text-gray-500">{m.Contact?.phone}</p>
                       </div>
