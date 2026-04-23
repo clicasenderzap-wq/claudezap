@@ -45,6 +45,8 @@ app.use('/api', rateLimit({
 
 app.use('/api', routes);
 
+app.get('/', (req, res) => res.json({ status: 'ok' }));
+
 app.get('/health', (req, res) => {
   try {
     const whatsapp = require('./services/whatsappService');
