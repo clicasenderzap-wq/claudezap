@@ -8,7 +8,12 @@ import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { formatDate } from '@/lib/utils';
 
-const PLAN_LABELS: Record<string, string> = { starter: 'Starter', pro: 'Pro' };
+const PLAN_LABELS: Record<string, string> = {
+  starter: 'Starter',
+  pro: 'Pro',
+  starter_cortesia: 'Básico Cortesia',
+  pro_cortesia: 'Pro Cortesia',
+};
 const STATUS_LABELS: Record<string, string> = { active: 'Ativo', trial: 'Trial', inactive: 'Inativo', pending: 'Pendente' };
 const STATUS_COLORS: Record<string, string> = {
   active: 'bg-green-100 text-green-700',
@@ -19,7 +24,10 @@ const STATUS_COLORS: Record<string, string> = {
 const PLAN_COLORS: Record<string, string> = {
   starter: 'bg-gray-100 text-gray-700',
   pro: 'bg-brand-100 text-brand-700',
+  starter_cortesia: 'bg-teal-100 text-teal-700',
+  pro_cortesia: 'bg-violet-100 text-violet-700',
 };
+const COURTESY_PLANS = new Set(['starter_cortesia', 'pro_cortesia']);
 
 export default function AdminPage() {
   const qc = useQueryClient();
@@ -139,13 +147,32 @@ export default function AdminPage() {
 
       {/* Planos */}
       {stats?.by_plan && (
-        <div className="flex gap-4 flex-wrap">
-          {Object.entries(stats.by_plan).map(([plan, count]: any) => (
-            <div key={plan} className="bg-white rounded-xl border border-gray-200 px-4 py-2.5 flex items-center gap-2">
-              <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan] ?? plan}</span>
-              <span className="text-sm font-bold text-gray-800">{count} usuários</span>
+        <div className="space-y-2">
+          <div className="flex gap-3 flex-wrap items-center">
+            <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Pagantes:</span>
+            {Object.entries(stats.by_plan)
+              .filter(([plan]) => !COURTESY_PLANS.has(plan))
+              .map(([plan, count]: any) => (
+                <div key={plan} className="bg-white rounded-xl border border-gray-200 px-4 py-2 flex items-center gap-2">
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${PLAN_COLORS[plan] ?? 'bg-gray-100 text-gray-700'}`}>{PLAN_LABELS[plan] ?? plan}</span>
+                  <span className="text-sm font-bold text-gray-800">{count} usuários</span>
+                </div>
+              ))}
+          </div>
+          {Object.entries(stats.by_plan).some(([plan]) => COURTESY_PLANS.has(plan)) && (
+            <div className="flex gap-3 flex-wrap items-center">
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Cortesia (R$0):</span>
+              {Object.entries(stats.by_plan)
+                .filter(([plan]) => COURTESY_PLANS.has(plan))
+                .map(([plan, count]: any) => (
+                  <div key={plan} className="bg-white rounded-xl border border-dashed border-teal-300 px-4 py-2 flex items-center gap-2">
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${PLAN_COLORS[plan]}`}>{PLAN_LABELS[plan] ?? plan}</span>
+                    <span className="text-sm font-bold text-gray-800">{count} usuários</span>
+                    <span className="text-xs text-teal-600 bg-teal-50 px-1.5 py-0.5 rounded-full">R$0</span>
+                  </div>
+                ))}
             </div>
-          ))}
+          )}
         </div>
       )}
 
@@ -225,6 +252,8 @@ export default function AdminPage() {
           <option value="">Todos os planos</option>
           <option value="starter">Starter</option>
           <option value="pro">Pro</option>
+          <option value="starter_cortesia">Básico Cortesia</option>
+          <option value="pro_cortesia">Pro Cortesia</option>
         </select>
         <button onClick={() => refetch()} className="btn btn-secondary gap-2">
           <RefreshCw size={14} /> Atualizar
@@ -262,8 +291,14 @@ export default function AdminPage() {
                   </div>
                   <div className="col-span-2">
                     <select className="input text-xs" value={editForm.plan} onChange={(e) => setEditForm({ ...editForm, plan: e.target.value })}>
-                      <option value="starter">Starter — R$67,90</option>
-                      <option value="pro">Pro — R$117,90</option>
+                      <optgroup label="Planos pagos">
+                        <option value="starter">Starter — R$67,90</option>
+                        <option value="pro">Pro — R$117,90</option>
+                      </optgroup>
+                      <optgroup label="Cortesia (R$ 0 — testes / parcerias)">
+                        <option value="starter_cortesia">Básico Cortesia — R$0</option>
+                        <option value="pro_cortesia">Pro Cortesia — R$0</option>
+                      </optgroup>
                     </select>
                   </div>
                   <div className="col-span-2">

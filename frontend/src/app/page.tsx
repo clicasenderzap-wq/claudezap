@@ -386,7 +386,7 @@ export default function LandingPage() {
               {/* BAB: BRIDGE */}
               <p className="text-xl text-gray-500 mb-8 leading-relaxed">
                 Automatize disparos em massa, aqueça seus números e atenda clientes 24h com IA —
-                tudo em uma plataforma só, sem risco de banimento.
+                tudo em uma plataforma só, com práticas para reduzir bloqueios.
               </p>
 
               {/* BAB: AFTER (bullets) */}
