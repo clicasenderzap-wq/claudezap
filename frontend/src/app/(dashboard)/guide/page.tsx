@@ -791,12 +791,17 @@ function BotsSection() {
     <div id="bots">
       <SectionTitle icon={Bot} color="text-indigo-600 bg-indigo-100" title="Bot de Atendimento" subtitle="Atenda clientes automaticamente com inteligência artificial" />
 
+      <div className="flex items-center gap-2 mb-4">
+        <span className="bg-indigo-100 text-indigo-700 text-xs font-bold px-2.5 py-1 rounded-full">Exclusivo Plano Pro</span>
+        <span className="text-xs text-gray-500">Custos de IA incluídos · até 500 conversas/mês</span>
+      </div>
+
       <p className="text-gray-600 mb-4 leading-relaxed">
-        O bot de atendimento usa IA para responder automaticamente os clientes que entram em contato com seus números WhatsApp. Cada número pode ter <strong>um bot configurado</strong> — com personalidade, comportamento e horários próprios.
+        O bot de atendimento usa <strong>GPT-4o-mini</strong> para responder automaticamente os clientes que entram em contato com seus números WhatsApp. Os custos de IA ficam por conta da plataforma — nenhuma chave de API necessária. Cada número pode ter <strong>um bot configurado</strong> com personalidade, comportamento e horários próprios.
       </p>
 
       <Success>
-        <strong>1 bot por número:</strong> Cada número WhatsApp tem sua própria configuração de bot independente. Configure bots diferentes para vendas, suporte, agendamentos, etc.
+        <strong>Incluído no plano Pro:</strong> Até 500 novas conversas por mês cobertas pela plataforma. O contador reinicia todo dia 1º. Conversas já abertas continuam sendo atendidas normalmente.
       </Success>
 
       <h3 className="font-bold text-gray-800 mb-4 text-lg mt-6">Como funciona</h3>
@@ -804,7 +809,7 @@ function BotsSection() {
         {[
           'Cliente envia mensagem para o número → bot verifica se está ativo e no horário configurado.',
           'Bot carrega o histórico da conversa com esse cliente (contexto completo).',
-          'Envia o histórico + sua mensagem para a IA (Claude ou GPT) com o prompt de identidade.',
+          'Envia o histórico + sua mensagem para o GPT-4o-mini com o seu prompt de identidade.',
           'IA gera resposta contextualizada e o bot envia automaticamente ao cliente.',
           'Se o cliente pedir humano, ou após o limite de turnos, o bot escala e avisa o operador.',
         ].map((s, i) => (
@@ -822,26 +827,7 @@ function BotsSection() {
       <Step num={2} title="Clique no número e expanda as configurações">
         Clique no card do número desejado para expandir a configuração completa do bot.
       </Step>
-      <Step num={3} title="Escolha o provedor de IA">
-        <div className="space-y-2 mt-1">
-          <div className="flex gap-3 bg-gray-50 rounded-xl p-3">
-            <div className="font-semibold text-sm text-gray-800 min-w-28">Anthropic (Claude)</div>
-            <div className="text-sm text-gray-600">Melhor para conversas naturais em português. Modelo recomendado: <Code>claude-haiku-4-5</Code> (rápido e barato).</div>
-          </div>
-          <div className="flex gap-3 bg-gray-50 rounded-xl p-3">
-            <div className="font-semibold text-sm text-gray-800 min-w-28">OpenAI (GPT)</div>
-            <div className="text-sm text-gray-600">Alternativa popular. Modelo recomendado: <Code>gpt-4o-mini</Code> (equilíbrio custo/qualidade).</div>
-          </div>
-        </div>
-      </Step>
-      <Step num={4} title="Insira sua chave de API">
-        <div className="space-y-2 mt-1 text-sm text-gray-600">
-          <p><strong>Anthropic:</strong> crie em <Code>console.anthropic.com</Code> → API Keys → Create Key. Começa com <Code>sk-ant-</Code>.</p>
-          <p><strong>OpenAI:</strong> crie em <Code>platform.openai.com</Code> → API Keys → Create. Começa com <Code>sk-</Code>.</p>
-          <p className="text-xs text-gray-400 mt-1">A chave é armazenada de forma segura e nunca é exibida completa após salvar.</p>
-        </div>
-      </Step>
-      <Step num={5} title="Escreva o Prompt do sistema (o mais importante)">
+      <Step num={3} title="Escreva o Prompt do sistema (o mais importante)">
         O prompt define a personalidade e o conhecimento do bot. Quanto mais detalhado, melhor a qualidade das respostas.
       </Step>
 
@@ -919,7 +905,7 @@ function BotsSection() {
       </div>
 
       <Tip>
-        <strong>Custo por conversa:</strong> O custo de IA é muito baixo — entre R$0,01 e R$0,07 por conversa completa (10 trocas). Esse valor é cobrado diretamente pelo provedor de IA (Anthropic ou OpenAI) na sua chave de API, não pela Clica Aí.
+        <strong>Limite mensal:</strong> O plano Pro cobre até 500 novas conversas por mês. Você pode acompanhar o uso na própria página do Bot de Atendimento — há um contador no canto superior direito. Quando o limite é atingido, o bot para de iniciar novas conversas até o dia 1º do mês seguinte.
       </Tip>
 
       <h3 className="font-bold text-gray-800 mb-4 text-lg mt-6">Horário de funcionamento do bot</h3>

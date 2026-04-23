@@ -1,4 +1,5 @@
-const { BotConfig, BotConversation, WhatsappAccount, Contact, Message } = require('../models');
+const { Op } = require('sequelize');
+const { BotConfig, BotConversation, WhatsappAccount, User, Contact, Message } = require('../models');
 const whatsapp = require('./whatsappService');
 const { enqueueScheduled } = require('./queueService');
 
@@ -56,41 +57,34 @@ async function createBotScheduledMessages(account, fromPhone, schedules) {
   }
 }
 
+const SYSTEM_SUFFIX = '\n\nSe o cliente precisar de atendimento humano especializado ou se você não conseguir resolver o problema, inclua exatamente [[ESCALAR]] na sua resposta.\n\nPara agendar um follow-up automático para este cliente em uma data futura, inclua na sua resposta a tag [[AGENDAR:AAAA-MM-DD HH:mm:texto da mensagem]] — exemplo: [[AGENDAR:2026-05-01 10:00:Olá {{nome}}, só passando para confirmar nosso combinado!]]. A tag não aparecerá para o cliente.';
+
 async function callAI(config, messages) {
-  if (!config.ai_api_key) throw new Error('Chave de API não configurada');
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('OPENAI_API_KEY não configurada no servidor');
 
-  if (config.ai_provider === 'anthropic') {
-    const Anthropic = require('@anthropic-ai/sdk');
-    const client = new Anthropic({ apiKey: config.ai_api_key });
+  const { default: OpenAI } = require('openai');
+  const client = new OpenAI({ apiKey });
 
-    const response = await client.messages.create({
-      model: config.ai_model || 'claude-haiku-4-5-20251001',
-      max_tokens: 500,
-      system: config.system_prompt + '\n\nSe o cliente precisar de atendimento humano especializado ou se você não conseguir resolver o problema, inclua exatamente [[ESCALAR]] na sua resposta.\n\nPara agendar um follow-up automático para este cliente em uma data futura, inclua na sua resposta a tag [[AGENDAR:AAAA-MM-DD HH:mm:texto da mensagem]] — exemplo: [[AGENDAR:2026-05-01 10:00:Olá {{nome}}, só passando para confirmar nosso combinado!]]. A tag não aparecerá para o cliente.',
-      messages,
-    });
-    return response.content[0].text;
-  }
-
-  if (config.ai_provider === 'openai') {
-    const { default: OpenAI } = require('openai');
-    const client = new OpenAI({ apiKey: config.ai_api_key });
-
-    const response = await client.chat.completions.create({
-      model: config.ai_model || 'gpt-4o-mini',
-      max_tokens: 500,
-      messages: [
-        { role: 'system', content: config.system_prompt + '\n\nSe o cliente precisar de atendimento humano especializado ou se você não conseguir resolver o problema, inclua exatamente [[ESCALAR]] na sua resposta.\n\nPara agendar um follow-up automático para este cliente em uma data futura, inclua na sua resposta a tag [[AGENDAR:AAAA-MM-DD HH:mm:texto da mensagem]] — exemplo: [[AGENDAR:2026-05-01 10:00:Olá {{nome}}, só passando para confirmar nosso combinado!]]. A tag não aparecerá para o cliente.' },
-        ...messages,
-      ],
-    });
-    return response.choices[0].message.content;
-  }
-
-  throw new Error('Provedor de IA não suportado');
+  const response = await client.chat.completions.create({
+    model: 'gpt-4o-mini',
+    max_tokens: 500,
+    messages: [
+      { role: 'system', content: (config.system_prompt || '') + SYSTEM_SUFFIX },
+      ...messages,
+    ],
+  });
+  return response.choices[0].message.content;
 }
 
 async function handleMessage(accountId, fromPhone, text) {
+  // Load account and verify user is on Pro plan
+  const account = await WhatsappAccount.findByPk(accountId);
+  if (!account) return;
+
+  const user = await User.findByPk(account.user_id);
+  if (!user || user.plan !== 'pro') return;
+
   const config = await BotConfig.findOne({ where: { account_id: accountId, enabled: true } });
   if (!config) return;
 
@@ -104,6 +98,20 @@ async function handleMessage(accountId, fromPhone, text) {
   let conv = await BotConversation.findOne({ where: { account_id: accountId, contact_phone: fromPhone } });
 
   if (!conv) {
+    // Enforce 500 conversations/month limit
+    const monthStart = new Date();
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+    const allAccounts = await WhatsappAccount.findAll({ where: { user_id: account.user_id }, attributes: ['id'] });
+    const accountIds = allAccounts.map((a) => a.id);
+    const monthlyCount = await BotConversation.count({
+      where: { account_id: accountIds, created_at: { [Op.gte]: monthStart } },
+    });
+    if (monthlyCount >= 500) {
+      console.log(`[Bot] limite mensal de conversas atingido para user ${account.user_id}`);
+      return;
+    }
+
     conv = await BotConversation.create({ account_id: accountId, contact_phone: fromPhone, messages: [] });
     // Envia mensagem de boas-vindas
     if (config.welcome_message) {
@@ -157,8 +165,7 @@ async function handleMessage(accountId, fromPhone, text) {
 
   // Create any scheduled follow-ups the AI requested
   if (schedules.length > 0) {
-    const account = await WhatsappAccount.findByPk(accountId).catch(() => null);
-    if (account) await createBotScheduledMessages(account, fromPhone, schedules);
+    await createBotScheduledMessages(account, fromPhone, schedules);
   }
 }
 

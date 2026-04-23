@@ -43,4 +43,11 @@ function requireAdmin(req, res, next) {
   next();
 }
 
-module.exports = { requireActive, limitCheck, requireAdmin, getLimit, PLAN_LIMITS };
+function requireProBot(req, res, next) {
+  if (req.user.plan !== 'pro') {
+    return res.status(403).json({ error: 'O Bot de Atendimento com IA é exclusivo do plano Pro. Faça upgrade para acessar.' });
+  }
+  next();
+}
+
+module.exports = { requireActive, limitCheck, requireAdmin, requireProBot, getLimit, PLAN_LIMITS };

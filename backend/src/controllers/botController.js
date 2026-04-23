@@ -1,3 +1,4 @@
+const { Op } = require('sequelize');
 const { BotConfig, BotConversation, WhatsappAccount } = require('../models');
 
 async function getConfig(req, res) {
@@ -20,8 +21,7 @@ async function updateConfig(req, res) {
 
   const {
     enabled, system_prompt, welcome_message, escalation_message,
-    ai_provider, ai_api_key, ai_model, max_turns,
-    business_hours_only, start_hour, end_hour,
+    max_turns, business_hours_only, start_hour, end_hour,
   } = req.body;
 
   await config.update({
@@ -29,9 +29,6 @@ async function updateConfig(req, res) {
     ...(system_prompt !== undefined && { system_prompt }),
     ...(welcome_message !== undefined && { welcome_message }),
     ...(escalation_message !== undefined && { escalation_message }),
-    ...(ai_provider !== undefined && { ai_provider }),
-    ...(ai_api_key !== undefined && { ai_api_key }),
-    ...(ai_model !== undefined && { ai_model }),
     ...(max_turns !== undefined && { max_turns: Math.max(1, Math.min(50, Number(max_turns))) }),
     ...(business_hours_only !== undefined && { business_hours_only }),
     ...(start_hour !== undefined && { start_hour: Number(start_hour) }),
@@ -80,4 +77,16 @@ async function reopenConversation(req, res) {
   res.json(conv);
 }
 
-module.exports = { getConfig, updateConfig, getConversations, closeConversation, reopenConversation };
+async function getMonthlyStats(req, res) {
+  const accounts = await WhatsappAccount.findAll({ where: { user_id: req.user.id }, attributes: ['id'] });
+  const accountIds = accounts.map((a) => a.id);
+  const monthStart = new Date();
+  monthStart.setDate(1);
+  monthStart.setHours(0, 0, 0, 0);
+  const count = await BotConversation.count({
+    where: { account_id: accountIds, created_at: { [Op.gte]: monthStart } },
+  });
+  res.json({ conversations_this_month: count, limit: 500 });
+}
+
+module.exports = { getConfig, updateConfig, getConversations, closeConversation, reopenConversation, getMonthlyStats };

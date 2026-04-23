@@ -113,7 +113,6 @@ const PLANS = [
       'Até 3 números WhatsApp',
       'Disparos em massa ilimitados',
       'Aquecimento de números',
-      'Bot de IA (chave de API própria)',
       'Até 5.000 contatos',
       'Dashboard e relatórios completos',
       '7 dias grátis para testar',
@@ -130,7 +129,7 @@ const PLANS = [
       'Até 6 números WhatsApp',
       'Disparos em massa ilimitados',
       'Aquecimento de números',
-      'Bot de IA (chave de API própria)',
+      'Bot com IA incluído (até 500 conv/mês)',
       'Contatos ilimitados',
       'Dashboard e relatórios completos',
       'Suporte prioritário via WhatsApp',
@@ -151,11 +150,11 @@ const FAQS = [
   },
   {
     q: 'Como funciona o bot de atendimento com IA?',
-    a: 'Você configura um "prompt de identidade" para o bot (ex: "Você é o assistente da loja X...") e insere sua chave de API da Anthropic (Claude) ou OpenAI. O bot mantém o histórico da conversa, entende o contexto e sabe quando escalar para um atendente humano.',
+    a: 'Você configura um "prompt de identidade" para o bot (ex: "Você é o assistente da loja X...") e o bot passa a responder automaticamente os clientes que entram em contato. O bot usa GPT-4o-mini, mantém o histórico da conversa, entende o contexto e sabe quando escalar para um atendente humano.',
   },
   {
     q: 'Preciso pagar pela IA do bot separado?',
-    a: 'Sim. O bot usa sua própria chave de API (Anthropic ou OpenAI). O custo é muito baixo — cerca de R$0,01 a R$0,07 por conversa completa — e você paga diretamente ao provedor de IA, sem taxas adicionais da nossa parte.',
+    a: 'Não. O bot com IA está incluído no plano Pro — os custos de IA ficam por nossa conta. Você tem até 500 conversas por mês cobertas, sem precisar criar conta em nenhum provedor de IA nem configurar chave de API.',
   },
   {
     q: 'O que é o envio em lotes e por que evita bloqueios?',

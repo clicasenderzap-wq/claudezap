@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Bot, Power, MessageSquare, Settings, ChevronDown, ChevronUp, Clock, Users, AlertCircle, CheckCircle, RotateCcw } from 'lucide-react';
+import { Bot, Power, MessageSquare, ChevronDown, ChevronUp, AlertCircle, RotateCcw, Lock, TrendingUp } from 'lucide-react';
+import Link from 'next/link';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { formatDate } from '@/lib/utils';
+import { useAuthStore } from '@/store/authStore';
 
 const STATUS_COLORS: Record<string, string> = {
   active: 'bg-green-100 text-green-700',
@@ -89,42 +91,10 @@ function BotAccountCard({ account }: { account: any }) {
                 </button>
               </div>
 
-              {/* Campos de configuração */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <div>
-                  <label className="label">Provedor de IA</label>
-                  <select className="input" value={liveForm.ai_provider ?? 'anthropic'} onChange={(e) => setForm({ ...liveForm, ai_provider: e.target.value })}>
-                    <option value="anthropic">Anthropic (Claude)</option>
-                    <option value="openai">OpenAI (GPT)</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="label">Modelo</label>
-                  <select className="input" value={liveForm.ai_model ?? ''} onChange={(e) => setForm({ ...liveForm, ai_model: e.target.value })}>
-                    {(liveForm.ai_provider ?? 'anthropic') === 'anthropic' ? (
-                      <>
-                        <option value="claude-haiku-4-5-20251001">Claude Haiku 4.5 (rápido, barato)</option>
-                        <option value="claude-sonnet-4-6">Claude Sonnet 4.6 (melhor qualidade)</option>
-                      </>
-                    ) : (
-                      <>
-                        <option value="gpt-4o-mini">GPT-4o Mini (rápido, barato)</option>
-                        <option value="gpt-4o">GPT-4o (melhor qualidade)</option>
-                      </>
-                    )}
-                  </select>
-                </div>
-              </div>
-
-              <div>
-                <label className="label">Chave de API</label>
-                <input
-                  type="password"
-                  className="input"
-                  placeholder={liveForm.ai_api_key ? '••••••••••••••••' : 'sk-ant-... ou sk-...'}
-                  onChange={(e) => setForm({ ...liveForm, ai_api_key: e.target.value })}
-                />
-                <p className="text-xs text-gray-400 mt-1">A chave fica armazenada de forma segura e nunca é exibida completa</p>
+              {/* IA gerenciada pela plataforma */}
+              <div className="flex items-center gap-3 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 text-sm text-indigo-800">
+                <TrendingUp size={15} className="shrink-0 text-indigo-500" />
+                <span>Modelo: <strong>GPT-4o Mini</strong> · Custos de IA incluídos no plano Pro · Limite: <strong>500 conversas/mês</strong></span>
               </div>
 
               <div>
@@ -254,19 +224,65 @@ function BotAccountCard({ account }: { account: any }) {
 }
 
 export default function BotsPage() {
+  const { user } = useAuthStore();
+  const isPro = (user as any)?.plan === 'pro';
+
   const { data: accounts, isLoading } = useQuery({
     queryKey: ['whatsapp-accounts'],
     queryFn: () => api.get('/whatsapp/accounts').then((r) => r.data),
     refetchInterval: 20000,
+    enabled: isPro,
+  });
+
+  const { data: stats } = useQuery({
+    queryKey: ['bot-monthly-stats'],
+    queryFn: () => api.get('/bot/stats').then((r) => r.data),
+    refetchInterval: 60_000,
+    enabled: isPro,
   });
 
   const connected = (accounts ?? []).filter((a: any) => a.status === 'connected');
+  const usagePercent = stats ? Math.min(100, Math.round((stats.conversations_this_month / stats.limit) * 100)) : 0;
+
+  if (!isPro) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Bot de Atendimento</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Atenda clientes automaticamente com inteligência artificial</p>
+        </div>
+        <div className="card p-10 flex flex-col items-center text-center gap-4">
+          <div className="p-4 bg-indigo-100 rounded-2xl">
+            <Lock size={32} className="text-indigo-500" />
+          </div>
+          <h2 className="text-xl font-bold text-gray-900">Funcionalidade exclusiva do plano Pro</h2>
+          <p className="text-gray-500 max-w-md text-sm leading-relaxed">
+            O Bot de Atendimento com IA usa GPT-4o-mini para responder clientes automaticamente. Os custos de IA estão incluídos no plano Pro — até <strong>500 conversas por mês</strong> sem precisar configurar nenhuma chave de API.
+          </p>
+          <Link href="/#precos" className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm">
+            Ver planos e fazer upgrade
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Bot de Atendimento</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Configure um bot com IA para responder automaticamente os clientes que entrarem em contato</p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Bot de Atendimento</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Configure um bot com IA para responder automaticamente os clientes que entrarem em contato</p>
+        </div>
+        {stats && (
+          <div className="shrink-0 bg-indigo-50 border border-indigo-200 rounded-xl px-4 py-3 text-right min-w-44">
+            <p className="text-xs text-indigo-600 font-semibold">Conversas este mês</p>
+            <p className="text-2xl font-black text-indigo-700">{stats.conversations_this_month}<span className="text-sm font-normal text-indigo-400">/{stats.limit}</span></p>
+            <div className="w-full bg-indigo-100 rounded-full h-1.5 mt-1.5">
+              <div className="bg-indigo-500 h-1.5 rounded-full transition-all" style={{ width: `${usagePercent}%` }} />
+            </div>
+          </div>
+        )}
       </div>
 
       {!isLoading && connected.length === 0 && (
@@ -289,11 +305,11 @@ export default function BotsPage() {
         <h3 className="text-sm font-semibold text-gray-800 mb-3">Como funciona o bot de atendimento</h3>
         <div className="grid sm:grid-cols-2 gap-3 text-sm text-gray-600">
           {[
-            'Quando um cliente manda mensagem para o número, o bot responde automaticamente usando IA.',
-            'Você define a personalidade do bot com um prompt: ele pode ser atendente de uma empresa, suporte técnico, vendas, etc.',
+            'Quando um cliente manda mensagem para o número, o bot responde automaticamente usando GPT-4o-mini.',
+            'Você define a personalidade do bot com um prompt: atendente de empresa, suporte técnico, vendas, etc.',
             'O bot mantém o histórico da conversa para responder com contexto, como um atendente humano faria.',
             'Se o cliente pedir para falar com humano, ou após o limite de turnos, o bot encaminha e avisa o operador.',
-            'Você precisa de uma chave de API da Anthropic (Claude) ou OpenAI — o custo por conversa é muito baixo.',
+            'Nenhuma chave de API necessária — os custos de IA estão incluídos no plano Pro (até 500 conv/mês).',
             'O bot funciona 24h ou apenas no horário comercial configurado — você escolhe.',
           ].map((tip, i) => (
             <div key={i} className="flex gap-2">
