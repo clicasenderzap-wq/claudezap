@@ -112,6 +112,9 @@ async function verifyEmail(req, res) {
   res.json({ message: 'Email confirmado! Você já pode fazer login e usar a plataforma. Bom proveito!' });
 }
 
+const LOGIN_MAX_ATTEMPTS = 5;
+const LOGIN_LOCKOUT_MINUTES = 30;
+
 async function login(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
@@ -121,11 +124,38 @@ async function login(req, res) {
     const user = await User.findOne({ where: { email } });
     if (!user) return res.status(401).json({ error: 'Credenciais inválidas' });
 
+    // Conta bloqueada por tentativas excessivas?
+    if (user.login_locked_until && new Date(user.login_locked_until) > new Date()) {
+      const minutesLeft = Math.ceil((new Date(user.login_locked_until) - Date.now()) / 60000);
+      await audit(user.id, 'login_blocked', req, { reason: 'account_locked', minutes_left: minutesLeft });
+      return res.status(429).json({
+        error: `Conta bloqueada por tentativas excessivas. Tente novamente em ${minutesLeft} minuto(s).`,
+        code: 'ACCOUNT_LOCKED',
+      });
+    }
+
     const valid = await user.verifyPassword(password);
     if (!valid) {
-      await audit(user.id, 'login_failed', req, { reason: 'wrong_password' });
+      const newCount = (user.login_failed_count || 0) + 1;
+      const shouldLock = newCount >= LOGIN_MAX_ATTEMPTS;
+      await user.update({
+        login_failed_count: shouldLock ? 0 : newCount,
+        login_locked_until: shouldLock
+          ? new Date(Date.now() + LOGIN_LOCKOUT_MINUTES * 60000)
+          : null,
+      });
+      await audit(user.id, 'login_failed', req, { reason: 'wrong_password', attempt: newCount });
+      if (shouldLock) {
+        return res.status(429).json({
+          error: `Conta bloqueada por ${LOGIN_LOCKOUT_MINUTES} minutos após ${LOGIN_MAX_ATTEMPTS} tentativas incorretas.`,
+          code: 'ACCOUNT_LOCKED',
+        });
+      }
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
+
+    // Login bem-sucedido — zera o contador de falhas
+    await user.update({ login_failed_count: 0, login_locked_until: null });
 
     // null = legado (pré-verificação), passa; false = aguardando verificação
     if (user.email_verified === false) {

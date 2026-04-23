@@ -31,7 +31,7 @@ const User = sequelize.define('User', {
     defaultValue: 'user',
   },
   plan: {
-    type: DataTypes.ENUM('starter', 'pro'),
+    type: DataTypes.ENUM('starter', 'pro', 'starter_cortesia', 'pro_cortesia'),
     defaultValue: 'starter',
   },
   status: {
@@ -62,6 +62,14 @@ const User = sequelize.define('User', {
   },
   email_verification_token: {
     type: DataTypes.STRING,
+    allowNull: true,
+  },
+  login_failed_count: {
+    type: DataTypes.INTEGER,
+    defaultValue: 0,
+  },
+  login_locked_until: {
+    type: DataTypes.DATE,
     allowNull: true,
   },
 }, {

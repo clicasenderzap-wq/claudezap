@@ -18,8 +18,19 @@ const app = express();
 app.set('trust proxy', 1);
 
 app.use(helmet());
+
+// CORS: em produção aceita apenas origens listadas em CORS_ORIGIN (vírgula-separadas).
+// Sem CORS_ORIGIN definido (dev local) aceita tudo.
+const _allowedOrigins = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((o) => o.trim()).filter(Boolean)
+  : null;
+
 app.use(cors({
-  origin: process.env.CORS_ORIGIN || '*',
+  origin: (origin, callback) => {
+    if (!_allowedOrigins) return callback(null, true);
+    if (!origin || _allowedOrigins.includes(origin)) return callback(null, true);
+    callback(new Error('CORS: origem não permitida'));
+  },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
 }));
 app.use(express.json());
