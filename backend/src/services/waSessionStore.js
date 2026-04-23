@@ -72,4 +72,9 @@ async function deleteSession(accountId) {
   } while (cursor !== '0');
 }
 
-module.exports = { useRedisAuthState, deleteSession };
+async function hasSession(accountId) {
+  const key = `${NS}:${accountId}:creds`;
+  return (await redis.exists(key)) > 0;
+}
+
+module.exports = { useRedisAuthState, deleteSession, hasSession };

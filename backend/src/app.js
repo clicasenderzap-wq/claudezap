@@ -81,17 +81,25 @@ const server = app.listen(PORT, () => {
     require('./services/warmupService').start();
     console.log('[Warmup] iniciado');
 
-    // Reconecta contas WhatsApp com delay escalonado (evita spike no Redis/WA)
+    // Reconecta apenas contas que têm sessão salva no Redis (sem sessão = aguarda QR manual)
     const whatsapp = require('./services/whatsappService');
+    const { hasSession } = require('./services/waSessionStore');
     const { WhatsappAccount } = require('./models');
     const accounts = await WhatsappAccount.findAll();
-    console.log(`[WA] Reconectando ${accounts.length} conta(s) com escalonamento de 3s...`);
-    accounts.forEach((account, i) => {
-      setTimeout(() => {
-        console.log(`[WA] Conectando: ${account.label} (${account.id})`);
-        whatsapp.connect(account.id).catch((e) => console.error(`[WA] Falha ao conectar ${account.id}:`, e.message));
-      }, i * 3000);
-    });
+    let delay = 0;
+    for (const account of accounts) {
+      const sessionExists = await hasSession(account.id).catch(() => false);
+      if (sessionExists) {
+        setTimeout(() => {
+          console.log(`[WA] Reconectando: ${account.label}`);
+          whatsapp.connect(account.id).catch((e) => console.error(`[WA] Falha ao reconectar ${account.id}:`, e.message));
+        }, delay);
+        delay += 3000;
+      } else {
+        console.log(`[WA] ${account.label}: sem sessão — aguardando QR scan`);
+        await WhatsappAccount.update({ status: 'disconnected' }, { where: { id: account.id } }).catch(() => {});
+      }
+    }
   } catch (err) {
     console.error('[Startup] falha ao conectar:', err.message);
     // Não encerra o processo — deixa o /health responder para diagnóstico

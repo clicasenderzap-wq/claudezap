@@ -5,7 +5,7 @@ const {
   makeCacheableSignalKeyStore,
 } = require('@whiskeysockets/baileys');
 const { EventEmitter } = require('events');
-const { useRedisAuthState, deleteSession } = require('./waSessionStore');
+const { useRedisAuthState, deleteSession, hasSession } = require('./waSessionStore');
 
 const noop = () => {};
 const silentLogger = {
@@ -99,6 +99,14 @@ class WhatsAppService extends EventEmitter {
           console.log(`[WA] ${accountId}: sessão inválida (código ${code}) — limpando para reconexão limpa`);
           await deleteSession(accountId).catch(() => {});
           this.reconnectAttempts.delete(accountId);
+        }
+
+        // Só reconecta automaticamente se há sessão salva no Redis
+        // (sem sessão = conta nova, aguarda QR scan manual)
+        const sessionSaved = await hasSession(accountId).catch(() => false);
+        if (!sessionSaved) {
+          console.log(`[WA] ${accountId}: sem sessão no Redis — aguardando QR scan manual`);
+          return;
         }
 
         const attempts = this.reconnectAttempts.get(accountId) || 0;
