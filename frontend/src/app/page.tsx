@@ -8,6 +8,13 @@ import {
   AlertTriangle, Lock,
 } from 'lucide-react';
 
+// ─── Contato WhatsApp ─────────────────────────────────────────────────────────
+const WA = (msg: string) => `https://wa.me/5535999153639?text=${encodeURIComponent(msg)}`;
+const WA_PLANS   = WA('Olá! Tenho interesse em contratar o Clica Aí. Pode me ajudar?');
+const WA_SUPPORT = WA('Olá! Preciso de suporte com o Clica Aí.');
+const WA_START   = WA('Olá! Quero começar a usar o Clica Aí. Como funciona?');
+const WA_INFO    = WA('Olá! Vim pelo site do Clica Aí e gostaria de mais informações.');
+
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
 const FEATURES = [
@@ -124,7 +131,7 @@ const FAQS = [
   },
   {
     q: 'Posso cancelar a qualquer momento?',
-    a: 'Sim, sem fidelidade e sem multa. Você começa com 7 dias grátis sem precisar de cartão. Se decidir cancelar, basta entrar em contato e o acesso é encerrado no fim do período pago.',
+    a: 'Sim, sem fidelidade e sem multa. Você começa com 7 dias grátis sem precisar de cartão. Se decidir cancelar, basta falar com a gente pelo WhatsApp e o acesso é encerrado no fim do período pago.',
   },
   {
     q: 'Posso usar o sistema para qualquer tipo de mensagem?',
@@ -605,7 +612,9 @@ export default function LandingPage() {
 
             <p className="text-center text-gray-500 text-sm mt-8">
               Tem dúvidas sobre qual plano escolher?{' '}
-              <a href="mailto:suporte@clicaai.com.br" className="text-green-400 hover:underline">Fale com a gente</a>
+              <a href={WA_PLANS} target="_blank" rel="noopener noreferrer" className="text-green-400 hover:underline">
+                Fale com a gente no WhatsApp
+              </a>
             </p>
           </div>
         </section>
@@ -634,6 +643,14 @@ export default function LandingPage() {
             <div className="space-y-3">
               {FAQS.map((f) => <FAQItem key={f.q} q={f.q} a={f.a} />)}
             </div>
+            <div className="mt-10 bg-green-50 border border-green-200 rounded-2xl p-6 text-center">
+              <p className="text-gray-700 font-semibold mb-1">Não encontrou sua resposta?</p>
+              <p className="text-gray-500 text-sm mb-4">Nossa equipe responde rapidamente pelo WhatsApp.</p>
+              <a href={WA_SUPPORT} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm">
+                <Smartphone size={16} /> Falar com o suporte agora
+              </a>
+            </div>
           </div>
         </section>
 
@@ -648,11 +665,17 @@ export default function LandingPage() {
               7 dias grátis. Sem cartão de crédito. Cancele quando quiser.<br />
               Mais de 500 empresas já automatizaram suas vendas com o Clica Aí.
             </p>
-            <Link href="/register"
-              className="inline-flex items-center gap-2 bg-white text-green-700 font-black px-12 py-5 rounded-2xl text-lg hover:bg-green-50 transition-all shadow-2xl hover:scale-[1.03]">
-              Criar minha conta grátis <ArrowRight size={20} />
-            </Link>
-            <p className="text-green-200/70 text-xs mt-6">Sem contrato · Suporte incluso · Cancele quando quiser</p>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/register"
+                className="inline-flex items-center gap-2 bg-white text-green-700 font-black px-12 py-5 rounded-2xl text-lg hover:bg-green-50 transition-all shadow-2xl hover:scale-[1.03]">
+                Criar minha conta grátis <ArrowRight size={20} />
+              </Link>
+              <a href={WA_START} target="_blank" rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 border-2 border-white/40 text-white font-bold px-8 py-5 rounded-2xl text-base hover:bg-white/10 transition-all">
+                <Smartphone size={18} /> Falar no WhatsApp primeiro
+              </a>
+            </div>
+            <p className="text-green-200/70 text-xs mt-6">Sem contrato · Suporte via WhatsApp · Cancele quando quiser</p>
           </div>
         </section>
 
@@ -689,6 +712,19 @@ export default function LandingPage() {
                 <ul className="space-y-2.5 text-sm">
                   <li><Link href="/login" className="hover:text-green-400 transition-colors">Entrar na plataforma</Link></li>
                   <li><Link href="/register" className="hover:text-green-400 transition-colors">Criar conta grátis</Link></li>
+                </ul>
+                <p className="text-white font-bold text-sm mb-3 mt-6">Contato</p>
+                <ul className="space-y-2.5 text-sm">
+                  <li>
+                    <a href={WA_PLANS} target="_blank" rel="noopener noreferrer" className="hover:text-green-400 transition-colors flex items-center gap-1.5">
+                      <Smartphone size={13} className="text-green-500 shrink-0" /> Quero assinar
+                    </a>
+                  </li>
+                  <li>
+                    <a href={WA_SUPPORT} target="_blank" rel="noopener noreferrer" className="hover:text-green-400 transition-colors flex items-center gap-1.5">
+                      <Smartphone size={13} className="text-green-500 shrink-0" /> Suporte via WhatsApp
+                    </a>
+                  </li>
                 </ul>
               </div>
 
@@ -727,9 +763,13 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="pt-8 text-center text-xs text-gray-600">
-              © {new Date().getFullYear()} Clica Aí · Todos os direitos reservados ·{' '}
-              <a href="mailto:contato@clicaai.com.br" className="hover:text-gray-400 transition-colors">contato@clicaai.com.br</a>
+            <div className="pt-8 text-center text-xs text-gray-600 leading-relaxed">
+              © {new Date().getFullYear()} Clica Aí — Empresa da Clica Rede e Marketing — Todos os Direitos Reservados
+              <br />
+              CNPJ 30.925.376/0001-78 ·{' '}
+              <a href={WA_INFO} target="_blank" rel="noopener noreferrer" className="hover:text-gray-400 transition-colors">
+                Fale conosco via WhatsApp
+              </a>
             </div>
           </div>
         </footer>
