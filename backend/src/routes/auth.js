@@ -36,6 +36,12 @@ router.post('/login', loginLimiter, [
 
 router.get('/verify-email', ctrl.verifyEmail);
 
+router.post('/resend-verification', rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 3,
+  message: { error: 'Muitas tentativas. Aguarde 15 minutos.' },
+}), ctrl.resendVerification);
+
 router.get('/me', auth, ctrl.me);
 
 module.exports = router;

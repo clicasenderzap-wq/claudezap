@@ -150,8 +150,27 @@ async function login(req, res) {
   }
 }
 
+async function resendVerification(req, res) {
+  const { email } = req.body;
+  if (!email) return res.status(422).json({ error: 'Email obrigatório' });
+
+  const user = await User.findOne({ where: { email } });
+  // Resposta genérica para não vazar se o email existe ou não
+  if (!user || user.email_verified !== false) {
+    return res.json({ message: 'Se o email existir e não estiver verificado, o link foi reenviado.' });
+  }
+
+  const new_token = crypto.randomBytes(32).toString('hex');
+  await user.update({ email_verification_token: new_token });
+  emailSvc.sendVerificationEmail(user, new_token).catch((e) =>
+    console.error('[ResendVerification] Falha:', e.message)
+  );
+
+  res.json({ message: 'Link de verificação reenviado! Verifique sua caixa de entrada (e o spam).' });
+}
+
 async function me(req, res) {
   res.json({ user: req.user });
 }
 
-module.exports = { register, verifyEmail, login, me };
+module.exports = { register, verifyEmail, resendVerification, login, me };

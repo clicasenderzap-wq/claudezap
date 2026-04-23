@@ -1,11 +1,13 @@
 'use client';
 
+import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { MailWarning, Send } from 'lucide-react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
 
@@ -19,7 +21,11 @@ type FormData = z.infer<typeof schema>;
 export default function LoginPage() {
   const router = useRouter();
   const setAuth = useAuthStore((s) => s.setAuth);
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const [unverifiedEmail, setUnverifiedEmail] = useState('');
+  const [resending, setResending] = useState(false);
+  const [resentOk, setResentOk] = useState(false);
+
+  const { register, handleSubmit, getValues, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
   });
 
@@ -30,14 +36,69 @@ export default function LoginPage() {
       toast.success(`Bem-vindo, ${res.data.user.name}!`);
       router.push('/dashboard');
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Erro ao entrar');
+      const code = err.response?.data?.code;
+      if (code === 'EMAIL_UNVERIFIED') {
+        setUnverifiedEmail(data.email);
+      } else {
+        toast.error(err.response?.data?.error || 'Erro ao entrar');
+      }
     }
+  }
+
+  async function handleResend() {
+    setResending(true);
+    try {
+      const email = unverifiedEmail || getValues('email');
+      await api.post('/auth/resend-verification', { email });
+      setResentOk(true);
+      toast.success('Email reenviado! Verifique sua caixa de entrada.');
+    } catch {
+      toast.error('Erro ao reenviar. Tente novamente.');
+    } finally {
+      setResending(false);
+    }
+  }
+
+  if (unverifiedEmail) {
+    return (
+      <div className="card w-full max-w-sm p-8 text-center space-y-4">
+        <div className="flex justify-center">
+          <div className="p-4 bg-orange-100 rounded-full">
+            <MailWarning size={36} className="text-orange-500" />
+          </div>
+        </div>
+        <h2 className="text-xl font-bold text-gray-900">Confirme seu email</h2>
+        <p className="text-gray-600 text-sm leading-relaxed">
+          Sua conta ainda não foi verificada. Enviamos um link para <strong>{unverifiedEmail}</strong>.
+        </p>
+        {resentOk ? (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-3 text-sm text-green-700">
+            Link reenviado! Verifique sua caixa de entrada e o spam.
+          </div>
+        ) : (
+          <button
+            onClick={handleResend}
+            disabled={resending}
+            className="btn-primary w-full flex items-center justify-center gap-2"
+          >
+            <Send size={15} />
+            {resending ? 'Reenviando…' : 'Reenviar email de verificação'}
+          </button>
+        )}
+        <button
+          onClick={() => { setUnverifiedEmail(''); setResentOk(false); }}
+          className="text-sm text-gray-400 hover:text-gray-600 underline"
+        >
+          Voltar ao login
+        </button>
+      </div>
+    );
   }
 
   return (
     <div className="card w-full max-w-sm p-8">
       <div className="text-center mb-8">
-        <h1 className="text-2xl font-bold text-brand-600">ClaudeZap</h1>
+        <h1 className="text-2xl font-bold text-brand-600">Clica Aí</h1>
         <p className="text-gray-500 text-sm mt-1">Entre na sua conta</p>
       </div>
 
