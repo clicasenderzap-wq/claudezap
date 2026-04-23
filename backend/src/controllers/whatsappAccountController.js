@@ -78,11 +78,10 @@ async function list(req, res) {
 }
 
 async function create(req, res) {
-  const { limitCheck } = require('../middleware/planGuard');
+  const { getLimit } = require('../middleware/planGuard');
   const { WhatsappAccount: WA } = require('../models');
   const count = await WA.count({ where: { user_id: req.user.id } });
-  const limits = { starter: 3, pro: 6 };
-  const max = limits[req.user.plan] ?? 3;
+  const max = getLimit(req.user.plan, 'whatsapp_accounts');
   if (count >= max) {
     return res.status(403).json({ error: `Limite do seu plano atingido (${max} números). Faça upgrade para continuar.` });
   }

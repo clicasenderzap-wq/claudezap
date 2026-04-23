@@ -16,125 +16,133 @@ async function sendSingle(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
 
-  const { contact_id, content, media_url, media_type, media_filename } = req.body;
-  const contact = await Contact.findOne({ where: { id: contact_id, user_id: req.user.id } });
-  if (!contact) return res.status(404).json({ error: 'Contato não encontrado' });
-  if (contact.opt_out) return res.status(400).json({ error: 'Contato optou por não receber mensagens' });
+  try {
+    const { contact_id, content, media_url, media_type, media_filename } = req.body;
+    const contact = await Contact.findOne({ where: { id: contact_id, user_id: req.user.id } });
+    if (!contact) return res.status(404).json({ error: 'Contato não encontrado' });
+    if (contact.opt_out) return res.status(400).json({ error: 'Contato optou por não receber mensagens' });
 
-  const msg = await Message.create({
-    user_id: req.user.id,
-    contact_id: contact.id,
-    content: applyTemplate(content, contact),
-    status: 'queued',
-    ...(media_url && { media_url, media_type, media_filename }),
-  });
+    const msg = await Message.create({
+      user_id: req.user.id,
+      contact_id: contact.id,
+      content: applyTemplate(content, contact),
+      status: 'queued',
+      ...(media_url && { media_url, media_type, media_filename }),
+    });
 
-  await enqueueMessage(msg.id, req.user.id, contact.phone, msg.content);
-  res.status(201).json(msg);
+    await enqueueMessage(msg.id, req.user.id, contact.phone, msg.content);
+    res.status(201).json(msg);
+  } catch (err) {
+    console.error('[sendSingle]', err.message);
+    res.status(500).json({ error: 'Erro ao enfileirar mensagem. Tente novamente.' });
+  }
 }
 
 async function sendCampaign(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
 
-  const {
-    name, message_template, contact_ids, tags, delay_ms = 3000, account_ids = [],
-    include_optout = true, rotate_every = 1, scheduled_for,
-    exclude_contacted = false,
-    batch_mode = false, batch_size = 50, batch_interval_hours = 8,
-    media_url, media_type, media_filename,
-  } = req.body;
-  const optoutText = include_optout ? '\n\nPara sair desta lista, responda: SAIR' : '';
-  const rotateEvery = Math.max(1, Number(rotate_every));
+  try {
+    const {
+      name, message_template, contact_ids, tags, delay_ms = 3000, account_ids = [],
+      include_optout = true, rotate_every = 1, scheduled_for,
+      exclude_contacted = false,
+      batch_mode = false, batch_size = 50, batch_interval_hours = 8,
+      media_url, media_type, media_filename,
+    } = req.body;
+    const optoutText = include_optout ? '\n\nPara sair desta lista, responda: SAIR' : '';
+    const rotateEvery = Math.max(1, Number(rotate_every));
 
-  let contacts;
-  if (Array.isArray(tags) && tags.length) {
-    const normalizedTags = tags.map((t) => String(t).trim().toUpperCase());
-    const baseWhere = { user_id: req.user.id, opt_out: false };
-    if (exclude_contacted) baseWhere.last_campaign_sent_at = null;
-    const allContacts = await Contact.findAll({ where: baseWhere });
-    contacts = allContacts.filter((c) =>
-      (c.tags || []).some((t) => normalizedTags.includes(String(t).trim().toUpperCase()))
-    );
-  } else {
-    const baseWhere = { id: contact_ids, user_id: req.user.id, opt_out: false };
-    if (exclude_contacted) baseWhere.last_campaign_sent_at = null;
-    contacts = await Contact.findAll({ where: baseWhere });
-  }
+    let contacts;
+    if (Array.isArray(tags) && tags.length) {
+      const normalizedTags = tags.map((t) => String(t).trim().toUpperCase());
+      const baseWhere = { user_id: req.user.id, opt_out: false };
+      if (exclude_contacted) baseWhere.last_campaign_sent_at = null;
+      const allContacts = await Contact.findAll({ where: baseWhere });
+      contacts = allContacts.filter((c) =>
+        (c.tags || []).some((t) => normalizedTags.includes(String(t).trim().toUpperCase()))
+      );
+    } else {
+      const baseWhere = { id: contact_ids, user_id: req.user.id, opt_out: false };
+      if (exclude_contacted) baseWhere.last_campaign_sent_at = null;
+      contacts = await Contact.findAll({ where: baseWhere });
+    }
 
-  if (!contacts.length) return res.status(400).json({ error: 'Nenhum contato válido selecionado' });
+    if (!contacts.length) return res.status(400).json({ error: 'Nenhum contato válido selecionado' });
 
-  // Verifica limite diário de mensagens do plano
-  const dailyLimit = getLimit(req.user.plan, 'daily_messages');
-  const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
-  const sentToday = await Message.count({ where: { user_id: req.user.id, created_at: { [Op.gte]: startOfDay } } });
-  if (sentToday + contacts.length > dailyLimit) {
-    return res.status(403).json({
-      error: `Limite diário do plano ${req.user.plan === 'pro' ? 'Pro' : 'Starter'} atingido (${dailyLimit} mensagens/dia). Saldo restante hoje: ${Math.max(0, dailyLimit - sentToday)}.`,
-    });
-  }
+    const dailyLimit = getLimit(req.user.plan, 'daily_messages');
+    const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+    const sentToday = await Message.count({ where: { user_id: req.user.id, created_at: { [Op.gte]: startOfDay } } });
+    if (sentToday + contacts.length > dailyLimit) {
+      return res.status(403).json({
+        error: `Limite diário do plano ${req.user.plan === 'pro' ? 'Pro' : 'Starter'} atingido (${dailyLimit} mensagens/dia). Saldo restante hoje: ${Math.max(0, dailyLimit - sentToday)}.`,
+      });
+    }
 
-  // Valida contas selecionadas; se nenhuma, usa todas conectadas do usuário
-  const { WhatsappAccount } = require('../models');
-  const whatsapp = require('../services/whatsappService');
-  let selectedAccounts = [];
-  if (account_ids.length) {
-    selectedAccounts = await WhatsappAccount.findAll({
-      where: { id: account_ids, user_id: req.user.id },
-    });
-  } else {
-    selectedAccounts = await WhatsappAccount.findAll({ where: { user_id: req.user.id } });
-  }
-  const connectedAccounts = selectedAccounts.filter((a) => whatsapp.getStatus(a.id) === 'connected');
-  if (!connectedAccounts.length) return res.status(400).json({ error: 'Nenhuma conta WhatsApp conectada selecionada' });
+    const { WhatsappAccount } = require('../models');
+    const whatsapp = require('../services/whatsappService');
+    let selectedAccounts = [];
+    if (account_ids.length) {
+      selectedAccounts = await WhatsappAccount.findAll({
+        where: { id: account_ids, user_id: req.user.id },
+      });
+    } else {
+      selectedAccounts = await WhatsappAccount.findAll({ where: { user_id: req.user.id } });
+    }
+    const connectedAccounts = selectedAccounts.filter((a) => whatsapp.getStatus(a.id) === 'connected');
+    if (!connectedAccounts.length) return res.status(400).json({ error: 'Nenhuma conta WhatsApp conectada selecionada' });
 
-  const startOffset = scheduled_for ? Math.max(0, new Date(scheduled_for).getTime() - Date.now()) : 0;
-  const campaignStatus = startOffset > 0 ? 'scheduled' : 'running';
+    const startOffset = scheduled_for ? Math.max(0, new Date(scheduled_for).getTime() - Date.now()) : 0;
+    const campaignStatus = startOffset > 0 ? 'scheduled' : 'running';
 
-  const batchSz = Math.max(1, Number(batch_size));
-  const batchIntervalMs = Number(batch_interval_hours) * 3600000;
+    const batchSz = Math.max(1, Number(batch_size));
+    const batchIntervalMs = Number(batch_interval_hours) * 3600000;
 
-  const campaign = await Campaign.create({
-    user_id: req.user.id,
-    name,
-    message_template,
-    status: campaignStatus,
-    scheduled_for: scheduled_for ? new Date(scheduled_for) : null,
-    total_contacts: contacts.length,
-    delay_ms,
-    rotate_every: rotateEvery,
-    account_ids: connectedAccounts.map((a) => a.id),
-    batch_mode: Boolean(batch_mode),
-    batch_size: batchSz,
-    batch_interval_hours: Number(batch_interval_hours),
-  });
-
-  const messages = await Message.bulkCreate(
-    contacts.map((c, i) => ({
+    const campaign = await Campaign.create({
       user_id: req.user.id,
-      contact_id: c.id,
-      campaign_id: campaign.id,
-      account_id: connectedAccounts[Math.floor(i / rotateEvery) % connectedAccounts.length].id,
-      content: applyTemplate(message_template, c) + optoutText,
-      status: 'queued',
-      ...(media_url && { media_url, media_type, media_filename }),
-    }))
-  );
+      name,
+      message_template,
+      status: campaignStatus,
+      scheduled_for: scheduled_for ? new Date(scheduled_for) : null,
+      total_contacts: contacts.length,
+      delay_ms,
+      rotate_every: rotateEvery,
+      account_ids: connectedAccounts.map((a) => a.id),
+      batch_mode: Boolean(batch_mode),
+      batch_size: batchSz,
+      batch_interval_hours: Number(batch_interval_hours),
+    });
 
-  const jobs = messages.map((m, i) => ({
-    messageId: m.id,
-    userId: req.user.id,
-    accountId: connectedAccounts[Math.floor(i / rotateEvery) % connectedAccounts.length].id,
-    phone: contacts[i].phone,
-    content: m.content,
-  }));
+    const messages = await Message.bulkCreate(
+      contacts.map((c, i) => ({
+        user_id: req.user.id,
+        contact_id: c.id,
+        campaign_id: campaign.id,
+        account_id: connectedAccounts[Math.floor(i / rotateEvery) % connectedAccounts.length].id,
+        content: applyTemplate(message_template, c) + optoutText,
+        status: 'queued',
+        ...(media_url && { media_url, media_type, media_filename }),
+      }))
+    );
 
-  if (batch_mode) {
-    await enqueueBatched(jobs, delay_ms, batchSz, batchIntervalMs, startOffset);
-  } else {
-    await enqueueBulk(jobs, delay_ms, startOffset);
+    const jobs = messages.map((m, i) => ({
+      messageId: m.id,
+      userId: req.user.id,
+      accountId: connectedAccounts[Math.floor(i / rotateEvery) % connectedAccounts.length].id,
+      phone: contacts[i].phone,
+      content: m.content,
+    }));
+
+    if (batch_mode) {
+      await enqueueBatched(jobs, delay_ms, batchSz, batchIntervalMs, startOffset);
+    } else {
+      await enqueueBulk(jobs, delay_ms, startOffset);
+    }
+    res.status(201).json({ campaign, queued: messages.length });
+  } catch (err) {
+    console.error('[sendCampaign]', err.message);
+    res.status(500).json({ error: 'Erro ao criar campanha. Tente novamente.' });
   }
-  res.status(201).json({ campaign, queued: messages.length });
 }
 
 async function history(req, res) {
