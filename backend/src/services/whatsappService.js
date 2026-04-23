@@ -1,13 +1,11 @@
 const {
   default: makeWASocket,
-  useMultiFileAuthState,
   DisconnectReason,
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
 } = require('@whiskeysockets/baileys');
-const path = require('path');
-const fs = require('fs');
 const { EventEmitter } = require('events');
+const { useRedisAuthState, deleteSession } = require('./waSessionStore');
 
 const noop = () => {};
 const silentLogger = {
@@ -17,26 +15,48 @@ const silentLogger = {
   child: () => silentLogger,
 };
 
+// Backoff delays (ms): 5s, 10s, 30s, 60s, 2min, 5min, 5min, ...
+const RECONNECT_DELAYS = [5_000, 10_000, 30_000, 60_000, 120_000, 300_000];
+const MAX_RECONNECT_ATTEMPTS = 12;
+
+// Codes that indicate permanent failure — don't reconnect, clear session
+const PERMANENT_FAILURES = new Set([
+  DisconnectReason.loggedOut,   // 401 — user logged out from phone
+  DisconnectReason.forbidden,   // 403 — account banned
+]);
+
+// Codes that need a clean session before retrying
+const BAD_SESSION_CODES = new Set([
+  DisconnectReason.badSession,        // 500
+  DisconnectReason.restartRequired,   // 515
+]);
+
 class WhatsAppService extends EventEmitter {
   constructor() {
     super();
     this.sockets = new Map();
-    this.sessionDir = process.env.WA_SESSION_DIR || path.join(__dirname, '../../wa_sessions');
-    if (!fs.existsSync(this.sessionDir)) fs.mkdirSync(this.sessionDir, { recursive: true });
+    this.reconnectAttempts = new Map();
   }
 
   async connect(accountId) {
     if (this.sockets.has(accountId)) return;
 
-    const sessionPath = path.join(this.sessionDir, accountId);
-    const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+    let authState;
+    try {
+      authState = await useRedisAuthState(accountId);
+    } catch (err) {
+      console.error(`[WA] ${accountId}: erro ao carregar sessão do Redis:`, err.message);
+      return;
+    }
+
+    const { state, saveCreds } = authState;
     const { version } = await fetchLatestBaileysVersion();
 
     const sock = makeWASocket({
       version,
       auth: {
         creds: state.creds,
-        keys: makeCacheableSignalKeyStore(state.keys, console),
+        keys: makeCacheableSignalKeyStore(state.keys, silentLogger),
       },
       printQRInTerminal: false,
       logger: silentLogger,
@@ -52,34 +72,48 @@ class WhatsAppService extends EventEmitter {
       }
 
       if (connection === 'open') {
-        // Captura o número do WhatsApp conectado
+        this.reconnectAttempts.delete(accountId);
         const phone = sock.user?.id?.split(':')[0] ?? null;
+        console.log(`[WA] ${accountId}: conectado — número ${phone}`);
         this.emit('ready', { accountId, phone });
       }
 
       if (connection === 'close') {
         const code = lastDisconnect?.error?.output?.statusCode;
-        const shouldReconnect = code !== DisconnectReason.loggedOut;
         this.sockets.delete(accountId);
         this.emit('disconnected', { accountId, code });
-        if (shouldReconnect) {
-          setTimeout(() => this.connect(accountId), 5000);
-        } else {
-          // Sessão inválida — remove arquivos de sessão
-          const sessionPath = path.join(this.sessionDir, accountId);
-          if (fs.existsSync(sessionPath)) fs.rmSync(sessionPath, { recursive: true });
+
+        if (PERMANENT_FAILURES.has(code)) {
+          console.log(`[WA] ${accountId}: desconexão permanente (código ${code}) — removendo sessão`);
+          await deleteSession(accountId).catch(() => {});
+          return;
         }
+
+        if (BAD_SESSION_CODES.has(code)) {
+          console.log(`[WA] ${accountId}: sessão inválida (código ${code}) — limpando para reconexão limpa`);
+          await deleteSession(accountId).catch(() => {});
+          this.reconnectAttempts.delete(accountId);
+        }
+
+        const attempts = this.reconnectAttempts.get(accountId) || 0;
+        if (attempts >= MAX_RECONNECT_ATTEMPTS) {
+          console.error(`[WA] ${accountId}: máximo de tentativas de reconexão atingido — desistindo`);
+          return;
+        }
+
+        const delay = RECONNECT_DELAYS[Math.min(attempts, RECONNECT_DELAYS.length - 1)];
+        this.reconnectAttempts.set(accountId, attempts + 1);
+        console.log(`[WA] ${accountId}: reconectando em ${delay / 1000}s (tentativa ${attempts + 1}/${MAX_RECONNECT_ATTEMPTS})`);
+        setTimeout(() => this.connect(accountId), delay);
       }
     });
 
     sock.ev.on('messages.upsert', ({ messages: msgs, type }) => {
-      // 'notify' = tempo real | 'append' = sync de mensagens perdidas durante desconexão
       if (type !== 'notify' && type !== 'append') return;
       const isSync = type === 'append';
       for (const msg of msgs) {
         if (msg.key.fromMe) continue;
         const remoteJid = msg.key.remoteJid ?? '';
-        // Ignora grupos
         if (remoteJid.includes('@g.us')) continue;
         const from = remoteJid.replace('@s.whatsapp.net', '').replace('@c.us', '');
         const text = msg.message?.conversation
@@ -101,7 +135,6 @@ class WhatsAppService extends EventEmitter {
   async sendText(accountId, phone, text) {
     const sock = this.sockets.get(accountId);
     if (!sock) throw new Error('WhatsApp não conectado');
-
     const jid = this._toJid(phone);
     const result = await sock.sendMessage(jid, { text });
     return result.key.id;
@@ -112,8 +145,6 @@ class WhatsAppService extends EventEmitter {
     if (!sock) throw new Error('WhatsApp não conectado');
 
     const jid = this._toJid(phone);
-
-    // Download file buffer from storage URL
     const response = await fetch(mediaUrl);
     if (!response.ok) throw new Error(`Falha ao baixar arquivo de mídia: ${response.status}`);
     const buffer = Buffer.from(await response.arrayBuffer());
@@ -130,7 +161,6 @@ class WhatsAppService extends EventEmitter {
       const result = await sock.sendMessage(jid, { audio: buffer, mimetype: mediaType, ptt: false });
       return result.key.id;
     }
-    // Default: document (PDF, Word, Excel, etc.)
     const result = await sock.sendMessage(jid, { document: buffer, mimetype: mediaType, fileName: fileName || 'arquivo' });
     return result.key.id;
   }
@@ -141,15 +171,24 @@ class WhatsAppService extends EventEmitter {
       try { await sock.logout(); } catch {}
       this.sockets.delete(accountId);
     }
-    // Remove session files
-    const sessionPath = path.join(this.sessionDir, accountId);
-    if (fs.existsSync(sessionPath)) fs.rmSync(sessionPath, { recursive: true });
+    this.reconnectAttempts.delete(accountId);
+    await deleteSession(accountId).catch(() => {});
   }
 
   getStatus(accountId) {
     const sock = this.sockets.get(accountId);
     if (!sock) return 'disconnected';
     return sock.user ? 'connected' : 'connecting';
+  }
+
+  getConnectionSummary() {
+    let connected = 0;
+    let connecting = 0;
+    for (const sock of this.sockets.values()) {
+      if (sock.user) connected++;
+      else connecting++;
+    }
+    return { connected, connecting, disconnected: 0 };
   }
 
   _toJid(phone) {

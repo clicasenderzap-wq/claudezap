@@ -45,7 +45,14 @@ app.use('/api', rateLimit({
 
 app.use('/api', routes);
 
-app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
+app.get('/health', (req, res) => {
+  try {
+    const whatsapp = require('./services/whatsappService');
+    res.json({ status: 'ok', timestamp: new Date(), whatsapp: whatsapp.getConnectionSummary() });
+  } catch {
+    res.json({ status: 'ok', timestamp: new Date() });
+  }
+});
 
 app.use((err, req, res, next) => {
   console.error('[Error]', err.message);
@@ -74,14 +81,17 @@ const server = app.listen(PORT, () => {
     require('./services/warmupService').start();
     console.log('[Warmup] iniciado');
 
-    // Reconecta contas WhatsApp salvas no banco ao iniciar
+    // Reconecta contas WhatsApp com delay escalonado (evita spike no Redis/WA)
     const whatsapp = require('./services/whatsappService');
     const { WhatsappAccount } = require('./models');
     const accounts = await WhatsappAccount.findAll();
-    for (const account of accounts) {
-      console.log(`[WA] Reconectando conta: ${account.label} (${account.id})`);
-      whatsapp.connect(account.id).catch((e) => console.error(`[WA] Falha ao reconectar ${account.id}:`, e.message));
-    }
+    console.log(`[WA] Reconectando ${accounts.length} conta(s) com escalonamento de 3s...`);
+    accounts.forEach((account, i) => {
+      setTimeout(() => {
+        console.log(`[WA] Conectando: ${account.label} (${account.id})`);
+        whatsapp.connect(account.id).catch((e) => console.error(`[WA] Falha ao conectar ${account.id}:`, e.message));
+      }, i * 3000);
+    });
   } catch (err) {
     console.error('[Startup] falha ao conectar:', err.message);
     // Não encerra o processo — deixa o /health responder para diagnóstico

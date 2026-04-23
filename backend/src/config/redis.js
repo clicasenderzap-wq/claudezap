@@ -28,7 +28,10 @@ function buildConnection() {
 }
 
 const connection = buildConnection();
-const redis = new Redis(connection);
+const redis = new Redis({
+  ...connection,
+  retryStrategy: (times) => Math.min(times * 500, 10_000),
+});
 
 redis.on('error', (err) => {
   console.error('[Redis] connection error:', err.message);
