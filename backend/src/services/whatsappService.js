@@ -50,7 +50,13 @@ class WhatsAppService extends EventEmitter {
     }
 
     const { state, saveCreds } = authState;
-    const { version } = await fetchLatestBaileysVersion();
+
+    let version;
+    try {
+      ({ version } = await fetchLatestBaileysVersion());
+    } catch {
+      version = [2, 3000, 1015901307]; // known stable fallback
+    }
 
     const sock = makeWASocket({
       version,

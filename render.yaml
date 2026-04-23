@@ -3,7 +3,7 @@ services:
     name: claudezap-api
     runtime: node
     region: oregon
-    plan: free
+    plan: starter
     rootDir: backend
     buildCommand: npm install
     startCommand: node src/app.js
@@ -13,8 +13,6 @@ services:
         value: production
       - key: JWT_EXPIRES_IN
         value: 7d
-      - key: WA_SESSION_DIR
-        value: ./wa_sessions
       - key: MSG_DELAY_MS
         value: "3000"
       - key: MSG_RATE_LIMIT_PER_MIN
