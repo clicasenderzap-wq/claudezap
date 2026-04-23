@@ -18,18 +18,24 @@ async function getConfig(req, res) {
 }
 
 async function updateConfig(req, res) {
-  const { enabled, messages_per_day, start_hour, end_hour } = req.body;
+  const {
+    enabled, messages_per_day, start_hour, end_hour, account_ids,
+    night_enabled, night_start_hour, night_end_hour, night_messages_per_day,
+  } = req.body;
 
   let config = await WarmupConfig.findOne({ where: { user_id: req.user.id } });
   if (!config) config = await WarmupConfig.create({ user_id: req.user.id });
 
-  const { account_ids } = req.body;
   await config.update({
     ...(enabled !== undefined && { enabled }),
     ...(messages_per_day !== undefined && { messages_per_day: Math.min(200, Math.max(5, Number(messages_per_day))) }),
     ...(start_hour !== undefined && { start_hour: Number(start_hour) }),
     ...(end_hour !== undefined && { end_hour: Number(end_hour) }),
     ...(account_ids !== undefined && { account_ids: Array.isArray(account_ids) ? account_ids : [] }),
+    ...(night_enabled !== undefined && { night_enabled: Boolean(night_enabled) }),
+    ...(night_start_hour !== undefined && { night_start_hour: Number(night_start_hour) }),
+    ...(night_end_hour !== undefined && { night_end_hour: Number(night_end_hour) }),
+    ...(night_messages_per_day !== undefined && { night_messages_per_day: Math.min(200, Math.max(5, Number(night_messages_per_day))) }),
   });
 
   // Se acabou de ativar, tenta rodar imediatamente

@@ -79,6 +79,16 @@ export default function WarmupPage() {
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao salvar'),
   });
 
+  const saveMutation = useMutation({
+    mutationFn: (body: object) => api.put('/warmup', body),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['warmup'] });
+      setForm(null);
+      toast.success('Configurações salvas!');
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao salvar'),
+  });
+
   function toggleEnabled() {
     const next = !config?.enabled;
     updateMutation.mutate({ enabled: next });
@@ -86,9 +96,7 @@ export default function WarmupPage() {
   }
 
   function saveSettings() {
-    updateMutation.mutate(liveForm);
-    setForm(null);
-    toast.success('Configurações salvas!');
+    saveMutation.mutate(liveForm);
   }
 
   const connectedCount = accounts.length;
@@ -281,8 +289,8 @@ export default function WarmupPage() {
           </div>
 
           {form && (
-            <button onClick={saveSettings} className="btn-primary w-full">
-              Salvar configurações
+            <button onClick={saveSettings} disabled={saveMutation.isPending} className="btn-primary w-full">
+              {saveMutation.isPending ? 'Salvando...' : 'Salvar configurações'}
             </button>
           )}
         </div>
@@ -365,8 +373,8 @@ export default function WarmupPage() {
             </p>
 
             {form && (
-              <button onClick={saveSettings} className="btn-primary w-full">
-                Salvar configurações noturnas
+              <button onClick={saveSettings} disabled={saveMutation.isPending} className="btn-primary w-full">
+                {saveMutation.isPending ? 'Salvando...' : 'Salvar configurações noturnas'}
               </button>
             )}
           </div>
