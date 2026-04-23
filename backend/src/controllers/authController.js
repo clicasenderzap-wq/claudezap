@@ -46,7 +46,20 @@ async function register(req, res) {
 
   try {
     const existing = await User.findOne({ where: { email } });
-    if (existing) return res.status(409).json({ error: 'Email já cadastrado' });
+    if (existing) {
+      // Se o email ainda não foi verificado, reenvia o link em vez de bloquear
+      if (existing.email_verified === false) {
+        const new_token = crypto.randomBytes(32).toString('hex');
+        await existing.update({ email_verification_token: new_token });
+        emailSvc.sendVerificationEmail(existing, new_token).catch((e) =>
+          console.error('[Register] Falha ao reenviar verificação:', e.message)
+        );
+        return res.status(200).json({
+          message: 'Cadastro já existe mas o email ainda não foi confirmado. Reenviamos o link de verificação.',
+        });
+      }
+      return res.status(409).json({ error: 'Email já cadastrado' });
+    }
 
     const password_hash = await User.hashPassword(password);
     const verification_token = crypto.randomBytes(32).toString('hex');
