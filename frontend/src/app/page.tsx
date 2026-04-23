@@ -5,7 +5,7 @@ import Link from 'next/link';
 import {
   Send, Flame, Bot, Smartphone, BarChart2, Check, ChevronDown, ChevronUp,
   Zap, Shield, Users, Star, ArrowRight, Menu, X, Sparkles,
-  AlertTriangle, Lock,
+  AlertTriangle, Lock, ShieldCheck, FileText, Link2, ClipboardCheck,
 } from 'lucide-react';
 
 // ─── Contato WhatsApp ─────────────────────────────────────────────────────────
@@ -136,6 +136,14 @@ const FAQS = [
   {
     q: 'Posso usar o sistema para qualquer tipo de mensagem?',
     a: 'Não. O uso é restrito a comunicações legítimas com pessoas que consentiram receber suas mensagens. Spam, golpes, mensagens ofensivas e qualquer uso ilegal são estritamente proibidos e resultam no cancelamento imediato da conta.',
+  },
+  {
+    q: 'A plataforma me ajuda a estar em conformidade com a LGPD?',
+    a: 'Sim. O Clica Aí possui ferramentas nativas de conformidade com a LGPD (Lei 13.709/2018): registro da origem do consentimento de cada contato, link público de opt-in para coleta de consentimento explícito e documentado, declaração obrigatória antes de cada campanha e opt-out automático quando o contato responde "SAIR". Além disso, publicamos nossos Termos de Uso e Política de Privacidade detalhados.',
+  },
+  {
+    q: 'O que é o link de opt-in e por que devo usar?',
+    a: 'É uma página pública única gerada para a sua conta (ex: clicaai.ia.br/optin/seu-id) onde seus leads preenchem nome, telefone e marcam uma caixa confirmando que querem receber suas mensagens. Esse registro com data e hora é a prova de consentimento mais sólida exigida pela LGPD — muito mais seguro do que planilhas importadas sem comprovação.',
   },
 ];
 
@@ -503,7 +511,7 @@ export default function LandingPage() {
                 {
                   emoji: '🛡️',
                   title: 'Conformidade LGPD',
-                  desc: 'Seus dados são tratados conforme a Lei Geral de Proteção de Dados (Lei 13.709/2018).',
+                  desc: 'Registro de consentimento por contato, opt-out automático, Termos de Uso e Política de Privacidade publicados conforme a Lei 13.709/2018.',
                 },
                 {
                   emoji: '📋',
@@ -524,6 +532,99 @@ export default function LandingPage() {
                 e a <Link href="/privacidade" target="_blank" className="text-green-400 font-semibold hover:underline">Política de Privacidade</Link>.
                 O acesso é liberado apenas após verificação de email e aprovação da equipe.
               </p>
+            </div>
+          </div>
+        </section>
+
+        {/* ── LGPD / COMPLIANCE ── */}
+        <section className="py-24 bg-white">
+          <div className="max-w-5xl mx-auto px-4">
+            <div className="text-center mb-14">
+              <span className="text-green-600 font-bold text-sm uppercase tracking-widest">Conformidade Legal</span>
+              <h2 className="text-4xl font-black tracking-tight mt-3 mb-4">
+                Opere dentro da lei —<br className="hidden sm:block" /> proteção LGPD nativa
+              </h2>
+              <p className="text-gray-500 text-lg max-w-2xl mx-auto">
+                A maioria das ferramentas de WhatsApp ignora a legislação. O Clica Aí foi construído com
+                ferramentas reais de conformidade para proteger você e seus clientes.
+              </p>
+            </div>
+
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mb-12">
+              {[
+                {
+                  icon: Link2,
+                  color: 'bg-green-100 text-green-600',
+                  title: 'Link de opt-in público',
+                  desc: 'Gere um link para seus leads confirmarem o consentimento antes de entrar na sua lista. Registro com data e hora.',
+                },
+                {
+                  icon: ShieldCheck,
+                  color: 'bg-blue-100 text-blue-600',
+                  title: 'Origem do consentimento',
+                  desc: 'Cada contato tem registrado como e quando autorizou receber suas mensagens — dado exigível pela ANPD.',
+                },
+                {
+                  icon: ClipboardCheck,
+                  color: 'bg-purple-100 text-purple-600',
+                  title: 'Declaração por campanha',
+                  desc: 'Antes de todo disparo, você confirma que os destinatários autorizaram. Prova de boa-fé em caso de questionamento.',
+                },
+                {
+                  icon: FileText,
+                  color: 'bg-orange-100 text-orange-600',
+                  title: 'Termos e Privacidade',
+                  desc: 'Documentos legais completos, em português, em conformidade com LGPD, Marco Civil e Código de Defesa do Consumidor.',
+                },
+              ].map((item) => (
+                <div key={item.title} className="bg-white border border-gray-100 rounded-3xl p-6 shadow-sm hover:shadow-md transition-shadow text-center">
+                  <div className={`w-12 h-12 rounded-2xl ${item.color} flex items-center justify-center mb-4 mx-auto`}>
+                    <item.icon size={22} />
+                  </div>
+                  <h3 className="font-bold text-gray-900 mb-2 text-sm">{item.title}</h3>
+                  <p className="text-gray-500 text-xs leading-relaxed">{item.desc}</p>
+                </div>
+              ))}
+            </div>
+
+            {/* Fluxo de consentimento */}
+            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-3xl p-8">
+              <p className="text-center text-sm font-bold text-green-800 mb-6 uppercase tracking-widest">Como funciona a prova de consentimento</p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-0 text-center">
+                {[
+                  { step: '1', label: 'Você compartilha', sub: 'o link de opt-in nas redes sociais ou WhatsApp pessoal' },
+                  { step: '2', label: 'Contato preenche', sub: 'nome, telefone e marca "autorizo receber mensagens"' },
+                  { step: '3', label: 'Registro automático', sub: 'data, hora e IP ficam salvos como prova de consentimento' },
+                  { step: '4', label: 'Disparo seguro', sub: 'campanha com declaração LGPD confirmada antes do envio' },
+                ].map((s, i) => (
+                  <div key={s.step} className="flex sm:flex-row items-center w-full sm:w-auto">
+                    <div className="flex flex-col items-center sm:max-w-[130px]">
+                      <div className="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center text-white font-black text-sm mb-2 shrink-0">
+                        {s.step}
+                      </div>
+                      <p className="text-xs font-bold text-gray-800">{s.label}</p>
+                      <p className="text-[11px] text-gray-500 mt-0.5 leading-relaxed">{s.sub}</p>
+                    </div>
+                    {i < 3 && (
+                      <div className="hidden sm:block w-8 h-0.5 bg-green-300 mx-2 mt-[-20px] shrink-0" />
+                    )}
+                    {i < 3 && (
+                      <div className="sm:hidden h-6 w-0.5 bg-green-300 my-1" />
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4 text-sm">
+              <Link href="/termos" target="_blank"
+                className="flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors border border-gray-200 hover:border-green-300 rounded-xl px-4 py-2.5">
+                <FileText size={15} /> Ler os Termos de Uso
+              </Link>
+              <Link href="/privacidade" target="_blank"
+                className="flex items-center gap-2 text-gray-600 hover:text-green-600 transition-colors border border-gray-200 hover:border-green-300 rounded-xl px-4 py-2.5">
+                <ShieldCheck size={15} /> Ver Política de Privacidade
+              </Link>
             </div>
           </div>
         </section>
@@ -724,6 +825,21 @@ export default function LandingPage() {
                     <a href={WA_SUPPORT} target="_blank" rel="noopener noreferrer" className="hover:text-green-400 transition-colors flex items-center gap-1.5">
                       <Smartphone size={13} className="text-green-500 shrink-0" /> Suporte via WhatsApp
                     </a>
+                  </li>
+                </ul>
+                <p className="text-white font-bold text-sm mb-3 mt-6 flex items-center gap-1.5">
+                  <ShieldCheck size={13} className="text-green-400" /> Legal & Privacidade
+                </p>
+                <ul className="space-y-2.5 text-sm">
+                  <li>
+                    <Link href="/termos" target="_blank" className="hover:text-green-400 transition-colors flex items-center gap-1.5">
+                      <FileText size={13} className="text-gray-500 shrink-0" /> Termos de Uso
+                    </Link>
+                  </li>
+                  <li>
+                    <Link href="/privacidade" target="_blank" className="hover:text-green-400 transition-colors flex items-center gap-1.5">
+                      <FileText size={13} className="text-gray-500 shrink-0" /> Política de Privacidade
+                    </Link>
                   </li>
                 </ul>
               </div>
