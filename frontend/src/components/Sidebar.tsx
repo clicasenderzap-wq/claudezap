@@ -11,6 +11,7 @@ const NAV = [
   { href: '/contacts', label: 'Contatos', icon: Users },
   { href: '/messages', label: 'Mensagens', icon: MessageSquare },
   { href: '/campaigns', label: 'Campanhas', icon: Megaphone },
+  { href: '/scheduled', label: 'Agendamentos', icon: Clock },
   { href: '/whatsapp', label: 'WhatsApp', icon: Smartphone },
   { href: '/warmup', label: 'Aquecimento', icon: Flame },
   { href: '/bots', label: 'Bot de Atendimento', icon: Bot },

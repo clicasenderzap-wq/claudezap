@@ -55,6 +55,14 @@ const Message = sequelize.define('Message', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  scheduled_for: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
+  queue_job_id: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
 }, {
   tableName: 'messages',
   underscored: true,

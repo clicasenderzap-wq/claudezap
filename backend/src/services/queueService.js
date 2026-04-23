@@ -41,4 +41,21 @@ async function enqueueBatched(messages, baseDelayMs = 3000, batchSize = 50, batc
   return messageQueue.addBulk(jobs);
 }
 
-module.exports = { messageQueue, enqueueMessage, enqueueBulk, enqueueBatched };
+async function enqueueScheduled(messageId, userId, accountId, phone, content, scheduledFor) {
+  const delay = Math.max(0, new Date(scheduledFor).getTime() - Date.now());
+  const job = await messageQueue.add(
+    'send',
+    { messageId, userId, accountId, phone, content },
+    { delay }
+  );
+  return job.id;
+}
+
+async function cancelJob(jobId) {
+  try {
+    const job = await messageQueue.getJob(String(jobId));
+    if (job) await job.remove();
+  } catch { /* job may have already run */ }
+}
+
+module.exports = { messageQueue, enqueueMessage, enqueueBulk, enqueueBatched, enqueueScheduled, cancelJob };

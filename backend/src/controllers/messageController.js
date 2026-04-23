@@ -1,6 +1,6 @@
 const { validationResult } = require('express-validator');
 const { Message, Contact, Campaign } = require('../models');
-const { enqueueMessage, enqueueBulk, enqueueBatched } = require('../services/queueService');
+const { enqueueMessage, enqueueBulk, enqueueBatched, enqueueScheduled, cancelJob } = require('../services/queueService');
 const { Op } = require('sequelize');
 const { getLimit } = require('../middleware/planGuard');
 
@@ -162,4 +162,84 @@ async function history(req, res) {
   res.json({ total: count, page: Number(page), data: rows });
 }
 
-module.exports = { sendSingle, sendCampaign, history };
+async function scheduleMessage(req, res) {
+  const errors = validationResult(req);
+  if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
+
+  try {
+    const { contact_id, content, account_id, scheduled_for, media_url, media_type, media_filename } = req.body;
+
+    const contact = await Contact.findOne({ where: { id: contact_id, user_id: req.user.id } });
+    if (!contact) return res.status(404).json({ error: 'Contato não encontrado' });
+    if (contact.opt_out) return res.status(400).json({ error: 'Contato optou por não receber mensagens' });
+
+    const scheduledDate = new Date(scheduled_for);
+    if (scheduledDate <= new Date()) return res.status(400).json({ error: 'A data de agendamento deve ser no futuro' });
+
+    const { WhatsappAccount } = require('../models');
+    const whatsapp = require('../services/whatsappService');
+
+    let account = null;
+    if (account_id) {
+      account = await WhatsappAccount.findOne({ where: { id: account_id, user_id: req.user.id } });
+    }
+    if (!account) {
+      const all = await WhatsappAccount.findAll({ where: { user_id: req.user.id } });
+      account = all.find((a) => whatsapp.getStatus(a.id) === 'connected') || all[0];
+    }
+    if (!account) return res.status(400).json({ error: 'Nenhuma conta WhatsApp encontrada' });
+
+    const msg = await Message.create({
+      user_id: req.user.id,
+      contact_id: contact.id,
+      account_id: account.id,
+      content: applyTemplate(content, contact),
+      status: 'queued',
+      scheduled_for: scheduledDate,
+      ...(media_url && { media_url, media_type, media_filename }),
+    });
+
+    const jobId = await enqueueScheduled(msg.id, req.user.id, account.id, contact.phone, msg.content, scheduledDate);
+    await msg.update({ queue_job_id: String(jobId) });
+
+    res.status(201).json(msg);
+  } catch (err) {
+    console.error('[scheduleMessage]', err.message);
+    res.status(500).json({ error: 'Erro ao agendar mensagem. Tente novamente.' });
+  }
+}
+
+async function cancelScheduled(req, res) {
+  try {
+    const msg = await Message.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    if (!msg) return res.status(404).json({ error: 'Agendamento não encontrado' });
+    if (msg.status !== 'queued') return res.status(400).json({ error: 'Apenas mensagens pendentes podem ser canceladas' });
+    if (!msg.scheduled_for || new Date(msg.scheduled_for) <= new Date()) {
+      return res.status(400).json({ error: 'Mensagem já enviada ou não é um agendamento futuro' });
+    }
+
+    if (msg.queue_job_id) await cancelJob(msg.queue_job_id);
+    await msg.update({ status: 'failed', error_message: 'Cancelado pelo usuário' });
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[cancelScheduled]', err.message);
+    res.status(500).json({ error: 'Erro ao cancelar agendamento' });
+  }
+}
+
+async function listScheduled(req, res) {
+  const { page = 1, limit = 50 } = req.query;
+  const where = { user_id: req.user.id, scheduled_for: { [Op.ne]: null } };
+
+  const { count, rows } = await Message.findAndCountAll({
+    where,
+    include: [{ model: Contact, attributes: ['name', 'phone'] }],
+    limit: Number(limit),
+    offset: (Number(page) - 1) * Number(limit),
+    order: [['scheduled_for', 'ASC']],
+  });
+
+  res.json({ total: count, page: Number(page), data: rows });
+}
+
+module.exports = { sendSingle, sendCampaign, history, scheduleMessage, cancelScheduled, listScheduled };

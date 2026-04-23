@@ -6,7 +6,7 @@ import {
   MessageSquare, BookOpen, ChevronRight, Info, AlertTriangle,
   CheckCircle, Lightbulb, ArrowRight, Key, Clock, Zap, Shield,
   FileSpreadsheet, Send, BarChart2, RefreshCw, Settings, Star, Tag, Moon,
-  UserCheck, MailCheck, Paperclip, Package, Target,
+  UserCheck, MailCheck, Paperclip, Package, Target, CalendarClock,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -26,6 +26,7 @@ const SECTIONS: Section[] = [
   { id: 'contacts',        label: 'Importar Contatos',      icon: Users,           color: 'text-green-600 bg-green-100' },
   { id: 'campaigns',       label: 'Mensagens e Campanhas',  icon: Megaphone,       color: 'text-purple-600 bg-purple-100' },
   { id: 'batch-files',     label: 'Lotes e Arquivos',       icon: Package,         color: 'text-orange-600 bg-orange-100' },
+  { id: 'scheduled',       label: 'Agendamentos',           icon: CalendarClock,   color: 'text-blue-600 bg-blue-100' },
   { id: 'whatsapp',        label: 'Conectar WhatsApp',      icon: Smartphone,      color: 'text-emerald-600 bg-emerald-100' },
   { id: 'warmup',          label: 'Aquecimento',            icon: Flame,           color: 'text-orange-600 bg-orange-100' },
   { id: 'bots',            label: 'Bot de Atendimento',     icon: Bot,             color: 'text-indigo-600 bg-indigo-100' },
@@ -503,6 +504,113 @@ function CampaignsSection() {
   );
 }
 
+function ScheduledSection() {
+  return (
+    <div id="scheduled">
+      <SectionTitle
+        icon={CalendarClock}
+        color="text-blue-600 bg-blue-100"
+        title="Agendamentos"
+        subtitle="Programe follow-ups e nunca perca uma venda por falta de contato"
+      />
+
+      <p className="text-gray-600 text-sm leading-relaxed mb-6">
+        Com os <strong>Agendamentos</strong> você programa uma mensagem para ser enviada automaticamente em qualquer data e horário — mesmo sem estar logado no sistema. Ideal para follow-ups de vendas, lembretes, confirmações de consulta e muito mais.
+      </p>
+
+      <h3 className="font-bold text-gray-800 mb-4 text-lg">Criar um agendamento manual</h3>
+      <Step num={1} title="Acesse a página Agendamentos no menu lateral">
+        Clique em <strong>Agendamentos</strong> no menu. Você verá a lista de todos os agendamentos criados.
+      </Step>
+      <Step num={2} title='Clique em "Novo agendamento"'>
+        O formulário de criação vai abrir no topo da página.
+      </Step>
+      <Step num={3} title="Preencha os dados">
+        <div className="space-y-2 mt-1">
+          <div className="flex gap-3 bg-gray-50 rounded-xl p-3 border border-gray-200 text-sm text-gray-700">
+            <strong className="min-w-32 text-gray-800">Contato</strong>
+            Escolha para quem a mensagem vai ser enviada. Apenas contatos ativos (sem opt-out) aparecem na lista.
+          </div>
+          <div className="flex gap-3 bg-gray-50 rounded-xl p-3 border border-gray-200 text-sm text-gray-700">
+            <strong className="min-w-32 text-gray-800">Número de envio</strong>
+            Escolha qual número WhatsApp vai enviar (ou deixe "Automático" para usar o primeiro conectado).
+          </div>
+          <div className="flex gap-3 bg-gray-50 rounded-xl p-3 border border-gray-200 text-sm text-gray-700">
+            <strong className="min-w-32 text-gray-800">Data e hora</strong>
+            Escolha o momento exato do envio. Deve ser no futuro — o sistema não aceita horários passados.
+          </div>
+          <div className="flex gap-3 bg-gray-50 rounded-xl p-3 border border-gray-200 text-sm text-gray-700">
+            <strong className="min-w-32 text-gray-800">Mensagem</strong>
+            Escreva o texto. Use <Code>{'{{nome}}'}</Code> para personalizar com o nome do contato.
+          </div>
+        </div>
+      </Step>
+      <Step num={4} title='Clique em "Agendar mensagem"'>
+        Pronto! A mensagem aparece na lista com o status <strong>Agendado</strong> em azul e será enviada automaticamente no horário marcado.
+      </Step>
+
+      <h3 className="font-bold text-gray-800 mb-3 text-lg mt-8">Status dos agendamentos</h3>
+      <div className="space-y-2 mb-6">
+        {[
+          { s: 'Agendado', c: 'bg-blue-100 text-blue-700',   d: 'Aguardando o horário marcado para ser enviado.' },
+          { s: 'Enviado',  c: 'bg-green-100 text-green-700', d: 'Mensagem enviada com sucesso no horário programado.' },
+          { s: 'Cancelado',c: 'bg-gray-100 text-gray-500',   d: 'Você cancelou este agendamento antes do horário.' },
+          { s: 'Falhou',   c: 'bg-red-100 text-red-600',     d: 'Ocorreu um erro no envio (ex: WhatsApp desconectado no momento).' },
+        ].map((s) => (
+          <div key={s.s} className="flex items-center gap-3 text-sm">
+            <span className={`px-2.5 py-0.5 rounded-full font-semibold text-xs min-w-20 text-center ${s.c}`}>{s.s}</span>
+            <span className="text-gray-600">{s.d}</span>
+          </div>
+        ))}
+      </div>
+
+      <h3 className="font-bold text-gray-800 mb-4 text-lg">Cancelar um agendamento</h3>
+      <p className="text-gray-600 text-sm leading-relaxed mb-4">
+        Enquanto o agendamento tiver status <strong>Agendado</strong>, você pode cancelá-lo clicando no ícone de lixeira ao lado da mensagem na lista. Após o horário do envio ou após ser enviado, não é mais possível cancelar.
+      </p>
+
+      <h3 className="font-bold text-gray-800 mb-4 text-lg mt-8 flex items-center gap-2">
+        <Bot size={17} className="text-indigo-500" /> Agendamento via Bot (automático)
+      </h3>
+      <p className="text-gray-600 text-sm leading-relaxed mb-4">
+        O Bot de Atendimento pode criar agendamentos automaticamente durante uma conversa com o cliente — sem intervenção humana. Para isso, instrua o bot no prompt de sistema a agendar mensagens quando necessário.
+      </p>
+      <div className="bg-indigo-50 border border-indigo-200 rounded-2xl p-5 mb-5 text-sm text-indigo-900">
+        <p className="font-semibold mb-3">Como instruir o bot a fazer agendamentos:</p>
+        <p className="mb-2">Adicione no prompt de sistema do bot uma instrução como:</p>
+        <div className="bg-gray-900 rounded-xl p-4 font-mono text-xs text-gray-300 leading-relaxed">
+          <p className="text-gray-500 mb-2">// Exemplo de instrução no prompt do bot</p>
+          <p>Se o cliente demonstrar interesse mas não quiser fechar agora,</p>
+          <p>agende um follow-up para 3 dias depois às 10h usando a tag:</p>
+          <p className="text-yellow-300 mt-1">{'[[AGENDAR:AAAA-MM-DD 10:00:Olá {{nome}}, só passando para ver se você conseguiu pensar na nossa proposta! 😊]]'}</p>
+          <p className="text-gray-500 mt-2">// A data deve estar no formato AAAA-MM-DD HH:mm</p>
+        </div>
+      </div>
+      <div className="space-y-2 mb-4">
+        {[
+          'O bot inclui a tag [[AGENDAR:...]] na resposta internamente — o cliente não vê a tag.',
+          'O sistema detecta a tag e cria automaticamente o agendamento na data e hora indicadas.',
+          'O agendamento aparece na página Agendamentos com o status "Agendado".',
+          'No dia e hora marcados, a mensagem é enviada automaticamente pelo número conectado.',
+        ].map((s, i) => (
+          <div key={i} className="flex gap-2.5 text-sm text-gray-700">
+            <span className="w-5 h-5 bg-indigo-100 rounded-full text-indigo-700 text-xs font-black flex items-center justify-center shrink-0">{i + 1}</span>
+            <span>{s}</span>
+          </div>
+        ))}
+      </div>
+
+      <Success>
+        <strong>Caso de uso real:</strong> Cliente conversa com o bot às 14h e diz "vou pensar". O bot agenda automaticamente uma mensagem para daqui a 3 dias às 10h: <em>"Olá João, só passando para ver se você conseguiu pensar na nossa proposta! 😊"</em> — sem o vendedor precisar lembrar.
+      </Success>
+
+      <Warning>
+        <strong>Atenção ao WhatsApp conectado:</strong> No momento do envio, o número de WhatsApp precisa estar conectado ao sistema. Se o servidor estiver inativo (plano gratuito do Render dorme após 15 min), a mensagem pode falhar. Para uso crítico de follow-ups, considere o plano pago do Render que mantém o servidor sempre ativo.
+      </Warning>
+    </div>
+  );
+}
+
 function WhatsappSection() {
   return (
     <div id="whatsapp">
@@ -906,6 +1014,9 @@ export default function GuidePage() {
           </div>
           <div className="card p-8">
             <CampaignsSection />
+          </div>
+          <div className="card p-8">
+            <ScheduledSection />
           </div>
           <div className="card p-8">
             <WhatsappSection />

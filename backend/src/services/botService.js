@@ -1,5 +1,6 @@
-const { BotConfig, BotConversation, WhatsappAccount } = require('../models');
+const { BotConfig, BotConversation, WhatsappAccount, Contact, Message } = require('../models');
 const whatsapp = require('./whatsappService');
+const { enqueueScheduled } = require('./queueService');
 
 const ESCALATION_SIGNALS = [
   'transferir para atendente',
@@ -15,6 +16,46 @@ function needsEscalation(text) {
   return ESCALATION_SIGNALS.some((s) => lower.includes(s));
 }
 
+// Parses [[AGENDAR:YYYY-MM-DD HH:mm:message text]] tags from bot replies
+// Returns { cleanText, schedules: [{ scheduledFor, content }] }
+function parseScheduleTags(text) {
+  const SCHEDULE_RE = /\[\[AGENDAR:(\d{4}-\d{2}-\d{2} \d{2}:\d{2}):(.+?)\]\]/g;
+  const schedules = [];
+  let match;
+  while ((match = SCHEDULE_RE.exec(text)) !== null) {
+    const scheduledFor = new Date(match[1]);
+    if (!isNaN(scheduledFor.getTime()) && scheduledFor > new Date()) {
+      schedules.push({ scheduledFor, content: match[2].trim() });
+    }
+  }
+  const cleanText = text.replace(SCHEDULE_RE, '').trim();
+  return { cleanText, schedules };
+}
+
+async function createBotScheduledMessages(account, fromPhone, schedules) {
+  try {
+    const digits = String(fromPhone).replace(/\D/g, '');
+    const variants = [digits, digits.startsWith('55') ? digits.slice(2) : `55${digits}`];
+    const contact = await Contact.findOne({ where: { user_id: account.user_id, phone: variants } });
+    if (!contact) return;
+
+    for (const { scheduledFor, content } of schedules) {
+      const msg = await Message.create({
+        user_id: account.user_id,
+        contact_id: contact.id,
+        account_id: account.id,
+        content,
+        status: 'queued',
+        scheduled_for: scheduledFor,
+      });
+      const jobId = await enqueueScheduled(msg.id, account.user_id, account.id, fromPhone, content, scheduledFor);
+      await msg.update({ queue_job_id: String(jobId) });
+    }
+  } catch (err) {
+    console.error('[Bot] erro ao criar agendamento:', err.message);
+  }
+}
+
 async function callAI(config, messages) {
   if (!config.ai_api_key) throw new Error('Chave de API não configurada');
 
@@ -25,7 +66,7 @@ async function callAI(config, messages) {
     const response = await client.messages.create({
       model: config.ai_model || 'claude-haiku-4-5-20251001',
       max_tokens: 500,
-      system: config.system_prompt + '\n\nSe o cliente precisar de atendimento humano especializado ou se você não conseguir resolver o problema, inclua exatamente [[ESCALAR]] na sua resposta.',
+      system: config.system_prompt + '\n\nSe o cliente precisar de atendimento humano especializado ou se você não conseguir resolver o problema, inclua exatamente [[ESCALAR]] na sua resposta.\n\nPara agendar um follow-up automático para este cliente em uma data futura, inclua na sua resposta a tag [[AGENDAR:AAAA-MM-DD HH:mm:texto da mensagem]] — exemplo: [[AGENDAR:2026-05-01 10:00:Olá {{nome}}, só passando para confirmar nosso combinado!]]. A tag não aparecerá para o cliente.',
       messages,
     });
     return response.content[0].text;
@@ -39,7 +80,7 @@ async function callAI(config, messages) {
       model: config.ai_model || 'gpt-4o-mini',
       max_tokens: 500,
       messages: [
-        { role: 'system', content: config.system_prompt + '\n\nSe o cliente precisar de atendimento humano especializado ou se você não conseguir resolver o problema, inclua exatamente [[ESCALAR]] na sua resposta.' },
+        { role: 'system', content: config.system_prompt + '\n\nSe o cliente precisar de atendimento humano especializado ou se você não conseguir resolver o problema, inclua exatamente [[ESCALAR]] na sua resposta.\n\nPara agendar um follow-up automático para este cliente em uma data futura, inclua na sua resposta a tag [[AGENDAR:AAAA-MM-DD HH:mm:texto da mensagem]] — exemplo: [[AGENDAR:2026-05-01 10:00:Olá {{nome}}, só passando para confirmar nosso combinado!]]. A tag não aparecerá para o cliente.' },
         ...messages,
       ],
     });
@@ -99,7 +140,9 @@ async function handleMessage(accountId, fromPhone, text) {
 
   // Verifica se precisa escalar
   const shouldEscalate = needsEscalation(reply);
-  const cleanReply = reply.replace('[[ESCALAR]]', '').trim();
+  // Parse schedule tags first, then strip escalation tag
+  const { cleanText: textAfterSchedule, schedules } = parseScheduleTags(reply);
+  const cleanReply = textAfterSchedule.replace('[[ESCALAR]]', '').trim();
 
   const newHistory = [...history, { role: 'assistant', content: cleanReply, ts: Date.now() }];
 
@@ -110,6 +153,12 @@ async function handleMessage(accountId, fromPhone, text) {
   } else {
     await conv.update({ messages: newHistory, last_message_at: new Date() });
     await whatsapp.sendText(accountId, fromPhone, cleanReply);
+  }
+
+  // Create any scheduled follow-ups the AI requested
+  if (schedules.length > 0) {
+    const account = await WhatsappAccount.findByPk(accountId).catch(() => null);
+    if (account) await createBotScheduledMessages(account, fromPhone, schedules);
   }
 }
 

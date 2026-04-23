@@ -3,11 +3,20 @@ const { body } = require('express-validator');
 const ctrl = require('../controllers/messageController');
 
 router.get('/', ctrl.history);
+router.get('/scheduled', ctrl.listScheduled);
+router.delete('/:id/cancel', ctrl.cancelScheduled);
 
 router.post('/send', [
   body('contact_id').isUUID(),
   body('content').notEmpty().trim(),
 ], ctrl.sendSingle);
+
+router.post('/schedule', [
+  body('contact_id').isUUID(),
+  body('content').notEmpty().trim(),
+  body('scheduled_for').isISO8601().withMessage('Data/hora inválida'),
+  body('account_id').optional().isUUID(),
+], ctrl.scheduleMessage);
 
 router.post('/campaign', [
   body('name').notEmpty().trim(),
