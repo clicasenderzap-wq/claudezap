@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Upload, Trash2, Search, Ban, Pencil, Download, Tag, X, CheckSquare } from 'lucide-react';
+import { Plus, Upload, Trash2, Search, Ban, Pencil, Download, Tag, X, CheckSquare, ShieldCheck, Link2 } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -10,14 +10,23 @@ import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { formatPhone } from '@/lib/utils';
 import Modal from '@/components/Modal';
+import { useAuthStore } from '@/store/authStore';
 
 const schema = z.object({
   name: z.string().min(1, 'Obrigatório'),
   phone: z.string().min(8, 'Telefone inválido'),
   notes: z.string().optional(),
   tags: z.string().optional(),
+  consent_source: z.string().optional(),
 });
 type FormData = z.infer<typeof schema>;
+
+const CONSENT_OPTIONS = [
+  { value: 'existing_relationship', label: 'Relacionamento comercial existente', desc: 'Cliente, fornecedor ou parceiro que já me conhece' },
+  { value: 'optin_form', label: 'Formulário / link de opt-in', desc: 'Preencheu formulário autorizando o contato' },
+  { value: 'manual', label: 'Autorização direta / presencial', desc: 'Me autorizou pessoalmente ou por outro canal' },
+  { value: 'other', label: 'Outro consentimento documentado', desc: 'Tenho registro do consentimento em outro formato' },
+];
 
 interface Contact {
   id: string;
@@ -54,6 +63,7 @@ function parseTags(raw: string): string[] {
 
 export default function ContactsPage() {
   const qc = useQueryClient();
+  const { user } = useAuthStore();
   const [search, setSearch] = useState('');
   const [page, setPage] = useState(1);
   const [activeTag, setActiveTag] = useState('');
@@ -63,6 +73,9 @@ export default function ContactsPage() {
   const [bulkModal, setBulkModal] = useState(false);
   const [bulkTags, setBulkTags] = useState('');
   const [bulkMode, setBulkMode] = useState<'replace' | 'add'>('replace');
+  const [importConsentModal, setImportConsentModal] = useState(false);
+  const [importConsentSource, setImportConsentSource] = useState('existing_relationship');
+  const [pendingFile, setPendingFile] = useState<File | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { data, isLoading } = useQuery({
@@ -187,11 +200,19 @@ export default function ContactsPage() {
     }
   }
 
-  async function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleImport(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    setPendingFile(file);
+    setImportConsentModal(true);
+    e.target.value = '';
+  }
+
+  async function submitImport() {
+    if (!pendingFile) return;
     const form = new FormData();
-    form.append('file', file);
+    form.append('file', pendingFile);
+    form.append('consent_source', importConsentSource);
     try {
       const res = await api.post('/contacts/import', form);
       qc.invalidateQueries({ queryKey: ['contacts'] });
@@ -208,18 +229,32 @@ export default function ContactsPage() {
     } catch (err: any) {
       toast.error(err.response?.data?.error || 'Erro na importação');
     }
-    e.target.value = '';
+    setImportConsentModal(false);
+    setPendingFile(null);
   }
 
   const contacts: Contact[] = data?.data ?? [];
   const allPageSelected = contacts.length > 0 && contacts.every((c) => selected.has(c.id));
 
+  function copyOptinLink() {
+    const link = `${window.location.origin}/optin/${user?.id}`;
+    navigator.clipboard.writeText(link);
+    toast.success('Link copiado! Compartilhe com seus contatos.');
+  }
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Contatos</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
           <input ref={fileRef} type="file" accept=".csv,.xlsx,.xls" className="hidden" onChange={handleImport} />
+          <button
+            onClick={copyOptinLink}
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border-2 border-green-400 text-green-700 bg-green-50 hover:bg-green-100 text-sm font-medium transition-colors"
+            title="Gera um link público onde seus contatos podem se cadastrar e dar consentimento"
+          >
+            <Link2 size={15} /> Copiar link de opt-in
+          </button>
           <a href="/contatos_modelo.xlsx" download className="btn-secondary">
             <Download size={16} /> Baixar modelo Excel
           </a>
@@ -434,6 +469,13 @@ export default function ContactsPage() {
             <label className="label">Observações</label>
             <textarea {...createForm.register('notes')} className="input resize-none" rows={3} placeholder="Anotações opcionais" />
           </div>
+          <div>
+            <label className="label flex items-center gap-1.5"><ShieldCheck size={13} className="text-green-600" /> Como este contato autorizou receber mensagens? *</label>
+            <select {...createForm.register('consent_source')} className="input">
+              {CONSENT_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
+            </select>
+            <p className="text-xs text-gray-400 mt-1">Exigido pela LGPD. Você é responsável pela veracidade desta informação.</p>
+          </div>
           <div className="flex gap-3 justify-end pt-2">
             <button type="button" onClick={() => { setOpen(false); createForm.reset(); }} className="btn-secondary">Cancelar</button>
             <button type="submit" disabled={createForm.formState.isSubmitting} className="btn-primary">Salvar</button>
@@ -517,6 +559,50 @@ export default function ContactsPage() {
               className="btn-primary"
             >
               Aplicar
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Modal — Consentimento do Import */}
+      <Modal open={importConsentModal} onClose={() => { setImportConsentModal(false); setPendingFile(null); }} title="Confirmação de Consentimento (LGPD)">
+        <div className="space-y-4">
+          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-xs text-yellow-800 leading-relaxed">
+            <strong>Obrigação legal:</strong> Pela LGPD (Lei 13.709/2018), você só pode enviar mensagens para contatos
+            que autorizaram receber suas comunicações. Indique abaixo como esses contatos consentiram.
+          </div>
+          <div className="space-y-2">
+            {CONSENT_OPTIONS.map((o) => (
+              <label
+                key={o.value}
+                className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                  importConsentSource === o.value ? 'border-brand-500 bg-brand-50' : 'border-gray-200 hover:border-gray-300'
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="import_consent"
+                  value={o.value}
+                  checked={importConsentSource === o.value}
+                  onChange={() => setImportConsentSource(o.value)}
+                  className="mt-0.5 accent-brand-600 shrink-0"
+                />
+                <div>
+                  <p className="text-sm font-semibold text-gray-800">{o.label}</p>
+                  <p className="text-xs text-gray-500 mt-0.5">{o.desc}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+          <p className="text-xs text-gray-400">
+            Arquivo: <strong>{pendingFile?.name}</strong>
+          </p>
+          <div className="flex gap-3 justify-end pt-2">
+            <button type="button" onClick={() => { setImportConsentModal(false); setPendingFile(null); }} className="btn-secondary">
+              Cancelar
+            </button>
+            <button onClick={submitImport} className="btn-primary flex items-center gap-2">
+              <ShieldCheck size={14} /> Confirmar e importar
             </button>
           </div>
         </div>

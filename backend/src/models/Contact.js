@@ -31,6 +31,15 @@ const Contact = sequelize.define('Contact', {
     type: DataTypes.JSON,
     defaultValue: [],
   },
+  consent_source: {
+    type: DataTypes.STRING,
+    allowNull: true,
+    // 'manual' | 'imported' | 'optin_form' | 'existing_relationship' | 'other'
+  },
+  consented_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
 }, {
   tableName: 'contacts',
   underscored: true,

@@ -1,5 +1,9 @@
 const router = require('express').Router();
 const auth = require('../middleware/auth');
+const optin = require('../controllers/optinController');
+
+router.get('/optin/:userId', optin.getOptinInfo);
+router.post('/optin/:userId', optin.submitOptin);
 
 router.use('/auth', require('./auth'));
 router.use('/contacts', auth, require('./contacts'));

@@ -8,7 +8,7 @@ import { z } from 'zod';
 import {
   Megaphone, Check, RefreshCw, Trash2, Plus, History,
   X, Smartphone, BarChart2, Send, CheckCircle2, XCircle, Clock,
-  ChevronRight, Timer, Repeat2, Tag, Users, CalendarClock,
+  ChevronRight, Timer, Repeat2, Tag, Users, CalendarClock, ShieldCheck,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
@@ -68,6 +68,7 @@ export default function CampaignsPage() {
   const [detailCampaign, setDetailCampaign] = useState<any>(null);
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [msgFilter, setMsgFilter] = useState<string>('all');
+  const [consentConfirmed, setConsentConfirmed] = useState(false);
 
   const { data: waAccounts = [] } = useQuery<any[]>({
     queryKey: ['wa-accounts'],
@@ -164,6 +165,7 @@ export default function CampaignsPage() {
     } else {
       if (!selected.length) return toast.error('Selecione pelo menos um contato');
     }
+    if (!consentConfirmed) return toast.error('Confirme que os contatos autorizaram receber mensagens (LGPD)');
     if (!connectedAccounts.length) return toast.error('Nenhum número WhatsApp conectado.');
     if (data.scheduled_for && new Date(data.scheduled_for) <= new Date()) {
       return toast.error('O horário agendado deve ser no futuro');
@@ -414,10 +416,25 @@ export default function CampaignsPage() {
                   <p className="text-sm text-gray-700 whitespace-pre-wrap">{preview}</p>
                 </div>
               )}
+
+              {/* Confirmação LGPD */}
+              <label className={`flex items-start gap-2.5 cursor-pointer p-3 rounded-xl border-2 transition-all ${consentConfirmed ? 'border-green-400 bg-green-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                <input
+                  type="checkbox"
+                  checked={consentConfirmed}
+                  onChange={(e) => setConsentConfirmed(e.target.checked)}
+                  className="mt-0.5 w-4 h-4 accent-green-600 shrink-0"
+                />
+                <span className="text-xs text-gray-700 leading-relaxed">
+                  <ShieldCheck size={12} className="inline mr-1 text-green-600" />
+                  <strong>Declaração LGPD:</strong> Confirmo que todos os contatos desta campanha autorizaram
+                  receber minhas mensagens e assumo total responsabilidade pelo conteúdo enviado.
+                </span>
+              </label>
             </div>
             <button
               type="submit"
-              disabled={isSubmitting || (contactMode === 'individual' ? !selected.length : !selectedTags.length)}
+              disabled={isSubmitting || !consentConfirmed || (contactMode === 'individual' ? !selected.length : !selectedTags.length)}
               className="btn-primary w-full"
             >
               <Megaphone size={16} />

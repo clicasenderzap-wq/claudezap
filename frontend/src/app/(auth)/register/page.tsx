@@ -18,6 +18,7 @@ const schema = z.object({
   whatsapp: z.string().min(10, 'WhatsApp obrigatório'),
   password: z.string().min(8, 'Mínimo 8 caracteres'),
   accepted_terms: z.boolean().refine((v) => v === true, 'Aceite os Termos de Uso para continuar'),
+  accepted_consent: z.boolean().refine((v) => v === true, 'Confirme que possui consentimento dos seus contatos'),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -27,7 +28,7 @@ export default function RegisterPage() {
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { accepted_terms: false },
+    defaultValues: { accepted_terms: false, accepted_consent: false },
   });
 
   async function onSubmit(data: FormData) {
@@ -101,20 +102,35 @@ export default function RegisterPage() {
           {errors.password && <p className="text-red-500 text-xs mt-1">{errors.password.message}</p>}
         </div>
 
-        <label className="flex items-start gap-2.5 cursor-pointer pt-1">
-          <input
-            type="checkbox"
-            {...register('accepted_terms')}
-            className="mt-0.5 w-4 h-4 accent-brand-600 shrink-0"
-          />
-          <span className="text-xs text-gray-600 leading-relaxed">
-            Li e aceito os{' '}
-            <Link href="/termos" target="_blank" className="text-brand-600 font-medium hover:underline">Termos de Uso</Link>
-            {' '}e a{' '}
-            <Link href="/privacidade" target="_blank" className="text-brand-600 font-medium hover:underline">Política de Privacidade</Link>
-          </span>
-        </label>
-        {errors.accepted_terms && <p className="text-red-500 text-xs -mt-2">{errors.accepted_terms.message}</p>}
+        <div className="space-y-3 pt-1">
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              {...register('accepted_terms')}
+              className="mt-0.5 w-4 h-4 accent-brand-600 shrink-0"
+            />
+            <span className="text-xs text-gray-600 leading-relaxed">
+              Li e aceito os{' '}
+              <Link href="/termos" target="_blank" className="text-brand-600 font-medium hover:underline">Termos de Uso</Link>
+              {' '}e a{' '}
+              <Link href="/privacidade" target="_blank" className="text-brand-600 font-medium hover:underline">Política de Privacidade</Link>
+            </span>
+          </label>
+          {errors.accepted_terms && <p className="text-red-500 text-xs">{errors.accepted_terms.message}</p>}
+
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              {...register('accepted_consent')}
+              className="mt-0.5 w-4 h-4 accent-brand-600 shrink-0"
+            />
+            <span className="text-xs text-gray-600 leading-relaxed">
+              Declaro que utilizarei a plataforma <strong>apenas para contatos que autorizaram</strong> receber
+              minhas mensagens, conforme exigido pela LGPD e pelo Código de Defesa do Consumidor.
+            </span>
+          </label>
+          {errors.accepted_consent && <p className="text-red-500 text-xs">{errors.accepted_consent.message}</p>}
+        </div>
 
         <button type="submit" disabled={isSubmitting} className="btn-primary w-full mt-2">
           {isSubmitting ? 'Criando conta…' : 'Criar conta'}

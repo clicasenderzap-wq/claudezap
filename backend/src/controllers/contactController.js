@@ -69,7 +69,7 @@ async function create(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
 
-  const { name, phone, notes, tags } = req.body;
+  const { name, phone, notes, tags, consent_source } = req.body;
   const normalizedTags = Array.isArray(tags) ? tags.map(normalizeTag).filter(Boolean) : [];
   try {
     const contact = await Contact.create({
@@ -78,6 +78,8 @@ async function create(req, res) {
       phone: normalizePhone(phone),
       notes,
       tags: normalizedTags,
+      consent_source: consent_source || 'manual',
+      consented_at: new Date(),
     });
     res.status(201).json(contact);
   } catch (err) {
@@ -145,6 +147,7 @@ async function remove(req, res) {
 
 async function importCSV(req, res) {
   if (!req.file) return res.status(400).json({ error: 'Arquivo obrigatório' });
+  const consent_source = req.body.consent_source || 'imported';
 
   const ext = (req.file.originalname || '').split('.').pop().toLowerCase();
   let rawRows = [];
@@ -188,6 +191,8 @@ async function importCSV(req, res) {
         phone: normalizePhone(phone),
         notes: String(row.observacoes || row.notes || '').trim() || null,
         tags,
+        consent_source,
+        consented_at: new Date(),
       });
     } else {
       errors.push({ row, reason: 'nome/telefone obrigatórios' });
