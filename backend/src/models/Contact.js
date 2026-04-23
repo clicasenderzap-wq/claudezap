@@ -40,6 +40,10 @@ const Contact = sequelize.define('Contact', {
     type: DataTypes.DATE,
     allowNull: true,
   },
+  last_campaign_sent_at: {
+    type: DataTypes.DATE,
+    allowNull: true,
+  },
 }, {
   tableName: 'contacts',
   underscored: true,

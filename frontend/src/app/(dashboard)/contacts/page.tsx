@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Upload, Trash2, Search, Ban, Pencil, Download, Tag, X, CheckSquare, ShieldCheck, Link2 } from 'lucide-react';
+import { Plus, Upload, Trash2, Search, Ban, Pencil, Download, Tag, X, CheckSquare, ShieldCheck, Link2, Send } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -35,6 +35,7 @@ interface Contact {
   notes?: string;
   opt_out: boolean;
   tags: string[];
+  last_campaign_sent_at?: string | null;
 }
 
 const TAG_COLORS = [
@@ -76,13 +77,20 @@ export default function ContactsPage() {
   const [importConsentModal, setImportConsentModal] = useState(false);
   const [importConsentSource, setImportConsentSource] = useState('existing_relationship');
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [contactedFilter, setContactedFilter] = useState<'all' | 'never' | 'yes'>('all');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const { data, isLoading } = useQuery({
-    queryKey: ['contacts', search, page, activeTag],
+    queryKey: ['contacts', search, page, activeTag, contactedFilter],
     queryFn: () =>
       api
-        .get('/contacts', { params: { search, page, limit: 20, tag: activeTag || undefined } })
+        .get('/contacts', {
+          params: {
+            search, page, limit: 20,
+            tag: activeTag || undefined,
+            contacted: contactedFilter === 'all' ? undefined : contactedFilter,
+          },
+        })
         .then((r) => r.data),
   });
 
@@ -267,6 +275,29 @@ export default function ContactsPage() {
         </div>
       </div>
 
+      {/* Contacted quick-filter */}
+      <div className="flex gap-2 items-center flex-wrap">
+        <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Campanhas:</span>
+        {([
+          { key: 'all', label: 'Todos' },
+          { key: 'never', label: 'Nunca contactado' },
+          { key: 'yes', label: 'Já contactado' },
+        ] as const).map((f) => (
+          <button
+            key={f.key}
+            onClick={() => { setContactedFilter(f.key); setPage(1); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors ${
+              contactedFilter === f.key
+                ? 'bg-brand-600 text-white border-brand-600'
+                : 'bg-white text-gray-600 border-gray-200 hover:border-gray-400'
+            }`}
+          >
+            {f.key === 'yes' && <Send size={11} />}
+            {f.label}
+          </button>
+        ))}
+      </div>
+
       {/* Search + tag filter row */}
       <div className="flex gap-3 flex-wrap items-center">
         <div className="relative flex-1 min-w-[200px]">
@@ -394,7 +425,19 @@ export default function ContactsPage() {
                     className="rounded border-gray-300 text-brand-600 focus:ring-brand-500"
                   />
                 </td>
-                <td className="px-4 py-3 font-medium text-gray-900">{c.name}</td>
+                <td className="px-4 py-3 font-medium text-gray-900">
+                  <div className="flex items-center gap-2">
+                    <span>{c.name}</span>
+                    {c.last_campaign_sent_at && (
+                      <span
+                        title={`Última campanha: ${new Date(c.last_campaign_sent_at).toLocaleDateString('pt-BR')}`}
+                        className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700 shrink-0"
+                      >
+                        <Send size={9} /> Enviado
+                      </span>
+                    )}
+                  </div>
+                </td>
                 <td className="px-4 py-3 text-gray-600">{formatPhone(c.phone)}</td>
                 <td className="px-4 py-3">
                   <div className="flex flex-wrap gap-1">

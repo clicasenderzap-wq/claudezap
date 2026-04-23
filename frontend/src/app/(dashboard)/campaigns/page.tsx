@@ -9,6 +9,7 @@ import {
   Megaphone, Check, RefreshCw, Trash2, Plus, History,
   X, Smartphone, BarChart2, Send, CheckCircle2, XCircle, Clock,
   ChevronRight, Timer, Repeat2, Tag, Users, CalendarClock, ShieldCheck,
+  Layers, AlertTriangle, UserX,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
@@ -21,6 +22,10 @@ const schema = z.object({
   rotate_every: z.number().min(1).default(10),
   include_optout: z.boolean().default(true),
   scheduled_for: z.string().optional(),
+  batch_mode: z.boolean().default(false),
+  batch_size: z.number().min(1).max(500).default(50),
+  batch_interval_hours: z.number().min(0.5).max(168).default(8),
+  exclude_contacted: z.boolean().default(false),
 });
 type FormData = z.infer<typeof schema>;
 
@@ -94,13 +99,17 @@ export default function CampaignsPage() {
 
   const { register, handleSubmit, watch, reset, setValue, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),
-    defaultValues: { delay_ms: 5000, rotate_every: 10, include_optout: true },
+    defaultValues: { delay_ms: 5000, rotate_every: 10, include_optout: true, batch_size: 50, batch_interval_hours: 8 },
   });
 
   const template = watch('message_template', '');
   const includeOptout = watch('include_optout', true);
   const delayMs = watch('delay_ms', 5000);
   const rotateEvery = watch('rotate_every', 10);
+  const batchMode = watch('batch_mode', false);
+  const batchSize = watch('batch_size', 50);
+  const batchIntervalHours = watch('batch_interval_hours', 8);
+  const excludeContacted = watch('exclude_contacted', false);
 
   const sendMutation = useMutation({
     mutationFn: (d: FormData & { contact_ids?: string[]; tags?: string[]; account_ids: string[] }) =>
@@ -182,6 +191,9 @@ export default function CampaignsPage() {
   );
   const activeFiltered = filtered.filter((c: any) => !c.opt_out);
   const previewName = contacts?.find((c: any) => selected[0] === c.id)?.name ?? 'João';
+
+  const totalForBatch = contactMode === 'tag' ? tagContactCount : selected.length;
+  const totalBatches = batchMode && batchSize > 0 ? Math.ceil(totalForBatch / batchSize) : 1;
   const preview = template
     .replace(/\{\{nome\}\}/gi, previewName)
     .replace(/\{\{name\}\}/gi, previewName)
@@ -237,7 +249,9 @@ export default function CampaignsPage() {
                       onClick={() => { setDetailCampaign(c); setMsgFilter('all'); }}
                       className="font-medium text-brand-600 hover:text-brand-800 truncate flex items-center gap-1 text-left"
                     >
-                      {c.name} <ChevronRight size={13} />
+                      {c.name}
+                      {c.batch_mode && <span title="Envio em lotes"><Layers size={11} className="text-orange-500 shrink-0" /></span>}
+                      <ChevronRight size={13} />
                     </button>
                   </td>
                   <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
@@ -374,6 +388,73 @@ export default function CampaignsPage() {
                 </p>
               </div>
 
+              {/* Envio em Lotes */}
+              <div className={`rounded-xl border-2 transition-all overflow-hidden ${batchMode ? 'border-orange-400' : 'border-gray-200'}`}>
+                <label className="flex items-start gap-3 cursor-pointer p-3">
+                  <input type="checkbox" {...register('batch_mode')} className="mt-0.5 w-4 h-4 accent-orange-600 shrink-0" />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                      <Layers size={13} className="text-orange-600" /> Envio em Lotes (Anti-Bloqueio Meta)
+                    </p>
+                    <p className="text-xs text-gray-500 mt-0.5">Divide o envio em grupos com intervalo entre eles para evitar restrições</p>
+                  </div>
+                </label>
+                {batchMode && (
+                  <div className="px-3 pb-3 space-y-3 border-t border-orange-200 pt-3 bg-orange-50">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="label text-xs">Contatos por lote</label>
+                        <input
+                          {...register('batch_size', { valueAsNumber: true })}
+                          type="number" min={1} max={500}
+                          className="input text-sm"
+                        />
+                        {(batchSize ?? 0) > 50 && (
+                          <p className="text-xs text-orange-600 mt-1 flex items-center gap-1">
+                            <AlertTriangle size={11} /> Meta pode restringir acima de 50
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="label text-xs">Intervalo entre lotes (horas)</label>
+                        <input
+                          {...register('batch_interval_hours', { valueAsNumber: true })}
+                          type="number" min={0.5} max={168} step={0.5}
+                          className="input text-sm"
+                        />
+                      </div>
+                    </div>
+                    {totalForBatch > 0 && totalBatches > 1 && (
+                      <div className="bg-white border border-orange-200 rounded-lg p-2.5 space-y-1.5">
+                        <p className="text-xs font-semibold text-orange-700 flex items-center gap-1"><Clock size={11} /> Cronograma ({totalBatches} lotes)</p>
+                        {Array.from({ length: Math.min(totalBatches, 4) }).map((_, i) => (
+                          <div key={i} className="flex items-center gap-2 text-xs text-gray-600">
+                            <span className={`w-2 h-2 rounded-full shrink-0 ${i === 0 ? 'bg-green-500' : 'bg-orange-300'}`} />
+                            <span>Lote {i + 1} — {Math.min(batchSize, totalForBatch - i * batchSize)} msgs</span>
+                            <span className="ml-auto text-gray-400 tabular-nums">{i === 0 ? 'agora' : `+${(i * batchIntervalHours).toFixed(1)}h`}</span>
+                          </div>
+                        ))}
+                        {totalBatches > 4 && <p className="text-xs text-gray-400 pl-4">...e mais {totalBatches - 4} lote{totalBatches - 4 !== 1 ? 's' : ''}</p>}
+                        <p className="text-xs font-semibold text-orange-700 pt-1 border-t border-orange-100">
+                          Conclusão em ~{((totalBatches - 1) * batchIntervalHours).toFixed(1)}h
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Excluir já contactados */}
+              <label className={`flex items-start gap-2.5 cursor-pointer p-3 rounded-xl border-2 transition-all ${excludeContacted ? 'border-blue-400 bg-blue-50' : 'border-gray-200 hover:border-gray-300'}`}>
+                <input type="checkbox" {...register('exclude_contacted')} className="mt-0.5 w-4 h-4 accent-blue-600 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                    <UserX size={13} className="text-blue-600" /> Excluir contatos já contactados
+                  </p>
+                  <p className="text-xs text-gray-500 mt-0.5">Remove da campanha qualquer contato que já recebeu mensagem em uma campanha anterior</p>
+                </div>
+              </label>
+
               {/* Opt-out */}
               <label className="flex items-center gap-2.5 cursor-pointer">
                 <input type="checkbox" {...register('include_optout')} className="w-4 h-4 accent-brand-600" />
@@ -506,26 +587,35 @@ export default function CampaignsPage() {
                   <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar..." className="input py-1.5 text-sm" />
                 </div>
                 <div className="overflow-y-auto max-h-[420px] divide-y divide-gray-100">
-                  {filtered.map((c: any) => (
-                    <label key={c.id} className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 ${c.opt_out ? 'opacity-40 pointer-events-none' : ''}`}>
-                      <div
-                        className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${selected.includes(c.id) ? 'bg-brand-600 border-brand-600' : 'border-gray-300'}`}
-                        onClick={() => !c.opt_out && toggleContact(c.id)}
-                      >
-                        {selected.includes(c.id) && <Check size={10} className="text-white" />}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-800 truncate">{c.name}</p>
-                        <p className="text-xs text-gray-500">{c.phone}</p>
-                      </div>
-                      {(c.tags || []).length > 0 && (
-                        <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full shrink-0 max-w-[80px] truncate">
-                          {c.tags[0]}
-                        </span>
-                      )}
-                      {c.opt_out && <span className="badge bg-red-100 text-red-600 ml-auto">Opt-out</span>}
-                    </label>
-                  ))}
+                  {filtered.map((c: any) => {
+                    const wasContacted = !!c.last_campaign_sent_at;
+                    const isExcluded = excludeContacted && wasContacted;
+                    return (
+                      <label key={c.id} className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-gray-50 ${(c.opt_out || isExcluded) ? 'opacity-40 pointer-events-none' : ''}`}>
+                        <div
+                          className={`w-4 h-4 rounded border-2 flex items-center justify-center flex-shrink-0 ${selected.includes(c.id) ? 'bg-brand-600 border-brand-600' : 'border-gray-300'}`}
+                          onClick={() => !c.opt_out && !isExcluded && toggleContact(c.id)}
+                        >
+                          {selected.includes(c.id) && <Check size={10} className="text-white" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-800 truncate">{c.name}</p>
+                          <p className="text-xs text-gray-500">{c.phone}</p>
+                        </div>
+                        {wasContacted && (
+                          <span className="flex items-center gap-0.5 px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-blue-100 text-blue-700 shrink-0">
+                            <Send size={9} /> Enviado
+                          </span>
+                        )}
+                        {(c.tags || []).length > 0 && (
+                          <span className="text-xs bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded-full shrink-0 max-w-[80px] truncate">
+                            {c.tags[0]}
+                          </span>
+                        )}
+                        {c.opt_out && <span className="badge bg-red-100 text-red-600 ml-auto">Opt-out</span>}
+                      </label>
+                    );
+                  })}
                   {!filtered.length && <p className="px-4 py-8 text-center text-sm text-gray-400">Nenhum contato</p>}
                 </div>
               </>
@@ -588,6 +678,45 @@ export default function CampaignsPage() {
                         style={{ width: `${Math.round(((detail.stats.sent + detail.stats.delivered) / detail.stats.total) * 100)}%` }}
                       />
                     </div>
+                  </div>
+                )}
+
+                {/* Batch progress */}
+                {detailCampaign.batch_mode && detailCampaign.batch_size > 0 && (
+                  <div className="px-6 py-3 border-b border-gray-100 shrink-0">
+                    <p className="text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1.5">
+                      <Layers size={12} /> Lotes (envio fracionado)
+                    </p>
+                    {(() => {
+                      const bs = detailCampaign.batch_size;
+                      const total = detailCampaign.total_contacts;
+                      const batchCount = Math.ceil(total / bs);
+                      const done = (detail?.stats?.sent ?? 0) + (detail?.stats?.delivered ?? 0) + (detail?.stats?.failed ?? 0);
+                      const createdMs = new Date(detailCampaign.createdAt ?? detailCampaign.created_at).getTime();
+                      const intervalMs = detailCampaign.batch_interval_hours * 3600000;
+                      return (
+                        <div className="space-y-1.5">
+                          {Array.from({ length: Math.min(batchCount, 5) }).map((_, i) => {
+                            const batchStart = i * bs;
+                            const batchDone = Math.max(0, Math.min(bs, done - batchStart));
+                            const batchTotal = Math.min(bs, total - batchStart);
+                            const scheduledAt = new Date(createdMs + i * intervalMs);
+                            const isPast = scheduledAt <= new Date();
+                            return (
+                              <div key={i} className="flex items-center gap-2 text-xs">
+                                <span className={`w-2 h-2 rounded-full shrink-0 ${batchDone >= batchTotal ? 'bg-green-500' : isPast ? 'bg-blue-500' : 'bg-gray-300'}`} />
+                                <span className="text-gray-700 font-medium w-14">Lote {i + 1}</span>
+                                <span className="text-gray-500">{batchDone}/{batchTotal} msgs</span>
+                                <span className="ml-auto text-gray-400 tabular-nums">
+                                  {i === 0 ? 'início' : scheduledAt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                            );
+                          })}
+                          {batchCount > 5 && <p className="text-xs text-gray-400 pl-4">...e mais {batchCount - 5} lote{batchCount - 5 !== 1 ? 's' : ''}</p>}
+                        </div>
+                      );
+                    })()}
                   </div>
                 )}
 

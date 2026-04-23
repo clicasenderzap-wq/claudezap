@@ -11,7 +11,7 @@ function normalizeTag(t) {
 }
 
 async function list(req, res) {
-  const { search, page = 1, limit = 50, tag } = req.query;
+  const { search, page = 1, limit = 50, tag, contacted } = req.query;
   const where = { user_id: req.user.id };
 
   if (search) {
@@ -19,6 +19,12 @@ async function list(req, res) {
       { name: { [Op.iLike]: `%${search}%` } },
       { phone: { [Op.iLike]: `%${search}%` } },
     ];
+  }
+
+  if (contacted === 'never') {
+    where.last_campaign_sent_at = null;
+  } else if (contacted === 'yes') {
+    where.last_campaign_sent_at = { [Op.ne]: null };
   }
 
   const { count, rows } = await Contact.findAndCountAll({

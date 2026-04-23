@@ -28,4 +28,17 @@ async function enqueueBulk(messages, baseDelayMs = 3000, startOffset = 0) {
   return messageQueue.addBulk(jobs);
 }
 
-module.exports = { messageQueue, enqueueMessage, enqueueBulk };
+async function enqueueBatched(messages, baseDelayMs = 3000, batchSize = 50, batchIntervalMs = 28800000, startOffset = 0) {
+  const jobs = messages.map((msg, i) => {
+    const batchIndex = Math.floor(i / batchSize);
+    const posInBatch = i % batchSize;
+    return {
+      name: 'send',
+      data: msg,
+      opts: { delay: startOffset + batchIndex * batchIntervalMs + posInBatch * baseDelayMs },
+    };
+  });
+  return messageQueue.addBulk(jobs);
+}
+
+module.exports = { messageQueue, enqueueMessage, enqueueBulk, enqueueBatched };

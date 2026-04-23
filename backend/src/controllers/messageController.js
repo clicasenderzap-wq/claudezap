@@ -1,6 +1,6 @@
 const { validationResult } = require('express-validator');
 const { Message, Contact, Campaign } = require('../models');
-const { enqueueMessage, enqueueBulk } = require('../services/queueService');
+const { enqueueMessage, enqueueBulk, enqueueBatched } = require('../services/queueService');
 const { Op } = require('sequelize');
 const { getLimit } = require('../middleware/planGuard');
 
@@ -36,21 +36,28 @@ async function sendCampaign(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
 
-  const { name, message_template, contact_ids, tags, delay_ms = 3000, account_ids = [], include_optout = true, rotate_every = 1, scheduled_for } = req.body;
+  const {
+    name, message_template, contact_ids, tags, delay_ms = 3000, account_ids = [],
+    include_optout = true, rotate_every = 1, scheduled_for,
+    exclude_contacted = false,
+    batch_mode = false, batch_size = 50, batch_interval_hours = 8,
+  } = req.body;
   const optoutText = include_optout ? '\n\nPara sair desta lista, responda: SAIR' : '';
   const rotateEvery = Math.max(1, Number(rotate_every));
 
   let contacts;
   if (Array.isArray(tags) && tags.length) {
     const normalizedTags = tags.map((t) => String(t).trim().toUpperCase());
-    const allContacts = await Contact.findAll({ where: { user_id: req.user.id, opt_out: false } });
+    const baseWhere = { user_id: req.user.id, opt_out: false };
+    if (exclude_contacted) baseWhere.last_campaign_sent_at = null;
+    const allContacts = await Contact.findAll({ where: baseWhere });
     contacts = allContacts.filter((c) =>
       (c.tags || []).some((t) => normalizedTags.includes(String(t).trim().toUpperCase()))
     );
   } else {
-    contacts = await Contact.findAll({
-      where: { id: contact_ids, user_id: req.user.id, opt_out: false },
-    });
+    const baseWhere = { id: contact_ids, user_id: req.user.id, opt_out: false };
+    if (exclude_contacted) baseWhere.last_campaign_sent_at = null;
+    contacts = await Contact.findAll({ where: baseWhere });
   }
 
   if (!contacts.length) return res.status(400).json({ error: 'Nenhum contato válido selecionado' });
@@ -82,6 +89,9 @@ async function sendCampaign(req, res) {
   const startOffset = scheduled_for ? Math.max(0, new Date(scheduled_for).getTime() - Date.now()) : 0;
   const campaignStatus = startOffset > 0 ? 'scheduled' : 'running';
 
+  const batchSz = Math.max(1, Number(batch_size));
+  const batchIntervalMs = Number(batch_interval_hours) * 3600000;
+
   const campaign = await Campaign.create({
     user_id: req.user.id,
     name,
@@ -92,6 +102,9 @@ async function sendCampaign(req, res) {
     delay_ms,
     rotate_every: rotateEvery,
     account_ids: connectedAccounts.map((a) => a.id),
+    batch_mode: Boolean(batch_mode),
+    batch_size: batchSz,
+    batch_interval_hours: Number(batch_interval_hours),
   });
 
   const messages = await Message.bulkCreate(
@@ -113,7 +126,11 @@ async function sendCampaign(req, res) {
     content: m.content,
   }));
 
-  await enqueueBulk(jobs, delay_ms, startOffset);
+  if (batch_mode) {
+    await enqueueBatched(jobs, delay_ms, batchSz, batchIntervalMs, startOffset);
+  } else {
+    await enqueueBulk(jobs, delay_ms, startOffset);
+  }
   res.status(201).json({ campaign, queued: messages.length });
 }
 

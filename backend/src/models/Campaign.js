@@ -55,6 +55,18 @@ const Campaign = sequelize.define('Campaign', {
     defaultValue: 1,
     comment: 'Switch to next account every N messages',
   },
+  batch_mode: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
+  batch_size: {
+    type: DataTypes.INTEGER,
+    defaultValue: 50,
+  },
+  batch_interval_hours: {
+    type: DataTypes.FLOAT,
+    defaultValue: 8,
+  },
 }, {
   tableName: 'campaigns',
   underscored: true,
