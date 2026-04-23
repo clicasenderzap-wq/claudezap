@@ -56,6 +56,7 @@ whatsapp.on('message.received', async ({ accountId, from, text, isSync }) => {
 });
 
 whatsapp.on('disconnected', async ({ accountId }) => {
+  pendingQR.delete(accountId); // stale QR must not be shown after disconnect
   await WhatsappAccount.update(
     { status: 'disconnected' },
     { where: { id: accountId } }
@@ -115,10 +116,14 @@ async function getQR(req, res) {
 
   const qr = await new Promise((resolve) => {
     if (pendingQR.has(account.id)) return resolve(pendingQR.get(account.id));
-    const timeout = setTimeout(() => resolve(null), 15_000);
-    whatsapp.once('qr', ({ accountId, qr: q }) => {
-      if (accountId === account.id) { clearTimeout(timeout); resolve(q); }
-    });
+    const onQR = ({ accountId: aid, qr: q }) => {
+      if (aid !== account.id) return;
+      whatsapp.off('qr', onQR);
+      clearTimeout(timer);
+      resolve(q);
+    };
+    const timer = setTimeout(() => { whatsapp.off('qr', onQR); resolve(null); }, 30_000);
+    whatsapp.on('qr', onQR);
   });
 
   if (!qr) return res.status(202).json({ status: 'connecting', message: 'Aguardando QR code...' });
