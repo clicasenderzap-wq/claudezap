@@ -5,6 +5,7 @@ const upload = require('../middleware/upload');
 
 router.get('/tags', ctrl.listTags);
 router.put('/bulk-tags', ctrl.bulkUpdateTags);
+router.delete('/bulk', ctrl.bulkDelete);
 router.get('/', ctrl.list);
 router.post('/', [
   body('name').notEmpty().trim(),

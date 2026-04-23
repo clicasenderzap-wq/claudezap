@@ -139,6 +139,18 @@ export default function ContactsPage() {
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro'),
   });
 
+  const bulkDeleteMutation = useMutation({
+    mutationFn: (payload: { ids?: string[]; tag?: string }) =>
+      api.delete('/contacts/bulk', { data: payload }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['contacts'] });
+      qc.invalidateQueries({ queryKey: ['contact-tags'] });
+      toast.success(`${res.data.deleted} contato${res.data.deleted !== 1 ? 's' : ''} excluído${res.data.deleted !== 1 ? 's' : ''}`);
+      setSelected(new Set());
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao excluir'),
+  });
+
   function openEdit(contact: Contact) {
     setEditing(contact);
     editForm.reset({
@@ -264,9 +276,9 @@ export default function ContactsPage() {
 
       {/* Bulk action bar */}
       {selected.size > 0 && (
-        <div className="flex items-center gap-4 bg-brand-50 border border-brand-200 rounded-xl px-4 py-3">
-          <CheckSquare size={18} className="text-brand-600" />
-          <span className="text-sm font-semibold text-brand-700">
+        <div className="flex items-center gap-3 flex-wrap bg-brand-50 border border-brand-200 rounded-xl px-4 py-3">
+          <CheckSquare size={18} className="text-brand-600 shrink-0" />
+          <span className="text-sm font-semibold text-brand-700 shrink-0">
             {selected.size} contato{selected.size !== 1 ? 's' : ''} selecionado{selected.size !== 1 ? 's' : ''}
           </span>
           <button
@@ -276,10 +288,39 @@ export default function ContactsPage() {
             <Tag size={14} /> Alterar tag
           </button>
           <button
+            onClick={() => {
+              if (confirm(`Excluir ${selected.size} contato${selected.size !== 1 ? 's' : ''} permanentemente?`)) {
+                bulkDeleteMutation.mutate({ ids: [...selected] });
+              }
+            }}
+            disabled={bulkDeleteMutation.isPending}
+            className="flex items-center gap-1.5 py-1.5 text-xs px-3 rounded-lg border border-red-300 text-red-600 bg-red-50 hover:bg-red-100 transition-colors font-medium"
+          >
+            <Trash2 size={14} /> Excluir selecionados
+          </button>
+          <button
             onClick={() => setSelected(new Set())}
             className="ml-auto text-xs text-gray-500 hover:text-gray-700 flex items-center gap-1"
           >
             <X size={13} /> Desmarcar todos
+          </button>
+        </div>
+      )}
+
+      {/* Delete by tag button */}
+      {activeTag && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={() => {
+              const tagName = activeTag;
+              if (confirm(`Excluir TODOS os contatos com a tag "${tagName}"? Esta ação não pode ser desfeita.`)) {
+                bulkDeleteMutation.mutate({ tag: tagName });
+              }
+            }}
+            disabled={bulkDeleteMutation.isPending}
+            className="flex items-center gap-1.5 py-1.5 text-xs px-3 rounded-lg border border-red-300 text-red-600 bg-red-50 hover:bg-red-100 transition-colors font-medium"
+          >
+            <Trash2 size={14} /> Excluir todos com tag "{activeTag}"
           </button>
         </div>
       )}

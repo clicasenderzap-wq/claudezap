@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Smartphone, Plus, Trash2, RefreshCw, CheckCircle, XCircle, Loader2, QrCode, Pencil } from 'lucide-react';
+import { Smartphone, Plus, Trash2, CheckCircle, XCircle, Loader2, QrCode, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 import api from '@/lib/api';
@@ -73,6 +73,15 @@ export default function WhatsAppPage() {
   }
 
   const connectedCount = accounts.filter((a) => a.status === 'connected').length;
+
+  useEffect(() => {
+    if (!qrModal) return;
+    const account = accounts.find((a) => a.id === qrModal.accountId);
+    if (account?.status === 'connected') {
+      toast.success('Número conectado com sucesso!');
+      setQrModal(null);
+    }
+  }, [accounts, qrModal?.accountId]);
 
   return (
     <div className="space-y-6">
@@ -155,14 +164,6 @@ export default function WhatsAppPage() {
                   className="btn-primary flex-1 py-1.5 text-sm"
                 >
                   <QrCode size={14} /> Escanear QR
-                </button>
-              )}
-              {account.status === 'connected' && (
-                <button
-                  onClick={() => openQR(account.id)}
-                  className="btn-secondary flex-1 py-1.5 text-sm"
-                >
-                  <RefreshCw size={14} /> Reconectar
                 </button>
               )}
               <button

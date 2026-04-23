@@ -543,7 +543,7 @@ export default function CampaignsPage() {
             ) : (
               <>
                 {/* Cards de estatísticas */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-6 py-4 border-b border-gray-100">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 px-6 py-4 border-b border-gray-100 shrink-0">
                   {[
                     { label: 'Total', value: detail?.stats?.total ?? 0, icon: <Send size={16} />, color: 'text-gray-600 bg-gray-100' },
                     { label: 'Enviados', value: detail?.stats?.sent ?? 0, icon: <CheckCircle2 size={16} />, color: 'text-green-600 bg-green-100' },
@@ -560,7 +560,7 @@ export default function CampaignsPage() {
 
                 {/* Barra de progresso */}
                 {(detail?.stats?.total ?? 0) > 0 && (
-                  <div className="px-6 py-3 border-b border-gray-100">
+                  <div className="px-6 py-3 border-b border-gray-100 shrink-0">
                     <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
                       <span>Taxa de entrega</span>
                       <span>{Math.round(((detail.stats.sent + detail.stats.delivered) / detail.stats.total) * 100)}%</span>
@@ -575,7 +575,7 @@ export default function CampaignsPage() {
                 )}
 
                 {/* Filtros */}
-                <div className="flex gap-2 px-6 py-3 border-b border-gray-100 overflow-x-auto">
+                <div className="flex gap-2 px-6 py-3 pb-4 border-b border-gray-100 overflow-x-auto shrink-0">
                   {[
                     { key: 'all', label: `Todos (${detail?.stats?.total ?? 0})` },
                     { key: 'sent', label: `Enviados (${detail?.stats?.sent ?? 0})` },

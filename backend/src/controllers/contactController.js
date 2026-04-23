@@ -225,10 +225,35 @@ async function importCSV(req, res) {
   res.json({ imported, duplicates, skipped: errors.length, errors });
 }
 
+async function bulkDelete(req, res) {
+  try {
+    const { ids, tag } = req.body;
+    const where = { user_id: req.user.id };
+    if (tag) {
+      const all = await Contact.findAll({ where, attributes: ['id', 'tags'] });
+      const normalized = normalizeTag(tag);
+      const taggedIds = all
+        .filter((c) => (c.tags || []).map(normalizeTag).includes(normalized))
+        .map((c) => c.id);
+      if (!taggedIds.length) return res.json({ deleted: 0 });
+      await Contact.destroy({ where: { id: taggedIds, user_id: req.user.id } });
+      return res.json({ deleted: taggedIds.length });
+    }
+    if (!Array.isArray(ids) || !ids.length) {
+      return res.status(400).json({ error: 'ids ou tag obrigatório' });
+    }
+    const count = await Contact.destroy({ where: { ...where, id: ids } });
+    res.json({ deleted: count });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: 'Erro ao excluir contatos' });
+  }
+}
+
 function normalizePhone(phone) {
   const digits = String(phone).replace(/\D/g, '');
   if (digits.length === 10 || digits.length === 11) return `55${digits}`;
   return digits;
 }
 
-module.exports = { list, listTags, create, update, bulkUpdateTags, remove, importCSV };
+module.exports = { list, listTags, create, update, bulkUpdateTags, bulkDelete, remove, importCSV };
