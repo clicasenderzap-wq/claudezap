@@ -143,4 +143,13 @@ async function disconnectWhatsappAccount(req, res) {
   res.json({ message: 'Conta desconectada' });
 }
 
-module.exports = { listUsers, getUser, updateUser, approveUser, rejectUser, getStats, listWhatsappAccounts, disconnectWhatsappAccount };
+async function removeWhatsappAccount(req, res) {
+  const whatsapp = require('../services/whatsappService');
+  const account = await WhatsappAccount.findByPk(req.params.id);
+  if (!account) return res.status(404).json({ error: 'Conta não encontrada' });
+  await whatsapp.disconnect(account.id);
+  await account.destroy();
+  res.status(204).send();
+}
+
+module.exports = { listUsers, getUser, updateUser, approveUser, rejectUser, getStats, listWhatsappAccounts, disconnectWhatsappAccount, removeWhatsappAccount };

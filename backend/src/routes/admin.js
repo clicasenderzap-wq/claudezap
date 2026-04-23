@@ -13,5 +13,6 @@ router.get('/stats', ctrl.getStats);
 
 router.get('/whatsapp-accounts', ctrl.listWhatsappAccounts);
 router.post('/whatsapp-accounts/:id/disconnect', ctrl.disconnectWhatsappAccount);
+router.delete('/whatsapp-accounts/:id', ctrl.removeWhatsappAccount);
 
 module.exports = router;

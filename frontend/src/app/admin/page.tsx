@@ -2,7 +2,10 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, ShieldCheck, Search, Check, X, RefreshCw, ArrowLeft, Clock, CheckCircle2, XCircle, Smartphone, WifiOff } from 'lucide-react';
+import {
+  Users, ShieldCheck, Search, Check, X, RefreshCw, ArrowLeft,
+  Clock, CheckCircle2, XCircle, Smartphone, WifiOff, Trash2, ChevronDown, ChevronRight,
+} from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
@@ -29,6 +32,22 @@ const PLAN_COLORS: Record<string, string> = {
 };
 const COURTESY_PLANS = new Set(['starter_cortesia', 'pro_cortesia']);
 
+const WA_STATUS_DOT: Record<string, string> = {
+  connected: 'bg-green-500',
+  connecting: 'bg-yellow-400 animate-pulse',
+  disconnected: 'bg-gray-300',
+};
+const WA_STATUS_BADGE: Record<string, string> = {
+  connected: 'bg-green-100 text-green-700',
+  connecting: 'bg-yellow-100 text-yellow-700',
+  disconnected: 'bg-gray-100 text-gray-500',
+};
+const WA_STATUS_LABEL: Record<string, string> = {
+  connected: 'Conectado',
+  connecting: 'Conectando',
+  disconnected: 'Desconectado',
+};
+
 export default function AdminPage() {
   const qc = useQueryClient();
   const [search, setSearch] = useState('');
@@ -36,6 +55,7 @@ export default function AdminPage() {
   const [filterPlan, setFilterPlan] = useState('');
   const [editing, setEditing] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Record<string, string>>({});
+  const [expandedUsers, setExpandedUsers] = useState<Set<string>>(new Set());
 
   const { data: stats } = useQuery({
     queryKey: ['admin-stats'],
@@ -52,6 +72,12 @@ export default function AdminPage() {
     queryKey: ['admin-pending'],
     queryFn: () => api.get('/admin/users', { params: { status: 'pending', limit: 50 } }).then((r) => r.data),
     refetchInterval: 30000,
+  });
+
+  const { data: waAccounts = [], refetch: refetchWA } = useQuery<any[]>({
+    queryKey: ['admin-wa-accounts'],
+    queryFn: () => api.get('/admin/whatsapp-accounts').then((r) => r.data),
+    refetchInterval: 8000,
   });
 
   const updateMutation = useMutation({
@@ -88,12 +114,6 @@ export default function AdminPage() {
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao rejeitar'),
   });
 
-  const { data: waAccounts = [], refetch: refetchWA } = useQuery<any[]>({
-    queryKey: ['admin-wa-accounts'],
-    queryFn: () => api.get('/admin/whatsapp-accounts').then((r) => r.data),
-    refetchInterval: 10000,
-  });
-
   const disconnectWAMutation = useMutation({
     mutationFn: (id: string) => api.post(`/admin/whatsapp-accounts/${id}/disconnect`),
     onSuccess: () => {
@@ -102,6 +122,24 @@ export default function AdminPage() {
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao desconectar'),
   });
+
+  const removeWAMutation = useMutation({
+    mutationFn: (id: string) => api.delete(`/admin/whatsapp-accounts/${id}`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-wa-accounts'] });
+      qc.invalidateQueries({ queryKey: ['admin-users'] });
+      toast.success('Número removido.');
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao remover'),
+  });
+
+  function toggleExpand(userId: string) {
+    setExpandedUsers((prev) => {
+      const next = new Set(prev);
+      next.has(userId) ? next.delete(userId) : next.add(userId);
+      return next;
+    });
+  }
 
   function startEdit(user: any) {
     setEditing(user.id);
@@ -270,70 +308,19 @@ export default function AdminPage() {
           <option value="starter_cortesia">Básico Cortesia</option>
           <option value="pro_cortesia">Pro Cortesia</option>
         </select>
-        <button onClick={() => refetch()} className="btn btn-secondary gap-2">
+        <button onClick={() => { refetch(); refetchWA(); }} className="btn btn-secondary gap-2">
           <RefreshCw size={14} /> Atualizar
         </button>
       </div>
 
-      {/* WhatsApp Connections */}
-      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
-          <Smartphone size={16} className="text-brand-600" />
-          <h2 className="font-semibold text-gray-800">Conexões WhatsApp</h2>
-          <span className="ml-2 text-xs text-gray-400">
-            {waAccounts.filter((a) => a.live_status === 'connected').length} conectados de {waAccounts.length}
-          </span>
-          <button onClick={() => refetchWA()} className="ml-auto btn btn-secondary text-xs py-1 px-2 gap-1">
-            <RefreshCw size={12} /> Atualizar
-          </button>
-        </div>
-        {waAccounts.length === 0 ? (
-          <p className="text-center py-6 text-sm text-gray-400">Nenhuma conta cadastrada</p>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {waAccounts.map((a: any) => (
-              <div key={a.id} className="px-5 py-3 flex items-center gap-4 text-sm">
-                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                  a.live_status === 'connected' ? 'bg-green-500' :
-                  a.live_status === 'connecting' ? 'bg-yellow-400' : 'bg-gray-300'
-                }`} />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium text-gray-800 truncate">{a.label}</p>
-                  <p className="text-xs text-gray-400 truncate">
-                    {a.user?.email} {a.phone ? `· +${a.phone}` : ''}
-                  </p>
-                </div>
-                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${
-                  a.live_status === 'connected' ? 'bg-green-100 text-green-700' :
-                  a.live_status === 'connecting' ? 'bg-yellow-100 text-yellow-700' :
-                  'bg-gray-100 text-gray-500'
-                }`}>
-                  {a.live_status === 'connected' ? 'Conectado' : a.live_status === 'connecting' ? 'Conectando' : 'Desconectado'}
-                </span>
-                {a.live_status !== 'disconnected' && (
-                  <button
-                    onClick={() => { if (confirm(`Desconectar "${a.label}"?`)) disconnectWAMutation.mutate(a.id); }}
-                    disabled={disconnectWAMutation.isPending}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-xs font-semibold rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 flex-shrink-0"
-                    title="Forçar desconexão"
-                  >
-                    <WifiOff size={12} /> Derrubar
-                  </button>
-                )}
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Tabela */}
+      {/* Tabela de usuários */}
       <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
         <div className="px-5 py-3 border-b border-gray-100 text-xs font-semibold text-gray-500 uppercase tracking-wider grid grid-cols-12 gap-2">
           <span className="col-span-3">Usuário</span>
           <span className="col-span-2">Plano</span>
           <span className="col-span-2">Status</span>
           <span className="col-span-2">Trial até</span>
-          <span className="col-span-1 text-center">Numbers</span>
+          <span className="col-span-1 text-center">Números</span>
           <span className="col-span-2 text-right">Ações</span>
         </div>
 
@@ -341,78 +328,142 @@ export default function AdminPage() {
         {!isLoading && users.length === 0 && <p className="text-center py-10 text-gray-400">Nenhum usuário encontrado</p>}
 
         <div className="divide-y divide-gray-100">
-          {users.map((user: any) => (
-            <div key={user.id} className="grid grid-cols-12 gap-2 px-5 py-3 items-center text-sm hover:bg-gray-50">
-              {editing === user.id ? (
-                <>
-                  <div className="col-span-3">
-                    <p className="font-medium text-gray-800">{user.name}</p>
-                    <p className="text-xs text-gray-400">{user.email}</p>
-                    <input
-                      className="input mt-1 text-xs"
-                      placeholder="WhatsApp suporte (opcional)"
-                      value={editForm.whatsapp_support}
-                      onChange={(e) => setEditForm({ ...editForm, whatsapp_support: e.target.value })}
-                    />
+          {users.map((user: any) => {
+            const userWA = waAccounts.filter((a: any) => a.user_id === user.id);
+            const connectedCount = userWA.filter((a: any) => a.live_status === 'connected').length;
+            const isExpanded = expandedUsers.has(user.id);
+
+            return (
+              <div key={user.id}>
+                {/* User row */}
+                <div className="grid grid-cols-12 gap-2 px-5 py-3 items-center text-sm hover:bg-gray-50">
+                  {editing === user.id ? (
+                    <>
+                      <div className="col-span-3">
+                        <p className="font-medium text-gray-800">{user.name}</p>
+                        <p className="text-xs text-gray-400">{user.email}</p>
+                        <input
+                          className="input mt-1 text-xs"
+                          placeholder="WhatsApp suporte (opcional)"
+                          value={editForm.whatsapp_support}
+                          onChange={(e) => setEditForm({ ...editForm, whatsapp_support: e.target.value })}
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <select className="input text-xs" value={editForm.plan} onChange={(e) => setEditForm({ ...editForm, plan: e.target.value })}>
+                          <optgroup label="Planos pagos">
+                            <option value="starter">Starter — R$67,90</option>
+                            <option value="pro">Pro — R$117,90</option>
+                          </optgroup>
+                          <optgroup label="Cortesia (R$ 0 — testes / parcerias)">
+                            <option value="starter_cortesia">Básico Cortesia — R$0</option>
+                            <option value="pro_cortesia">Pro Cortesia — R$0</option>
+                          </optgroup>
+                        </select>
+                      </div>
+                      <div className="col-span-2">
+                        <select className="input text-xs" value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
+                          <option value="pending">Pendente</option>
+                          <option value="trial">Trial</option>
+                          <option value="active">Ativo</option>
+                          <option value="inactive">Inativo</option>
+                        </select>
+                      </div>
+                      <div className="col-span-2 text-xs text-gray-400">{formatDate(user.trial_ends_at)}</div>
+                      <div className="col-span-1 text-center text-gray-600">{user.whatsapp_count}</div>
+                      <div className="col-span-2 flex justify-end gap-2">
+                        <button onClick={() => saveEdit(user.id)} className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg" title="Salvar">
+                          <Check size={15} />
+                        </button>
+                        <button onClick={() => setEditing(null)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg" title="Cancelar">
+                          <X size={15} />
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="col-span-3">
+                        <p className="font-medium text-gray-800">{user.name}</p>
+                        <p className="text-xs text-gray-400">{user.email}</p>
+                      </div>
+                      <div className="col-span-2">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${PLAN_COLORS[user.plan]}`}>
+                          {PLAN_LABELS[user.plan] ?? user.plan}
+                        </span>
+                      </div>
+                      <div className="col-span-2">
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[user.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                          {STATUS_LABELS[user.status] ?? user.status}
+                        </span>
+                      </div>
+                      <div className="col-span-2 text-xs text-gray-500">{user.trial_ends_at ? formatDate(user.trial_ends_at) : '—'}</div>
+                      <div className="col-span-1 text-center">
+                        {user.whatsapp_count > 0 ? (
+                          <button
+                            onClick={() => toggleExpand(user.id)}
+                            className={`inline-flex items-center gap-1 text-xs font-semibold px-2 py-0.5 rounded-full transition-colors ${
+                              connectedCount > 0
+                                ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                            }`}
+                          >
+                            <Smartphone size={11} />
+                            {user.whatsapp_count}
+                            {isExpanded ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+                          </button>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
+                      </div>
+                      <div className="col-span-2 flex justify-end">
+                        <button onClick={() => startEdit(user)} className="btn btn-secondary text-xs py-1 px-3">
+                          Editar
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* WhatsApp accounts inline panel */}
+                {isExpanded && userWA.length > 0 && (
+                  <div className="bg-gray-50 border-t border-gray-100 px-5 py-3 space-y-2">
+                    {userWA.map((wa: any) => (
+                      <div key={wa.id} className="flex items-center gap-3 bg-white rounded-lg px-4 py-2.5 border border-gray-200 text-sm">
+                        <div className={`w-2.5 h-2.5 rounded-full flex-shrink-0 ${WA_STATUS_DOT[wa.live_status] ?? 'bg-gray-300'}`} />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-800">{wa.label}</p>
+                          <p className="text-xs text-gray-400">
+                            {wa.phone ? `+${wa.phone}` : 'Número não identificado'}
+                          </p>
+                        </div>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${WA_STATUS_BADGE[wa.live_status] ?? 'bg-gray-100 text-gray-500'}`}>
+                          {WA_STATUS_LABEL[wa.live_status] ?? wa.live_status}
+                        </span>
+                        {wa.live_status !== 'disconnected' && (
+                          <button
+                            onClick={() => disconnectWAMutation.mutate(wa.id)}
+                            disabled={disconnectWAMutation.isPending}
+                            title="Desconectar"
+                            className="flex items-center gap-1 px-2.5 py-1.5 bg-orange-50 text-orange-600 text-xs font-semibold rounded-lg hover:bg-orange-100 transition-colors disabled:opacity-50 flex-shrink-0"
+                          >
+                            <WifiOff size={12} /> Desconectar
+                          </button>
+                        )}
+                        <button
+                          onClick={() => { if (confirm(`Remover "${wa.label}" permanentemente?`)) removeWAMutation.mutate(wa.id); }}
+                          disabled={removeWAMutation.isPending}
+                          title="Remover número"
+                          className="flex items-center gap-1 px-2.5 py-1.5 bg-red-50 text-red-600 text-xs font-semibold rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 flex-shrink-0"
+                        >
+                          <Trash2 size={12} /> Remover
+                        </button>
+                      </div>
+                    ))}
                   </div>
-                  <div className="col-span-2">
-                    <select className="input text-xs" value={editForm.plan} onChange={(e) => setEditForm({ ...editForm, plan: e.target.value })}>
-                      <optgroup label="Planos pagos">
-                        <option value="starter">Starter — R$67,90</option>
-                        <option value="pro">Pro — R$117,90</option>
-                      </optgroup>
-                      <optgroup label="Cortesia (R$ 0 — testes / parcerias)">
-                        <option value="starter_cortesia">Básico Cortesia — R$0</option>
-                        <option value="pro_cortesia">Pro Cortesia — R$0</option>
-                      </optgroup>
-                    </select>
-                  </div>
-                  <div className="col-span-2">
-                    <select className="input text-xs" value={editForm.status} onChange={(e) => setEditForm({ ...editForm, status: e.target.value })}>
-                      <option value="pending">Pendente</option>
-                      <option value="trial">Trial</option>
-                      <option value="active">Ativo</option>
-                      <option value="inactive">Inativo</option>
-                    </select>
-                  </div>
-                  <div className="col-span-2 text-xs text-gray-400">{formatDate(user.trial_ends_at)}</div>
-                  <div className="col-span-1 text-center text-gray-600">{user.whatsapp_count}</div>
-                  <div className="col-span-2 flex justify-end gap-2">
-                    <button onClick={() => saveEdit(user.id)} className="p-1.5 text-green-600 hover:bg-green-50 rounded-lg" title="Salvar">
-                      <Check size={15} />
-                    </button>
-                    <button onClick={() => setEditing(null)} className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg" title="Cancelar">
-                      <X size={15} />
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="col-span-3">
-                    <p className="font-medium text-gray-800">{user.name}</p>
-                    <p className="text-xs text-gray-400">{user.email}</p>
-                  </div>
-                  <div className="col-span-2">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${PLAN_COLORS[user.plan]}`}>
-                      {PLAN_LABELS[user.plan] ?? user.plan}
-                    </span>
-                  </div>
-                  <div className="col-span-2">
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${STATUS_COLORS[user.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                      {STATUS_LABELS[user.status] ?? user.status}
-                    </span>
-                  </div>
-                  <div className="col-span-2 text-xs text-gray-500">{user.trial_ends_at ? formatDate(user.trial_ends_at) : '—'}</div>
-                  <div className="col-span-1 text-center text-gray-600">{user.whatsapp_count}</div>
-                  <div className="col-span-2 flex justify-end">
-                    <button onClick={() => startEdit(user)} className="btn btn-secondary text-xs py-1 px-3">
-                      Editar
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
-          ))}
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

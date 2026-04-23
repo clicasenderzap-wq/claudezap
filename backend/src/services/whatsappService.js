@@ -184,13 +184,15 @@ class WhatsAppService extends EventEmitter {
   }
 
   async disconnect(accountId) {
+    // Delete session and remove from map BEFORE logout to prevent the
+    // connection.update 'close' handler from scheduling an auto-reconnect.
+    await deleteSession(accountId).catch(() => {});
+    this.reconnectAttempts.delete(accountId);
     const sock = this.sockets.get(accountId);
     if (sock) {
-      try { await sock.logout(); } catch {}
       this.sockets.delete(accountId);
+      try { await sock.logout(); } catch {}
     }
-    this.reconnectAttempts.delete(accountId);
-    await deleteSession(accountId).catch(() => {});
   }
 
   getStatus(accountId) {
