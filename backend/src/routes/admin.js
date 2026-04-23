@@ -11,4 +11,7 @@ router.post('/users/:id/approve', ctrl.approveUser);
 router.post('/users/:id/reject', ctrl.rejectUser);
 router.get('/stats', ctrl.getStats);
 
+router.get('/whatsapp-accounts', ctrl.listWhatsappAccounts);
+router.post('/whatsapp-accounts/:id/disconnect', ctrl.disconnectWhatsappAccount);
+
 module.exports = router;

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Users, ShieldCheck, Search, Check, X, RefreshCw, ArrowLeft, Clock, CheckCircle2, XCircle } from 'lucide-react';
+import { Users, ShieldCheck, Search, Check, X, RefreshCw, ArrowLeft, Clock, CheckCircle2, XCircle, Smartphone, WifiOff } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
@@ -86,6 +86,21 @@ export default function AdminPage() {
       toast.success('Conta rejeitada.');
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao rejeitar'),
+  });
+
+  const { data: waAccounts = [], refetch: refetchWA } = useQuery<any[]>({
+    queryKey: ['admin-wa-accounts'],
+    queryFn: () => api.get('/admin/whatsapp-accounts').then((r) => r.data),
+    refetchInterval: 10000,
+  });
+
+  const disconnectWAMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/admin/whatsapp-accounts/${id}/disconnect`),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-wa-accounts'] });
+      toast.success('Número desconectado.');
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao desconectar'),
   });
 
   function startEdit(user: any) {
@@ -258,6 +273,57 @@ export default function AdminPage() {
         <button onClick={() => refetch()} className="btn btn-secondary gap-2">
           <RefreshCw size={14} /> Atualizar
         </button>
+      </div>
+
+      {/* WhatsApp Connections */}
+      <div className="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div className="px-5 py-3 border-b border-gray-100 flex items-center gap-2">
+          <Smartphone size={16} className="text-brand-600" />
+          <h2 className="font-semibold text-gray-800">Conexões WhatsApp</h2>
+          <span className="ml-2 text-xs text-gray-400">
+            {waAccounts.filter((a) => a.live_status === 'connected').length} conectados de {waAccounts.length}
+          </span>
+          <button onClick={() => refetchWA()} className="ml-auto btn btn-secondary text-xs py-1 px-2 gap-1">
+            <RefreshCw size={12} /> Atualizar
+          </button>
+        </div>
+        {waAccounts.length === 0 ? (
+          <p className="text-center py-6 text-sm text-gray-400">Nenhuma conta cadastrada</p>
+        ) : (
+          <div className="divide-y divide-gray-100">
+            {waAccounts.map((a: any) => (
+              <div key={a.id} className="px-5 py-3 flex items-center gap-4 text-sm">
+                <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
+                  a.live_status === 'connected' ? 'bg-green-500' :
+                  a.live_status === 'connecting' ? 'bg-yellow-400' : 'bg-gray-300'
+                }`} />
+                <div className="flex-1 min-w-0">
+                  <p className="font-medium text-gray-800 truncate">{a.label}</p>
+                  <p className="text-xs text-gray-400 truncate">
+                    {a.user?.email} {a.phone ? `· +${a.phone}` : ''}
+                  </p>
+                </div>
+                <span className={`text-xs font-semibold px-2 py-0.5 rounded-full flex-shrink-0 ${
+                  a.live_status === 'connected' ? 'bg-green-100 text-green-700' :
+                  a.live_status === 'connecting' ? 'bg-yellow-100 text-yellow-700' :
+                  'bg-gray-100 text-gray-500'
+                }`}>
+                  {a.live_status === 'connected' ? 'Conectado' : a.live_status === 'connecting' ? 'Conectando' : 'Desconectado'}
+                </span>
+                {a.live_status !== 'disconnected' && (
+                  <button
+                    onClick={() => { if (confirm(`Desconectar "${a.label}"?`)) disconnectWAMutation.mutate(a.id); }}
+                    disabled={disconnectWAMutation.isPending}
+                    className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-600 text-xs font-semibold rounded-lg hover:bg-red-100 transition-colors disabled:opacity-50 flex-shrink-0"
+                    title="Forçar desconexão"
+                  >
+                    <WifiOff size={12} /> Derrubar
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Tabela */}

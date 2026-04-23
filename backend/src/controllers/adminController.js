@@ -121,4 +121,26 @@ async function getStats(req, res) {
   });
 }
 
-module.exports = { listUsers, getUser, updateUser, approveUser, rejectUser, getStats };
+async function listWhatsappAccounts(req, res) {
+  const whatsapp = require('../services/whatsappService');
+  const accounts = await WhatsappAccount.findAll({
+    include: [{ model: User, attributes: ['email', 'name'] }],
+    order: [['status', 'ASC'], ['created_at', 'DESC']],
+  });
+  const data = accounts.map((a) => ({
+    ...a.toJSON(),
+    live_status: whatsapp.getStatus(a.id),
+  }));
+  res.json(data);
+}
+
+async function disconnectWhatsappAccount(req, res) {
+  const whatsapp = require('../services/whatsappService');
+  const account = await WhatsappAccount.findByPk(req.params.id);
+  if (!account) return res.status(404).json({ error: 'Conta não encontrada' });
+  await whatsapp.disconnect(account.id);
+  await account.update({ status: 'disconnected' });
+  res.json({ message: 'Conta desconectada' });
+}
+
+module.exports = { listUsers, getUser, updateUser, approveUser, rejectUser, getStats, listWhatsappAccounts, disconnectWhatsappAccount };
