@@ -83,7 +83,13 @@ async function handleMessage(accountId, fromPhone, text) {
   if (!account) return;
 
   const user = await User.findByPk(account.user_id);
-  if (!user || user.plan !== 'pro') return;
+  if (!user || !['pro', 'pro_cortesia'].includes(user.plan)) return;
+
+  // Prevent bot loop: skip if sender is one of the user's own WhatsApp accounts
+  const ownAccounts = await WhatsappAccount.findAll({ where: { user_id: account.user_id }, attributes: ['phone'] });
+  const ownPhones = ownAccounts.map((a) => String(a.phone || '').replace(/\D/g, '')).filter(Boolean);
+  const senderDigits = String(fromPhone).replace(/\D/g, '');
+  if (ownPhones.some((p) => p === senderDigits || p.endsWith(senderDigits) || senderDigits.endsWith(p))) return;
 
   const config = await BotConfig.findOne({ where: { account_id: accountId, enabled: true } });
   if (!config) return;

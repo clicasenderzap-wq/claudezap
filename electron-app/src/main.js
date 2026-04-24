@@ -8,6 +8,19 @@ const WSClient = require('./wsClient');
 
 const API_URL = 'https://claudezap-api.onrender.com';
 
+// Single-instance lock: if a second instance is launched, focus the existing window
+const gotLock = app.requestSingleInstanceLock();
+if (!gotLock) {
+  app.quit();
+}
+
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized() || !mainWindow.isVisible()) mainWindow.show();
+    mainWindow.focus();
+  }
+});
+
 let mainWindow = null;
 let tray = null;
 let waManager = null;
