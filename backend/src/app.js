@@ -81,6 +81,15 @@ setupDesktopWS(server);
     await sequelize.sync({ alter: true });
     console.log('[DB] Modelos sincronizados');
 
+    // Garante que a conta admin nunca conta como plano pago
+    const { User } = require('./models');
+    const adminEmail = 'clicasenderzap@gmail.com';
+    const [updated] = await User.update(
+      { plan: 'admin', status: 'active' },
+      { where: { email: adminEmail, plan: { [require('sequelize').Op.ne]: 'admin' } } }
+    );
+    if (updated) console.log(`[Startup] plano admin aplicado em ${adminEmail}`);
+
     require('./workers/messageWorker');
     console.log('[Worker] iniciado');
 

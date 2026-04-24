@@ -31,7 +31,7 @@ const User = sequelize.define('User', {
     defaultValue: 'user',
   },
   plan: {
-    type: DataTypes.ENUM('starter', 'pro', 'starter_cortesia', 'pro_cortesia'),
+    type: DataTypes.ENUM('starter', 'pro', 'starter_cortesia', 'pro_cortesia', 'admin'),
     defaultValue: 'starter',
   },
   status: {

@@ -88,7 +88,7 @@ async function handleMessage(accountId, fromPhone, text) {
   if (!account) { console.log(`[Bot] conta ${accountId} não encontrada`); return; }
 
   const user = await User.findByPk(account.user_id);
-  if (!user || !['pro', 'pro_cortesia'].includes(user.plan)) {
+  if (!user || !['pro', 'pro_cortesia', 'admin'].includes(user.plan)) {
     console.log(`[Bot] user ${account.user_id} plano inelegível: ${user?.plan}`);
     return;
   }

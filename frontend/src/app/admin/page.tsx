@@ -20,6 +20,7 @@ const PLAN_LABELS: Record<string, string> = {
   pro: 'Pro',
   starter_cortesia: 'Básico Cortesia',
   pro_cortesia: 'Pro Cortesia',
+  admin: 'Admin',
 };
 const STATUS_LABELS: Record<string, string> = {
   active: 'Ativo', trial: 'Trial', inactive: 'Inativo', pending: 'Pendente',
@@ -35,8 +36,9 @@ const PLAN_COLORS: Record<string, string> = {
   pro: 'bg-brand-100 text-brand-700',
   starter_cortesia: 'bg-teal-100 text-teal-700',
   pro_cortesia: 'bg-violet-100 text-violet-700',
+  admin: 'bg-orange-100 text-orange-700',
 };
-const COURTESY_PLANS = new Set(['starter_cortesia', 'pro_cortesia']);
+const COURTESY_PLANS = new Set(['starter_cortesia', 'pro_cortesia', 'admin']);
 const WA_STATUS_DOT: Record<string, string> = {
   connected: 'bg-green-500',
   connecting: 'bg-yellow-400 animate-pulse',
@@ -387,6 +389,7 @@ function UsersTab() {
           <option value="pro">Pro</option>
           <option value="starter_cortesia">Básico Cortesia</option>
           <option value="pro_cortesia">Pro Cortesia</option>
+          <option value="admin">Admin</option>
         </select>
         <button onClick={() => { refetch(); refetchWA(); }} className="btn btn-secondary gap-2">
           <RefreshCw size={14} /> Atualizar
@@ -437,6 +440,9 @@ function UsersTab() {
                           <optgroup label="Cortesia (R$0)">
                             <option value="starter_cortesia">Básico Cortesia</option>
                             <option value="pro_cortesia">Pro Cortesia</option>
+                          </optgroup>
+                          <optgroup label="Interno">
+                            <option value="admin">Admin</option>
                           </optgroup>
                         </select>
                       </div>

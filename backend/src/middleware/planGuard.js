@@ -3,6 +3,7 @@ const PLAN_LIMITS = {
   pro:               { whatsapp_accounts: 6, contacts: Infinity,  daily_messages: 5000 },
   starter_cortesia:  { whatsapp_accounts: 3, contacts: 5000,     daily_messages: 1000 },
   pro_cortesia:      { whatsapp_accounts: 6, contacts: Infinity,  daily_messages: 5000 },
+  admin:             { whatsapp_accounts: Infinity, contacts: Infinity, daily_messages: Infinity },
 };
 
 function getLimit(plan, resource) {
@@ -44,7 +45,7 @@ function requireAdmin(req, res, next) {
 }
 
 function requireProBot(req, res, next) {
-  if (!['pro', 'pro_cortesia'].includes(req.user.plan)) {
+  if (!['pro', 'pro_cortesia', 'admin'].includes(req.user.plan)) {
     return res.status(403).json({ error: 'O Bot de Atendimento com IA é exclusivo do plano Pro. Faça upgrade para acessar.' });
   }
   next();
