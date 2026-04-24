@@ -1,4 +1,4 @@
-const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, shell, dialog, safeStorage } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, shell, dialog } = require('electron');
 const path = require('path');
 const { autoUpdater } = require('electron-updater');
 const QRCode = require('qrcode');
@@ -315,17 +315,6 @@ ipcMain.handle('auth:login', async (_, { email, password }) => {
 
     store.setToken(data.token);
     store.setUserInfo(email, data.user?.name || email);
-
-    // Save credentials encrypted for auto-fill on next login
-    try {
-      if (safeStorage.isEncryptionAvailable()) {
-        const enc = safeStorage.encryptString(password).toString('base64');
-        store.setSavedCredentials(email, enc);
-      } else {
-        store.setSavedCredentials(email, null);
-      }
-    } catch {}
-
     initConnection();
     return { ok: true, user: data.user };
   } catch (e) {
@@ -333,19 +322,6 @@ ipcMain.handle('auth:login', async (_, { email, password }) => {
   }
 });
 
-ipcMain.handle('auth:getSavedCredentials', () => {
-  const email = store.getSavedEmail();
-  if (!email) return null;
-  const encPwd = store.getSavedPasswordEncrypted();
-  try {
-    const password = (encPwd && safeStorage.isEncryptionAvailable())
-      ? safeStorage.decryptString(Buffer.from(encPwd, 'base64'))
-      : '';
-    return { email, password };
-  } catch {
-    return { email, password: '' };
-  }
-});
 
 ipcMain.handle('auth:logout', async () => {
   store.clearToken();
@@ -386,14 +362,3 @@ ipcMain.handle('update:install', () => {
   autoUpdater.quitAndInstall(false, true);
 });
 
-ipcMain.handle('platform:open', () => {
-  const token = store.getToken();
-  const url = token
-    ? `https://clicaai.ia.br/login?autotoken=${encodeURIComponent(token)}`
-    : 'https://clicaai.ia.br/login';
-  shell.openExternal(url);
-});
-
-ipcMain.handle('platform:openRegister', () => {
-  shell.openExternal('https://clicaai.ia.br/register');
-});

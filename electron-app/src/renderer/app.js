@@ -188,11 +188,11 @@ api.onUpdateReady(() => {
 
 // Platform buttons
 document.getElementById('btn-open-platform').addEventListener('click', () => {
-  api.openPlatform();
+  window.open('https://clicaai.ia.br');
 });
 
 document.getElementById('btn-open-register').addEventListener('click', () => {
-  api.openRegister();
+  window.open('https://clicaai.ia.br/register');
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -206,11 +206,5 @@ document.getElementById('btn-open-register').addEventListener('click', () => {
     renderAccounts(accounts);
   } else {
     show('screen-login');
-    // Pre-fill saved credentials
-    const saved = await api.getSavedCredentials();
-    if (saved?.email) {
-      document.getElementById('input-email').value = saved.email;
-      if (saved.password) document.getElementById('input-password').value = saved.password;
-    }
   }
 })();

@@ -41,7 +41,4 @@ contextBridge.exposeInMainWorld('claudezap', {
     return () => ipcRenderer.removeAllListeners('update:ready');
   },
   installUpdate: () => ipcRenderer.invoke('update:install'),
-  getSavedCredentials: () => ipcRenderer.invoke('auth:getSavedCredentials'),
-  openPlatform: () => ipcRenderer.invoke('platform:open'),
-  openRegister: () => ipcRenderer.invoke('platform:openRegister'),
 });
