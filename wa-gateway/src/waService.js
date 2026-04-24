@@ -40,7 +40,14 @@ class WAService extends EventEmitter {
 
   async connect(accountId) {
     if (this.clients.has(accountId)) {
-      console.log(`[WA] ${accountId}: sessão já em andamento`);
+      const existing = this.clients.get(accountId);
+      // If already ready (has info), no need to reconnect
+      if (existing.info) {
+        console.log(`[WA] ${accountId}: já conectado`);
+        return;
+      }
+      // Still initializing — leave it running
+      console.log(`[WA] ${accountId}: inicialização em andamento`);
       return;
     }
 
@@ -108,12 +115,25 @@ class WAService extends EventEmitter {
     }
   }
 
+  _handleSendError(accountId, e) {
+    if (e.message?.includes('getChat') || e.message?.includes('Execution context') || e.message?.includes('Target closed')) {
+      console.error(`[WA] ${accountId}: contexto perdido — reconectando`);
+      this.clients.delete(accountId);
+      this.emit('disconnected', { accountId, code: 'CONTEXT_LOST' });
+    }
+  }
+
   async sendText(accountId, phone, text) {
     const client = this.clients.get(accountId);
     if (!client) throw new Error('Não conectado');
     const chatId = `${String(phone).replace(/\D/g, '')}@c.us`;
-    const msg = await client.sendMessage(chatId, text);
-    return msg.id._serialized;
+    try {
+      const msg = await client.sendMessage(chatId, text);
+      return msg.id._serialized;
+    } catch (e) {
+      this._handleSendError(accountId, e);
+      throw e;
+    }
   }
 
   async sendMedia(accountId, phone, mediaUrl, mediaType, fileName, caption = '') {
@@ -121,10 +141,15 @@ class WAService extends EventEmitter {
     if (!client) throw new Error('Não conectado');
     const { MessageMedia } = require('whatsapp-web.js');
     const chatId = `${String(phone).replace(/\D/g, '')}@c.us`;
-    const media = await MessageMedia.fromUrl(mediaUrl, { unsafeMime: true });
-    if (fileName) media.filename = fileName;
-    const msg = await client.sendMessage(chatId, media, { caption });
-    return msg.id._serialized;
+    try {
+      const media = await MessageMedia.fromUrl(mediaUrl, { unsafeMime: true });
+      if (fileName) media.filename = fileName;
+      const msg = await client.sendMessage(chatId, media, { caption });
+      return msg.id._serialized;
+    } catch (e) {
+      this._handleSendError(accountId, e);
+      throw e;
+    }
   }
 
   status(accountId) {
