@@ -605,7 +605,7 @@ function ScheduledSection() {
       </Success>
 
       <Warning>
-        <strong>Atenção ao WhatsApp conectado:</strong> No momento do envio, o número de WhatsApp precisa estar conectado ao sistema. Se o servidor estiver inativo (plano gratuito do Render dorme após 15 min), a mensagem pode falhar. Para uso crítico de follow-ups, considere o plano pago do Render que mantém o servidor sempre ativo.
+        <strong>Atenção ao WhatsApp conectado:</strong> No momento do envio agendado, o número de WhatsApp precisa estar ativo no app desktop Clica Aí. Se o aplicativo estiver fechado ou o número desconectado, o agendamento falhará. Mantenha o Clica Aí aberto em segundo plano no computador para garantir que os agendamentos sejam enviados no horário correto.
       </Warning>
     </div>
   );

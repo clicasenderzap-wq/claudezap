@@ -362,3 +362,5 @@ ipcMain.handle('update:install', () => {
   autoUpdater.quitAndInstall(false, true);
 });
 
+ipcMain.handle('app:version', () => app.getVersion());
+

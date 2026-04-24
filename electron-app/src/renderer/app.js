@@ -198,7 +198,15 @@ document.getElementById('btn-open-register').addEventListener('click', () => {
 // ── Init ──────────────────────────────────────────────────────────────────────
 
 (async () => {
-  const session = await api.getSession();
+  const [session, version] = await Promise.all([
+    api.getSession(),
+    api.getVersion().catch(() => null),
+  ]);
+
+  if (version) {
+    document.getElementById('app-version').textContent = `v${version}`;
+  }
+
   if (session.loggedIn) {
     show('screen-main');
     document.getElementById('user-name').textContent = session.user?.name || session.user?.email || '';

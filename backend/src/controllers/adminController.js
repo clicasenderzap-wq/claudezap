@@ -1,6 +1,12 @@
-const { User, WhatsappAccount, AuditLog } = require('../models');
-const { Op } = require('sequelize');
+const { sequelize, User, WhatsappAccount, AuditLog, SystemSetting } = require('../models');
+const { Op, fn, col } = require('sequelize');
 const emailSvc = require('../services/emailService');
+
+const PAYING_PLANS = ['starter', 'pro'];
+const DEFAULT_PRICES = {
+  starter: { price: '67.90', label: 'Starter' },
+  pro: { price: '117.90', label: 'Pro' },
+};
 
 async function listUsers(req, res) {
   const { page = 1, limit = 30, search = '', status, plan } = req.query;
@@ -152,4 +158,99 @@ async function removeWhatsappAccount(req, res) {
   res.status(204).send();
 }
 
-module.exports = { listUsers, getUser, updateUser, approveUser, rejectUser, getStats, listWhatsappAccounts, disconnectWhatsappAccount, removeWhatsappAccount };
+async function getPlanPrices(req, res) {
+  const setting = await SystemSetting.findOne({ where: { key: 'plan_prices' } });
+  res.json(setting ? JSON.parse(setting.value) : DEFAULT_PRICES);
+}
+
+async function updatePlanPrices(req, res) {
+  const { starter, pro } = req.body;
+  if (!starter?.price || !pro?.price) {
+    return res.status(400).json({ error: 'Preços inválidos — informe starter.price e pro.price' });
+  }
+  const prices = {
+    starter: { price: String(parseFloat(starter.price).toFixed(2)), label: 'Starter' },
+    pro: { price: String(parseFloat(pro.price).toFixed(2)), label: 'Pro' },
+  };
+  const existing = await SystemSetting.findOne({ where: { key: 'plan_prices' } });
+  if (existing) {
+    await existing.update({ value: JSON.stringify(prices) });
+  } else {
+    await SystemSetting.create({ key: 'plan_prices', value: JSON.stringify(prices) });
+  }
+  res.json(prices);
+}
+
+async function getRevenue(req, res) {
+  const { period = 'month' } = req.query;
+  const now = new Date();
+  let startDate;
+  switch (period) {
+    case 'month':   startDate = new Date(now.getFullYear(), now.getMonth(), 1); break;
+    case 'quarter': startDate = new Date(now.getFullYear(), Math.floor(now.getMonth() / 3) * 3, 1); break;
+    case 'year':    startDate = new Date(now.getFullYear(), 0, 1); break;
+    default:        startDate = null;
+  }
+
+  const priceSetting = await SystemSetting.findOne({ where: { key: 'plan_prices' } });
+  const prices = priceSetting ? JSON.parse(priceSetting.value) : DEFAULT_PRICES;
+
+  // MRR from current active paying users
+  const activeByPlan = await User.findAll({
+    where: { status: 'active', plan: { [Op.in]: PAYING_PLANS } },
+    attributes: ['plan', [fn('COUNT', col('id')), 'count']],
+    group: ['plan'],
+    raw: true,
+  });
+
+  let mrr = 0;
+  const revenueByPlan = {};
+  for (const { plan, count } of activeByPlan) {
+    const price = parseFloat(prices[plan]?.price || 0);
+    const planRevenue = price * Number(count);
+    mrr += planRevenue;
+    revenueByPlan[plan] = {
+      count: Number(count),
+      price: prices[plan]?.price || '0',
+      revenue: planRevenue.toFixed(2),
+    };
+  }
+
+  // New signups per month for last 6 months
+  const sixMonthsAgo = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+  const rawMonthly = await User.findAll({
+    where: { created_at: { [Op.gte]: sixMonthsAgo } },
+    attributes: [
+      [fn('date_trunc', 'month', col('created_at')), 'month'],
+      [fn('COUNT', col('id')), 'count'],
+    ],
+    group: [fn('date_trunc', 'month', col('created_at'))],
+    order: [[fn('date_trunc', 'month', col('created_at')), 'ASC']],
+    raw: true,
+  });
+
+  // Build full 6-month array with zeros for missing months
+  const monthlySignups = [];
+  for (let i = 5; i >= 0; i--) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const label = d.toLocaleString('pt-BR', { month: 'short', year: '2-digit' });
+    const isoMonth = d.toISOString().slice(0, 7);
+    const found = rawMonthly.find((r) => r.month && String(r.month).startsWith(isoMonth));
+    monthlySignups.push({ month: label, count: found ? Number(found.count) : 0 });
+  }
+
+  const newInPeriod = startDate
+    ? await User.count({ where: { created_at: { [Op.gte]: startDate } } })
+    : await User.count();
+
+  res.json({
+    period,
+    mrr: mrr.toFixed(2),
+    new_users_period: newInPeriod,
+    revenue_by_plan: revenueByPlan,
+    monthly_signups: monthlySignups,
+    prices,
+  });
+}
+
+module.exports = { listUsers, getUser, updateUser, approveUser, rejectUser, getStats, listWhatsappAccounts, disconnectWhatsappAccount, removeWhatsappAccount, getPlanPrices, updatePlanPrices, getRevenue };

@@ -10,6 +10,7 @@ const WarmupLog = require('./WarmupLog');
 const BotConfig = require('./BotConfig');
 const BotConversation = require('./BotConversation');
 const IncomingMessage = require('./IncomingMessage');
+const SystemSetting = require('./SystemSetting');
 
 // Associations
 User.hasMany(Contact, { foreignKey: 'user_id', onDelete: 'CASCADE' });
@@ -47,4 +48,4 @@ BotConversation.belongsTo(WhatsappAccount, { foreignKey: 'account_id' });
 WhatsappAccount.hasMany(IncomingMessage, { foreignKey: 'account_id', onDelete: 'CASCADE', as: 'account' });
 IncomingMessage.belongsTo(WhatsappAccount, { foreignKey: 'account_id', as: 'account' });
 
-module.exports = { sequelize, User, AuditLog, Contact, Campaign, Message, WhatsappAccount, WarmupConfig, WarmupLog, BotConfig, BotConversation, IncomingMessage };
+module.exports = { sequelize, User, AuditLog, Contact, Campaign, Message, WhatsappAccount, WarmupConfig, WarmupLog, BotConfig, BotConversation, IncomingMessage, SystemSetting };

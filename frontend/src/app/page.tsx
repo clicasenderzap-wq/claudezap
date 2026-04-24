@@ -6,7 +6,7 @@ import {
   Send, Flame, Bot, Smartphone, BarChart2, Check, ChevronDown, ChevronUp,
   Zap, Shield, Users, Star, ArrowRight, Menu, X, Sparkles,
   AlertTriangle, Lock, ShieldCheck, FileText, Link2, ClipboardCheck,
-  Layers, Paperclip, UserCheck,
+  Layers, Paperclip, UserCheck, Monitor,
 } from 'lucide-react';
 
 // ─── Contato WhatsApp ─────────────────────────────────────────────────────────
@@ -19,6 +19,13 @@ const WA_INFO    = WA('Olá! Vim pelo site do Clica Aí e gostaria de mais infor
 // ─── Data ─────────────────────────────────────────────────────────────────────
 
 const FEATURES = [
+  {
+    icon: Monitor,
+    title: 'App Desktop para Windows',
+    desc: 'Instale o Clica Aí no seu computador. O app conecta seus números WhatsApp localmente, atualiza sozinho de forma obrigatória e fica disponível na bandeja do sistema.',
+    color: 'bg-slate-100 text-slate-600',
+    badge: 'Novo',
+  },
   {
     icon: Send,
     title: 'Disparos em massa',
@@ -102,8 +109,9 @@ const STEPS = [
   },
 ];
 
-const PLANS = [
+const PLANS_DEFAULT = [
   {
+    planId: 'starter',
     name: 'Starter',
     price: 'R$ 67,90',
     period: '/mês',
@@ -115,11 +123,13 @@ const PLANS = [
       'Aquecimento de números',
       'Até 5.000 contatos',
       'Dashboard e relatórios completos',
+      'Suporte via WhatsApp 08h–18h',
       '7 dias grátis para testar',
     ],
     cta: 'Começar grátis',
   },
   {
+    planId: 'pro',
     name: 'Pro',
     price: 'R$ 117,90',
     period: '/mês',
@@ -132,7 +142,7 @@ const PLANS = [
       'Bot com IA incluído (até 500 conv/mês)',
       'Contatos ilimitados',
       'Dashboard e relatórios completos',
-      'Suporte prioritário via WhatsApp',
+      'Suporte prioritário via WhatsApp 08h–18h',
       '7 dias grátis para testar',
     ],
     cta: 'Começar grátis',
@@ -356,6 +366,25 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 // ─── Landing Page ─────────────────────────────────────────────────────────────
 
 export default function LandingPage() {
+  const [plans, setPlans] = useState(PLANS_DEFAULT);
+
+  useEffect(() => {
+    const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api').replace(/\/api\/?$/, '');
+    fetch(`${apiBase}/api/plans/prices`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (!data) return;
+        setPlans((prev) =>
+          prev.map((p) => {
+            const raw = parseFloat(data[p.planId]?.price);
+            if (!raw || isNaN(raw)) return p;
+            return { ...p, price: `R$ ${raw.toFixed(2).replace('.', ',')}` };
+          })
+        );
+      })
+      .catch(() => {});
+  }, []);
+
   return (
     <>
       <Navbar />
@@ -371,7 +400,7 @@ export default function LandingPage() {
             <div>
               <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 text-xs font-bold px-4 py-1.5 rounded-full mb-7 border border-green-200">
                 <Sparkles size={11} />
-                7 dias grátis · Sem cartão de crédito
+                7 dias grátis · App Desktop · Suporte 08h–18h
               </div>
 
               {/* BAB: BEFORE */}
@@ -415,7 +444,7 @@ export default function LandingPage() {
                   Ver funcionalidades
                 </a>
               </div>
-              <p className="text-xs text-gray-400 mt-4">Sem contrato · Cancele quando quiser · Suporte incluso</p>
+              <p className="text-xs text-gray-400 mt-4">Sem contrato · Cancele quando quiser · Suporte gratuito 08h–18h</p>
             </div>
 
             <div className="flex justify-center lg:justify-end">
@@ -710,7 +739,7 @@ export default function LandingPage() {
             </div>
 
             <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
-              {PLANS.map((plan) => (
+              {plans.map((plan) => (
                 <div key={plan.name} className={`rounded-3xl p-8 relative ${
                   plan.highlight
                     ? 'bg-green-600 border-2 border-green-400 ring-4 ring-green-500/20'
@@ -786,7 +815,7 @@ export default function LandingPage() {
             </div>
             <div className="mt-10 bg-green-50 border border-green-200 rounded-2xl p-6 text-center">
               <p className="text-gray-700 font-semibold mb-1">Não encontrou sua resposta?</p>
-              <p className="text-gray-500 text-sm mb-4">Nossa equipe responde rapidamente pelo WhatsApp.</p>
+              <p className="text-gray-500 text-sm mb-4">Suporte gratuito via WhatsApp, de segunda a sexta, das 08h às 18h.</p>
               <a href={WA_SUPPORT} target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white font-bold px-6 py-3 rounded-xl transition-colors text-sm">
                 <Smartphone size={16} /> Falar com o suporte agora
@@ -816,7 +845,7 @@ export default function LandingPage() {
                 <Smartphone size={18} /> Falar no WhatsApp primeiro
               </a>
             </div>
-            <p className="text-green-200/70 text-xs mt-6">Sem contrato · Suporte via WhatsApp · Cancele quando quiser</p>
+            <p className="text-green-200/70 text-xs mt-6">Sem contrato · Suporte gratuito 08h–18h · Cancele quando quiser</p>
           </div>
         </section>
 
@@ -863,7 +892,7 @@ export default function LandingPage() {
                   </li>
                   <li>
                     <a href={WA_SUPPORT} target="_blank" rel="noopener noreferrer" className="hover:text-green-400 transition-colors flex items-center gap-1.5">
-                      <Smartphone size={13} className="text-green-500 shrink-0" /> Suporte via WhatsApp
+                      <Smartphone size={13} className="text-green-500 shrink-0" /> Suporte · 08h–18h (seg–sex)
                     </a>
                   </li>
                 </ul>
