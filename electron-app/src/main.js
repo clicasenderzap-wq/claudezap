@@ -17,6 +17,7 @@ let accounts = []; // local cache of account list from server
 // ── App lifecycle ─────────────────────────────────────────────────────────────
 
 app.whenReady().then(() => {
+  setupAppMenu();
   createWindow();
   createTray();
   setupUpdater();
@@ -36,6 +37,20 @@ app.on('before-quit', async () => {
   if (waManager) await waManager.disconnectAll().catch(() => {});
   if (wsClient) wsClient.destroy();
 });
+
+// ── Application menu ─────────────────────────────────────────────────────────
+
+function setupAppMenu() {
+  const menu = Menu.buildFromTemplate([
+    {
+      label: 'Arquivo',
+      submenu: [
+        { label: 'Sair', accelerator: 'Alt+F4', click: () => app.exit(0) },
+      ],
+    },
+  ]);
+  Menu.setApplicationMenu(menu);
+}
 
 // ── Main window ────────────────────────────────────────────────────────────────
 
@@ -102,22 +117,27 @@ function setupUpdater() {
 
   autoUpdater.on('update-available', (info) => {
     console.log('[Updater] nova versão disponível:', info.version);
-    mainWindow?.webContents.send('update:available', { version: info.version });
+    mainWindow?.webContents.send('update:downloading', { version: info.version });
   });
 
-  autoUpdater.on('update-downloaded', () => {
-    console.log('[Updater] atualização baixada — aguardando instalação');
-    mainWindow?.webContents.send('update:ready');
-    // Show native dialog asking to install
-    dialog.showMessageBox(mainWindow, {
+  autoUpdater.on('download-progress', (p) => {
+    mainWindow?.webContents.send('update:progress', { percent: Math.round(p.percent) });
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    console.log('[Updater] atualização baixada — instalação obrigatória');
+    mainWindow?.show();
+    // Mandatory: only one button, no way to skip
+    dialog.showMessageBox({
       type: 'info',
-      title: 'Atualização disponível',
-      message: 'Uma nova versão do Clica Aí foi baixada.',
-      detail: 'Deseja instalar agora? O app será reiniciado.',
-      buttons: ['Instalar agora', 'Mais tarde'],
+      title: 'Atualização obrigatória — Clica Aí',
+      message: `Nova versão ${info.version} disponível!`,
+      detail: 'Clique em "Instalar Agora" para atualizar o Clica Aí. O aplicativo será reiniciado automaticamente.',
+      buttons: ['Instalar Agora'],
       defaultId: 0,
-    }).then(({ response }) => {
-      if (response === 0) autoUpdater.quitAndInstall(false, true);
+      noLink: true,
+    }).then(() => {
+      autoUpdater.quitAndInstall(false, true);
     });
   });
 

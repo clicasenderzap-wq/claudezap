@@ -29,8 +29,12 @@ contextBridge.exposeInMainWorld('claudezap', {
     return () => ipcRenderer.removeAllListeners('session:kicked');
   },
   onUpdateAvailable: (cb) => {
-    ipcRenderer.on('update:available', (_, data) => cb(data));
-    return () => ipcRenderer.removeAllListeners('update:available');
+    ipcRenderer.on('update:downloading', (_, data) => cb(data));
+    return () => ipcRenderer.removeAllListeners('update:downloading');
+  },
+  onUpdateProgress: (cb) => {
+    ipcRenderer.on('update:progress', (_, data) => cb(data));
+    return () => ipcRenderer.removeAllListeners('update:progress');
   },
   onUpdateReady: (cb) => {
     ipcRenderer.on('update:ready', () => cb());

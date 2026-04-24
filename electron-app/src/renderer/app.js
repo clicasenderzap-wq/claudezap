@@ -173,12 +173,17 @@ api.onSessionKicked(({ reason }) => {
 });
 
 api.onUpdateAvailable(({ version }) => {
-  document.getElementById('update-text').textContent = `Nova versão ${version} disponível!`;
+  document.getElementById('update-text').textContent = `Baixando atualização ${version}... 0%`;
   document.getElementById('update-banner').style.display = 'flex';
+  document.getElementById('btn-install-update').style.display = 'none';
+});
+
+api.onUpdateProgress(({ percent }) => {
+  document.getElementById('update-text').textContent = `Baixando atualização... ${percent}%`;
 });
 
 api.onUpdateReady(() => {
-  // The native dialog is shown by main.js
+  // Mandatory dialog is shown by main.js — nothing to do here
 });
 
 // Open external links in default browser
