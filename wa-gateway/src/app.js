@@ -12,10 +12,9 @@ const SECRET = process.env.GATEWAY_SECRET;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
 
 // Startup validation
-if (!WEBHOOK_URL) console.warn('[Gateway] ATENÇÃO: WEBHOOK_URL não definida — eventos QR/ready/disconnected NÃO chegarão ao backend!');
+if (!WEBHOOK_URL) console.warn('[Gateway] ATENÇÃO: WEBHOOK_URL não definida — eventos não chegarão ao backend!');
 else console.log('[Gateway] WEBHOOK_URL:', WEBHOOK_URL);
-if (!SECRET) console.warn('[Gateway] ATENÇÃO: GATEWAY_SECRET não definido — gateway sem autenticação!');
-console.log('[Gateway] REDIS_URL:', process.env.REDIS_URL ? process.env.REDIS_URL.slice(0, 30) + '...' : 'NÃO DEFINIDA');
+if (!SECRET) console.warn('[Gateway] ATENÇÃO: GATEWAY_SECRET não definido!');
 
 // Auth middleware
 app.use((req, res, next) => {
@@ -46,43 +45,24 @@ wa.on('qr', (data) => fireWebhook({ type: 'qr', ...data }));
 wa.on('ready', (data) => fireWebhook({ type: 'ready', ...data }));
 wa.on('disconnected', (data) => fireWebhook({ type: 'disconnected', ...data }));
 wa.on('message', (data) => fireWebhook({ type: 'message', ...data }));
-wa.on('message.update', (data) => fireWebhook({ type: 'message.update', ...data }));
 
 // ── Routes ────────────────────────────────────────────────────────────────
-app.get('/health', (req, res) => {
-  const summary = { connected: 0, connecting: 0, disconnected: 0 };
-  // wa doesn't expose sockets directly but we can keep it simple
-  res.json({ status: 'ok', timestamp: new Date() });
-});
+app.get('/health', (req, res) => res.json({ status: 'ok', timestamp: new Date() }));
 
-// Connect / start session (generates QR event via webhook)
 app.post('/sessions/:id/connect', async (req, res) => {
   try {
     await wa.connect(req.params.id);
     res.json({ ok: true });
   } catch (e) {
+    console.error(`[Route] connect ${req.params.id}:`, e.message);
     res.status(500).json({ error: e.message });
   }
 });
 
-// Request pairing code (returns code directly)
-app.post('/sessions/:id/pairing-code', async (req, res) => {
-  const { phone } = req.body;
-  if (!phone) return res.status(400).json({ error: 'phone obrigatório' });
-  try {
-    const code = await wa.requestPairingCode(req.params.id, phone);
-    res.json({ code });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
-});
-
-// Get status
 app.get('/sessions/:id/status', (req, res) => {
   res.json({ status: wa.status(req.params.id) });
 });
 
-// Send text
 app.post('/sessions/:id/send/text', async (req, res) => {
   const { phone, text } = req.body;
   if (!phone || !text) return res.status(400).json({ error: 'phone e text obrigatórios' });
@@ -94,7 +74,6 @@ app.post('/sessions/:id/send/text', async (req, res) => {
   }
 });
 
-// Send media
 app.post('/sessions/:id/send/media', async (req, res) => {
   const { phone, mediaUrl, mediaType, fileName, caption } = req.body;
   if (!phone || !mediaUrl) return res.status(400).json({ error: 'phone e mediaUrl obrigatórios' });
@@ -106,7 +85,6 @@ app.post('/sessions/:id/send/media', async (req, res) => {
   }
 });
 
-// Disconnect
 app.delete('/sessions/:id', async (req, res) => {
   try {
     await wa.disconnect(req.params.id);
@@ -116,15 +94,14 @@ app.delete('/sessions/:id', async (req, res) => {
   }
 });
 
+// Pairing code not supported in Chrome mode — only QR
+app.post('/sessions/:id/pairing-code', (req, res) => {
+  res.status(400).json({ error: 'Modo Chrome usa apenas QR Code. Use o botão "Via QR" para conectar.' });
+});
+
 // ── Startup ───────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`[Gateway] rodando na porta ${PORT}`));
 
-// Reconecta contas com sessão salva no Redis
-(async () => {
-  const { WhatsappAccount } = (() => {
-    // Gateway não tem acesso ao DB — recebe lista via env ou ignora (API gerencia isso)
-    return { WhatsappAccount: null };
-  })();
-  console.log('[Gateway] pronto para receber conexões');
-})();
+// Pre-launch Chromium so first connection is faster
+wa._getBrowser().catch((e) => console.error('[Gateway] Falha ao pré-iniciar Chromium:', e.message));

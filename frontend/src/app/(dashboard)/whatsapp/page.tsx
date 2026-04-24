@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Smartphone, Plus, Trash2, CheckCircle, XCircle, Loader2, QrCode, Pencil, Hash } from 'lucide-react';
+import { Smartphone, Plus, Trash2, CheckCircle, XCircle, Loader2, QrCode, Pencil } from 'lucide-react';
 import toast from 'react-hot-toast';
 import Image from 'next/image';
 import api from '@/lib/api';
@@ -14,18 +14,10 @@ interface Account {
   status: 'connected' | 'connecting' | 'disconnected';
 }
 
-type PairingMethod = 'qr' | 'code';
-
 interface QrModal {
   accountId: string;
-  method: PairingMethod;
-  // QR flow
   qr: string | null;
   qrLoading: boolean;
-  // Code flow
-  phoneInput: string;
-  pairingCode: string | null;
-  codeLoading: boolean;
 }
 
 export default function WhatsAppPage() {
@@ -44,7 +36,7 @@ export default function WhatsAppPage() {
     mutationFn: (label: string) => api.post('/whatsapp/accounts', { label }),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['wa-accounts'] });
-      openModal(res.data.id, 'code');
+      openModal(res.data.id);
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao criar conta'),
   });
@@ -60,17 +52,9 @@ export default function WhatsAppPage() {
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao remover'),
   });
 
-  function openModal(accountId: string, method: PairingMethod) {
-    setModal({
-      accountId,
-      method,
-      qr: null,
-      qrLoading: false,
-      phoneInput: '',
-      pairingCode: null,
-      codeLoading: false,
-    });
-    if (method === 'qr') loadQR(accountId);
+  function openModal(accountId: string) {
+    setModal({ accountId, qr: null, qrLoading: false });
+    loadQR(accountId);
   }
 
   async function loadQR(accountId: string) {
@@ -90,29 +74,6 @@ export default function WhatsAppPage() {
     } catch (e: any) {
       setModal((m) => m ? { ...m, qrLoading: false } : null);
       toast.error(e.response?.data?.error || 'Erro ao obter QR code');
-    }
-  }
-
-  async function requestCode() {
-    if (!modal) return;
-    const digits = modal.phoneInput.replace(/\D/g, '');
-    if (digits.length < 10) {
-      toast.error('Informe o número completo com DDD e código do país (ex: 5511999999999)');
-      return;
-    }
-    setModal((m) => m ? { ...m, codeLoading: true, pairingCode: null } : null);
-    try {
-      const res = await api.post(`/whatsapp/accounts/${modal.accountId}/pairing-code`, { phone: digits });
-      if (res.data.status === 'connected') {
-        toast.success('Número já conectado!');
-        setModal(null);
-        qc.invalidateQueries({ queryKey: ['wa-accounts'] });
-        return;
-      }
-      setModal((m) => m ? { ...m, codeLoading: false, pairingCode: res.data.code } : null);
-    } catch (e: any) {
-      setModal((m) => m ? { ...m, codeLoading: false } : null);
-      toast.error(e.response?.data?.error || 'Erro ao solicitar código');
     }
   }
 
@@ -207,11 +168,8 @@ export default function WhatsAppPage() {
 
             {account.status !== 'connected' && (
               <div className="flex gap-2 pt-1">
-                <button onClick={() => openModal(account.id, 'code')} className="btn-primary flex-1 py-1.5 text-sm">
-                  <Hash size={14} /> Conectar via código
-                </button>
-                <button onClick={() => openModal(account.id, 'qr')} className="btn-secondary py-1.5 px-3 text-sm" title="Conectar via QR Code">
-                  <QrCode size={14} />
+                <button onClick={() => openModal(account.id)} className="btn-primary flex-1 py-1.5 text-sm">
+                  <QrCode size={14} /> Conectar via QR
                 </button>
                 <button
                   onClick={() => { if (confirm(`Remover "${account.label}"?`)) removeMutation.mutate(account.id); }}
@@ -249,114 +207,40 @@ export default function WhatsAppPage() {
         </div>
       )}
 
-      {/* Modal de emparelhamento */}
+      {/* Modal QR */}
       {modal && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-sm p-6 space-y-4">
-            {/* Tabs */}
-            <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-              <button
-                onClick={() => setModal((m) => m ? { ...m, method: 'code', pairingCode: null } : null)}
-                className={`flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${modal.method === 'code' ? 'bg-brand-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
-              >
-                <Hash size={14} /> Via código
-              </button>
-              <button
-                onClick={() => { setModal((m) => m ? { ...m, method: 'qr', pairingCode: null, qr: null } : null); loadQR(modal.accountId); }}
-                className={`flex-1 py-2 text-sm font-medium transition-colors flex items-center justify-center gap-1.5 ${modal.method === 'qr' ? 'bg-brand-600 text-white' : 'text-gray-500 hover:bg-gray-50'}`}
-              >
-                <QrCode size={14} /> Via QR
-              </button>
-            </div>
+            <h2 className="text-base font-semibold text-gray-900 text-center">Conectar WhatsApp</h2>
 
-            {/* Code method */}
-            {modal.method === 'code' && (
-              <div className="space-y-4">
-                <div>
-                  <h2 className="text-base font-semibold text-gray-900">Conectar via código</h2>
-                  <p className="text-xs text-gray-500 mt-1">Recomendado — funciona sem escanear QR</p>
-                </div>
-
-                {!modal.pairingCode ? (
-                  <>
-                    <div className="space-y-1.5">
-                      <label className="text-sm font-medium text-gray-700">Número da conta WhatsApp</label>
-                      <input
-                        className="input w-full"
-                        placeholder="Ex: 5511999999999"
-                        value={modal.phoneInput}
-                        onChange={(e) => setModal((m) => m ? { ...m, phoneInput: e.target.value } : null)}
-                        onKeyDown={(e) => e.key === 'Enter' && requestCode()}
-                      />
-                      <p className="text-xs text-gray-400">Código do país + DDD + número, sem espaços ou traços</p>
-                    </div>
-                    <button
-                      onClick={requestCode}
-                      disabled={modal.codeLoading}
-                      className="btn-primary w-full"
-                    >
-                      {modal.codeLoading ? <><Loader2 size={16} className="animate-spin" /> Gerando código...</> : 'Solicitar código'}
-                    </button>
-                  </>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="bg-brand-50 border border-brand-200 rounded-xl p-4 text-center">
-                      <p className="text-xs text-brand-600 font-medium mb-1">Seu código de emparelhamento</p>
-                      <p className="text-3xl font-bold text-brand-700 tracking-widest font-mono">{modal.pairingCode}</p>
-                    </div>
-                    <div className="text-sm text-gray-600 space-y-1.5">
-                      <p className="font-medium">Como usar:</p>
-                      <ol className="list-decimal list-inside space-y-1 text-sm text-gray-500">
-                        <li>Abra o WhatsApp no celular</li>
-                        <li>Vá em <strong>Dispositivos Vinculados</strong></li>
-                        <li>Toque em <strong>Vincular dispositivo</strong></li>
-                        <li>Toque em <strong>Vincular com número de telefone</strong></li>
-                        <li>Digite o código acima</li>
-                      </ol>
-                    </div>
-                    <button
-                      onClick={() => setModal((m) => m ? { ...m, pairingCode: null } : null)}
-                      className="btn-secondary w-full text-sm"
-                    >
-                      Usar outro número
-                    </button>
-                  </div>
-                )}
+            {modal.qrLoading ? (
+              <div className="py-12 flex flex-col items-center gap-3 text-gray-400">
+                <Loader2 size={32} className="animate-spin" />
+                <p className="text-sm text-center">Abrindo WhatsApp Web...<br /><span className="text-xs">Aguarde até 30 segundos</span></p>
               </div>
-            )}
-
-            {/* QR method */}
-            {modal.method === 'qr' && (
+            ) : modal.qr ? (
               <div className="space-y-4 text-center">
-                <div>
-                  <h2 className="text-base font-semibold text-gray-900">Escanear QR Code</h2>
+                <div className="flex justify-center">
+                  <div className="border-4 border-brand-600 rounded-xl p-2 inline-block">
+                    <Image src={modal.qr} alt="QR Code" width={220} height={220} unoptimized />
+                  </div>
                 </div>
-                {modal.qrLoading ? (
-                  <div className="py-12 flex flex-col items-center gap-3 text-gray-400">
-                    <Loader2 size={32} className="animate-spin" />
-                    <p className="text-sm">Gerando QR code...</p>
-                  </div>
-                ) : modal.qr ? (
-                  <>
-                    <div className="flex justify-center">
-                      <div className="border-4 border-brand-600 rounded-xl p-2 inline-block">
-                        <Image src={modal.qr} alt="QR Code" width={220} height={220} unoptimized />
-                      </div>
-                    </div>
-                    <div className="text-sm text-gray-500 space-y-0.5">
-                      <p>1. Abra o WhatsApp no celular</p>
-                      <p>2. Vá em <strong>Dispositivos conectados</strong></p>
-                      <p>3. Escaneie o QR code acima</p>
-                    </div>
-                    <p className="text-xs text-gray-400">O QR code expira em alguns minutos</p>
-                  </>
-                ) : (
-                  <div className="py-8">
-                    <button onClick={() => loadQR(modal.accountId)} className="btn-primary">
-                      Gerar QR Code
-                    </button>
-                  </div>
-                )}
+                <div className="text-sm text-gray-500 space-y-0.5">
+                  <p>1. Abra o WhatsApp no celular</p>
+                  <p>2. Vá em <strong>Dispositivos conectados</strong></p>
+                  <p>3. Toque em <strong>Conectar dispositivo</strong></p>
+                  <p>4. Escaneie o QR code acima</p>
+                </div>
+                <p className="text-xs text-gray-400">O QR expira em ~60 segundos — clique em "Novo QR" se expirar</p>
+                <button onClick={() => loadQR(modal.accountId)} className="btn-secondary w-full text-sm">
+                  Novo QR
+                </button>
+              </div>
+            ) : (
+              <div className="py-8 text-center">
+                <button onClick={() => loadQR(modal.accountId)} className="btn-primary">
+                  Gerar QR Code
+                </button>
               </div>
             )}
 

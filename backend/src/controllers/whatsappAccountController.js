@@ -115,7 +115,7 @@ async function getQR(req, res) {
       clearTimeout(timer);
       resolve(q);
     };
-    const timer = setTimeout(() => { whatsapp.off('qr', onQR); resolve(null); }, 30_000);
+    const timer = setTimeout(() => { whatsapp.off('qr', onQR); resolve(null); }, 90_000);
     whatsapp.on('qr', onQR);
   });
 

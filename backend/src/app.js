@@ -83,24 +83,17 @@ const server = app.listen(PORT, () => {
     require('./services/warmupService').start();
     console.log('[Warmup] iniciado');
 
-    // Reconecta contas com sessão salva via gateway
+    // Reconecta contas que estavam conectadas antes do restart
     const whatsapp = require('./services/whatsappService');
-    const { hasSession } = require('./services/waSessionStore');
     const { WhatsappAccount } = require('./models');
-    const accounts = await WhatsappAccount.findAll();
+    const accounts = await WhatsappAccount.findAll({ where: { status: 'connected' } });
     let delay = 0;
     for (const account of accounts) {
-      const sessionExists = await hasSession(account.id).catch(() => false);
-      if (sessionExists) {
-        setTimeout(() => {
-          console.log(`[WA] Reconectando via gateway: ${account.label}`);
-          whatsapp.connect(account.id).catch((e) => console.error(`[WA] Falha ao reconectar ${account.id}:`, e.message));
-        }, delay);
-        delay += 3000;
-      } else {
-        console.log(`[WA] ${account.label}: sem sessão — aguardando emparelhamento`);
-        await WhatsappAccount.update({ status: 'disconnected' }, { where: { id: account.id } }).catch(() => {});
-      }
+      setTimeout(() => {
+        console.log(`[WA] Reconectando: ${account.label}`);
+        whatsapp.connect(account.id).catch((e) => console.error(`[WA] Falha ao reconectar ${account.id}:`, e.message));
+      }, delay);
+      delay += 3000;
     }
   } catch (err) {
     console.error('[Startup] falha ao conectar:', err.message);
