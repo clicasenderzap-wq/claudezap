@@ -102,6 +102,3 @@ app.post('/sessions/:id/pairing-code', (req, res) => {
 // ── Startup ───────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
 app.listen(PORT, () => console.log(`[Gateway] rodando na porta ${PORT}`));
-
-// Pre-launch Chromium so first connection is faster
-wa._getBrowser().catch((e) => console.error('[Gateway] Falha ao pré-iniciar Chromium:', e.message));

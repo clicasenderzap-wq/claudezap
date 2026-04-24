@@ -1,5 +1,6 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const { EventEmitter } = require('events');
+const fs = require('fs');
 
 const CHROME_ARGS = [
   '--no-sandbox',
@@ -14,50 +15,41 @@ const CHROME_ARGS = [
   '--mute-audio',
 ];
 
-const CHROME_BIN = process.env.CHROME_BIN || '/usr/bin/chromium';
+function findChrome() {
+  const candidates = [
+    process.env.CHROME_BIN,
+    '/usr/bin/chromium',
+    '/usr/bin/chromium-browser',
+    '/usr/bin/google-chrome-stable',
+    '/usr/bin/google-chrome',
+  ].filter(Boolean);
+  for (const p of candidates) {
+    if (fs.existsSync(p)) { console.log('[Browser] Chrome encontrado em:', p); return p; }
+  }
+  throw new Error('Chrome/Chromium não encontrado. Verifique a instalação no Dockerfile.');
+}
+
+const CHROME_BIN = findChrome();
 
 class WAService extends EventEmitter {
   constructor() {
     super();
-    this.clients = new Map();  // accountId -> { client, ready }
-    this._browser = null;
-    this._browserPromise = null;
-  }
-
-  async _getBrowser() {
-    if (this._browser?.isConnected()) return this._browser;
-    if (this._browserPromise) return this._browserPromise;
-
-    this._browserPromise = (async () => {
-      const puppeteer = require('whatsapp-web.js/node_modules/puppeteer');
-      console.log('[Browser] Iniciando Chromium...');
-      const browser = await puppeteer.launch({
-        executablePath: CHROME_BIN,
-        headless: true,
-        args: CHROME_ARGS,
-      });
-      browser.on('disconnected', () => {
-        console.log('[Browser] Chromium desconectado');
-        this._browser = null;
-        this._browserPromise = null;
-      });
-      this._browser = browser;
-      this._browserPromise = null;
-      console.log('[Browser] Chromium pronto');
-      return browser;
-    })();
-
-    return this._browserPromise;
+    this.clients = new Map();
   }
 
   async connect(accountId) {
-    if (this.clients.has(accountId)) return;
-
-    const browser = await this._getBrowser();
+    if (this.clients.has(accountId)) {
+      console.log(`[WA] ${accountId}: sessão já em andamento`);
+      return;
+    }
 
     const client = new Client({
       authStrategy: new LocalAuth({ clientId: accountId }),
-      puppeteer: { browserWSEndpoint: browser.wsEndpoint() },
+      puppeteer: {
+        executablePath: CHROME_BIN,
+        headless: true,
+        args: CHROME_ARGS,
+      },
     });
 
     this.clients.set(accountId, client);
@@ -94,7 +86,7 @@ class WAService extends EventEmitter {
       }
     });
 
-    // Non-blocking — QR arrives via event when page loads
+    console.log(`[WA] ${accountId}: iniciando Chrome...`);
     client.initialize().catch((e) => {
       console.error(`[WA] ${accountId}: erro ao inicializar:`, e.message);
       this.clients.delete(accountId);
