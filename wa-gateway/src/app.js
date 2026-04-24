@@ -101,4 +101,18 @@ app.post('/sessions/:id/pairing-code', (req, res) => {
 
 // ── Startup ───────────────────────────────────────────────────────────────
 const PORT = process.env.PORT || 3001;
-app.listen(PORT, () => console.log(`[Gateway] rodando na porta ${PORT}`));
+app.listen(PORT, () => {
+  console.log(`[Gateway] rodando na porta ${PORT}`);
+  // Notify backend so it reconnects all previously-connected accounts
+  if (WEBHOOK_URL) {
+    const restartUrl = WEBHOOK_URL.replace(/\/wa$/, '/wa/gateway-restart');
+    fetch(restartUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(SECRET ? { 'x-gateway-secret': SECRET } : {}),
+      },
+      body: JSON.stringify({ type: 'gateway_restart' }),
+    }).catch((e) => console.error('[Gateway] falha ao notificar restart:', e.message));
+  }
+});
