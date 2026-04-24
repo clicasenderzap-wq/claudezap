@@ -111,46 +111,24 @@ class WhatsAppService extends EventEmitter {
   // ── Public API ─────────────────────────────────────────────────────────────
 
   async connect(accountId) {
-    if (this._desktop().isAccountConnected(accountId)) {
-      return; // already managed by desktop app
-    }
-    // Try desktop (will throw if no desktop connected for this account's user)
-    try {
-      await this._desktop().connect(accountId);
-      return;
-    } catch {}
-    // Fall back to Fly.io gateway
-    await gw('POST', `/sessions/${accountId}/connect`);
+    if (this._desktop().isAccountConnected(accountId)) return;
+    await this._desktop().connect(accountId);
   }
 
   async requestPairingCode(accountId, phone) {
-    const data = await gw('POST', `/sessions/${accountId}/pairing-code`, { phone });
-    return data.code;
+    throw new Error('Pairing code não suportado no app desktop — use QR Code');
   }
 
   async sendText(accountId, phone, text) {
-    if (this._desktop().isAccountConnected(accountId)) {
-      return this._desktop().sendText(accountId, phone, text);
-    }
-    const data = await gw('POST', `/sessions/${accountId}/send/text`, { phone, text });
-    return data.id;
+    return this._desktop().sendText(accountId, phone, text);
   }
 
   async sendMedia(accountId, phone, mediaUrl, mediaType, fileName, caption = '') {
-    if (this._desktop().isAccountConnected(accountId)) {
-      return this._desktop().sendMedia(accountId, phone, mediaUrl, mediaType, fileName, caption);
-    }
-    const data = await gw('POST', `/sessions/${accountId}/send/media`, {
-      phone, mediaUrl, mediaType, fileName, caption,
-    });
-    return data.id;
+    return this._desktop().sendMedia(accountId, phone, mediaUrl, mediaType, fileName, caption);
   }
 
   async disconnect(accountId) {
-    if (this._desktop().isAccountConnected(accountId)) {
-      return this._desktop().disconnect(accountId);
-    }
-    await gw('DELETE', `/sessions/${accountId}`).catch(() => {});
+    await this._desktop().disconnect(accountId);
   }
 
   getStatus(accountId) {

@@ -160,10 +160,16 @@ class WAManager extends EventEmitter {
     );
   }
 
-  async _trySend(accountId, fn) {
+  async _trySend(accountId, fn, timeoutMs = 25_000) {
     for (let attempt = 1; attempt <= 2; attempt++) {
       try {
-        return await fn();
+        // Race the send against a timeout so a hung Chrome doesn't block forever
+        return await Promise.race([
+          fn(),
+          new Promise((_, reject) =>
+            setTimeout(() => reject(new Error('Timeout ao enviar mensagem')), timeoutMs)
+          ),
+        ]);
       } catch (e) {
         if (this._isContextError(e) && attempt === 1) {
           console.warn(`[WA] ${accountId}: contexto perdido, aguardando 4s...`);

@@ -53,7 +53,7 @@ class DesktopService extends EventEmitter {
 
   // ── Sending commands ────────────────────────────────────────────────────────
 
-  async _sendToUser(userId, command, timeoutMs = 35_000) {
+  async _sendToUser(userId, command, timeoutMs = 20_000) {
     const session = this._sessions.get(userId);
     if (!session || session.ws.readyState !== 1) throw new Error('App desktop não conectado');
 
@@ -62,7 +62,7 @@ class DesktopService extends EventEmitter {
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.removeAllListeners(`result:${correlationId}`);
-        reject(new Error('App desktop não respondeu a tempo'));
+        reject(new Error('Conta WhatsApp não respondeu — verifique se o Clica Aí está aberto e a conta está conectada'));
       }, timeoutMs);
 
       this.once(`result:${correlationId}`, (result) => {
