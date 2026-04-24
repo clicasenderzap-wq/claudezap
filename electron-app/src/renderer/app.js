@@ -156,9 +156,11 @@ api.onAccountsUpdate((accounts) => {
 
 api.onQR(({ accountId, qr }) => {
   pendingQRs[accountId] = qr;
-  showQR(accountId, qr);
-  // Refresh cards to show "Ver QR" button
-  api.getAccounts().then(renderAccounts);
+  // Refresh cards to show "Ver QR" button; auto-open modal so user can scan
+  api.getAccounts().then((accounts) => {
+    renderAccounts(accounts);
+    showQR(accountId, qr);
+  });
 });
 
 api.onConnectionStatus(({ connected }) => {

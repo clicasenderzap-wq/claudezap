@@ -1,6 +1,7 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, ipcMain, shell, dialog } = require('electron');
 const path = require('path');
 const { autoUpdater } = require('electron-updater');
+const QRCode = require('qrcode');
 const store = require('./store');
 const WAManager = require('./waManager');
 const WSClient = require('./wsClient');
@@ -236,11 +237,11 @@ function initConnection() {
 
   // ── WAManager events → backend ───────────────────────────────────────────────
 
-  waManager.on('qr', ({ accountId, qr }) => {
+  waManager.on('qr', async ({ accountId, qr }) => {
     wsClient.send({ type: 'qr', accountId, qr });
-    // Also show QR in the renderer window
-    mainWindow?.webContents.send('qr', { accountId, qr });
-    // Update local account status
+    // Convert raw QR string to data URL for the renderer
+    const qrDataUrl = await QRCode.toDataURL(qr, { margin: 1, width: 280 }).catch(() => null);
+    if (qrDataUrl) mainWindow?.webContents.send('qr', { accountId, qr: qrDataUrl });
     updateAccountStatus(accountId, 'connecting');
   });
 
