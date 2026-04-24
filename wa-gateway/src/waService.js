@@ -18,7 +18,8 @@ const silent = { level: 'silent', trace: noop, debug: noop, info: noop, warn: no
 const RECONNECT_DELAYS = [5_000, 10_000, 30_000, 60_000, 120_000, 300_000];
 const MAX_RECONNECT = 12;
 const PERMANENT = new Set([DisconnectReason.loggedOut, DisconnectReason.forbidden]);
-const BAD_SESSION = new Set([DisconnectReason.badSession, DisconnectReason.restartRequired]);
+// restartRequired (515) is a NORMAL Baileys restart after pairing/key update — NOT a bad session
+const BAD_SESSION = new Set([DisconnectReason.badSession]);
 
 class WAService extends EventEmitter {
   constructor() {
@@ -33,11 +34,14 @@ class WAService extends EventEmitter {
     let authState;
 
     if (!existing) {
-      const dir = path.join(os.tmpdir(), `wa_${accountId}`);
-      fs.mkdirSync(dir, { recursive: true });
+      // Reuse existing temp dir if present (e.g. reconnect after pairing, creds not yet in Redis)
+      const existingTemp = this.tempDirs.get(accountId);
+      const dir = existingTemp || path.join(os.tmpdir(), `wa_${accountId}`);
+      if (!existingTemp) fs.mkdirSync(dir, { recursive: true });
       this.tempDirs.set(accountId, dir);
       authState = await useMultiFileAuthState(dir);
-      console.log(`[WA] ${accountId}: nova conta — usando /tmp para emparelhamento`);
+      const hasCreds = fs.existsSync(path.join(dir, 'creds.json'));
+      console.log(`[WA] ${accountId}: ${hasCreds ? 'reconectando de /tmp (credenciais salvas)' : 'nova conta — aguardando emparelhamento'}`);
     } else {
       authState = await useRedisAuthState(accountId);
     }
@@ -79,28 +83,39 @@ class WAService extends EventEmitter {
       if (connection === 'close') {
         const code = lastDisconnect?.error?.output?.statusCode;
         this.sockets.delete(accountId);
-        const dir = this.tempDirs.get(accountId);
-        if (dir) { this.tempDirs.delete(accountId); fs.rmSync(dir, { recursive: true, force: true }); }
         this.emit('disconnected', { accountId, code });
 
         if (PERMANENT.has(code)) {
           console.log(`[WA] ${accountId}: permanente (${code}) — removendo sessão`);
           await deleteSession(accountId).catch(() => {});
+          const dir = this.tempDirs.get(accountId);
+          if (dir) { this.tempDirs.delete(accountId); fs.rmSync(dir, { recursive: true, force: true }); }
           return;
         }
+
         if (BAD_SESSION.has(code)) {
+          console.log(`[WA] ${accountId}: sessão corrompida (${code}) — limpando`);
           await deleteSession(accountId).catch(() => {});
+          const dir = this.tempDirs.get(accountId);
+          if (dir) { this.tempDirs.delete(accountId); fs.rmSync(dir, { recursive: true, force: true }); }
           this.attempts.delete(accountId);
         }
 
-        const saved = await hasSession(accountId).catch(() => false);
-        if (!saved) { console.log(`[WA] ${accountId}: sem sessão — aguardando emparelhamento`); return; }
+        // Check for valid credentials: temp dir (not yet migrated) OR Redis
+        const tempDir = this.tempDirs.get(accountId);
+        const hasTempCreds = tempDir && fs.existsSync(path.join(tempDir, 'creds.json'));
+        const saved = hasTempCreds || await hasSession(accountId).catch(() => false);
+
+        if (!saved) {
+          console.log(`[WA] ${accountId}: sem sessão (código ${code}) — aguardando emparelhamento`);
+          return;
+        }
 
         const n = this.attempts.get(accountId) || 0;
         if (n >= MAX_RECONNECT) { console.error(`[WA] ${accountId}: desistindo após ${MAX_RECONNECT} tentativas`); return; }
         const delay = RECONNECT_DELAYS[Math.min(n, RECONNECT_DELAYS.length - 1)];
         this.attempts.set(accountId, n + 1);
-        console.log(`[WA] ${accountId}: reconectando em ${delay / 1000}s (${n + 1}/${MAX_RECONNECT})`);
+        console.log(`[WA] ${accountId}: reconectando em ${delay / 1000}s [código ${code}] (${n + 1}/${MAX_RECONNECT})`);
         setTimeout(() => this.connect(accountId), delay);
       }
     });
