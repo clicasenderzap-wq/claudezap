@@ -43,8 +43,8 @@ async function gw(method, path, body, timeoutMs = 35_000) {
 class WhatsAppService extends EventEmitter {
   constructor() {
     super();
-    // In-memory QR cache so getQR() can resolve synchronously on retry
     this._pendingQR = new Map();
+    this._connected = new Set();
   }
 
   // Called by the /api/webhooks/wa route — converts gateway webhook to local events
@@ -57,10 +57,12 @@ class WhatsAppService extends EventEmitter {
         break;
       case 'ready':
         this._pendingQR.delete(accountId);
+        this._connected.add(accountId);
         this.emit('ready', { accountId, phone: payload.phone });
         break;
       case 'disconnected':
         this._pendingQR.delete(accountId);
+        this._connected.delete(accountId);
         this.emit('disconnected', { accountId, code: payload.code });
         break;
       case 'message':
@@ -103,10 +105,7 @@ class WhatsAppService extends EventEmitter {
   }
 
   getStatus(accountId) {
-    // Synchronous status unknown without calling gateway — return based on events received
-    // The controller polls accounts with DB status; this just checks if we saw 'ready' recently
-    // For a simple answer, we do a best-effort async call but return 'connecting' as default
-    return 'connecting'; // real status comes from DB via whatsappAccountController events
+    return this._connected.has(accountId) ? 'connected' : 'connecting';
   }
 
   getPendingQR(accountId) {

@@ -13,14 +13,16 @@ const worker = new Worker(
 
     // accountId from job takes priority; fall back to first connected account for the user
     let senderId = accountId;
-    if (!senderId || whatsapp.getStatus(senderId) !== 'connected') {
+    const isConnected = (id) => whatsapp.getStatus(id) === 'connected';
+    if (!senderId || !isConnected(senderId)) {
       const { WhatsappAccount } = require('../models');
+      // check in-memory first, then fall back to DB status
       const accounts = await WhatsappAccount.findAll({ where: { user_id: userId } });
-      const connected = accounts.find((a) => whatsapp.getStatus(a.id) === 'connected');
+      const connected = accounts.find((a) => isConnected(a.id)) || accounts.find((a) => a.status === 'connected');
       if (connected) senderId = connected.id;
     }
 
-    if (!senderId || whatsapp.getStatus(senderId) !== 'connected') {
+    if (!senderId) {
       await message.update({ status: 'failed', error_message: 'Nenhuma conta WhatsApp conectada' });
       throw new Error('Nenhuma conta WhatsApp conectada');
     }

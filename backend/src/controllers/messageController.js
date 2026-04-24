@@ -89,7 +89,9 @@ async function sendCampaign(req, res) {
     } else {
       selectedAccounts = await WhatsappAccount.findAll({ where: { user_id: req.user.id } });
     }
-    const connectedAccounts = selectedAccounts.filter((a) => whatsapp.getStatus(a.id) === 'connected');
+    const connectedAccounts = selectedAccounts.filter(
+      (a) => whatsapp.getStatus(a.id) === 'connected' || a.status === 'connected'
+    );
     if (!connectedAccounts.length) return res.status(400).json({ error: 'Nenhuma conta WhatsApp conectada selecionada' });
 
     const startOffset = scheduled_for ? Math.max(0, new Date(scheduled_for).getTime() - Date.now()) : 0;
