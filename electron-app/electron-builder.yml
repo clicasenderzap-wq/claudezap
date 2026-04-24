@@ -1,0 +1,39 @@
+appId: br.com.clicaai.claudezap
+productName: ClaudeZap
+copyright: Copyright © 2026 ClicaAI
+
+publish:
+  provider: github
+  owner: clicasenderzap-wq
+  repo: claudezap
+  releaseType: release
+
+directories:
+  output: dist
+  buildResources: assets
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: assets/icon.ico
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  runAfterFinish: true
+  installerHeaderIcon: assets/icon.ico
+
+files:
+  - src/**/*
+  - assets/**/*
+  - "!node_modules/puppeteer/.local-chromium/linux*"
+  - "!node_modules/puppeteer/.local-chromium/mac*"
+  - "!**/*.map"
+
+asarUnpack:
+  - "node_modules/puppeteer/.local-chromium/**/*"
+  - "node_modules/@puppeteer/**/*"

@@ -1,0 +1,264 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: #0f0f0f;
+  color: #e8e8e8;
+  height: 100vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  padding: 24px 28px;
+}
+
+/* ── Login ─────────────────────────────────────────────────── */
+
+.logo {
+  text-align: center;
+  margin-bottom: 32px;
+  margin-top: 32px;
+}
+.logo img { width: 64px; height: 64px; margin-bottom: 12px; }
+.logo h1 { font-size: 28px; font-weight: 700; color: #25D366; }
+.tagline { font-size: 13px; color: #888; margin-top: 6px; }
+
+form { display: flex; flex-direction: column; gap: 16px; }
+
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field label { font-size: 13px; color: #aaa; font-weight: 500; }
+
+input {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 12px 14px;
+  color: #e8e8e8;
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+input:focus { border-color: #25D366; }
+
+button[type="submit"], #btn-login, #btn-relogin {
+  background: #25D366;
+  color: #000;
+  font-weight: 700;
+  font-size: 15px;
+  border: none;
+  border-radius: 8px;
+  padding: 14px;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background 0.2s;
+}
+button[type="submit"]:hover, #btn-login:hover, #btn-relogin:hover { background: #1ebe55; }
+button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.error-msg {
+  background: #2a1515;
+  border: 1px solid #8b2222;
+  color: #ff6b6b;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+.help-text {
+  text-align: center;
+  font-size: 12px;
+  color: #666;
+  margin-top: 20px;
+}
+.help-text strong { color: #888; }
+
+/* ── Main screen ────────────────────────────────────────────── */
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #222;
+}
+
+.header-left { display: flex; align-items: center; gap: 10px; }
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+.dot-connected { background: #25D366; box-shadow: 0 0 6px #25D36688; }
+.dot-connecting { background: #f0a500; animation: pulse 1.5s infinite; }
+.dot-disconnected { background: #555; }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+#status-label { font-size: 13px; color: #aaa; }
+
+.btn-link {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 13px;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+.btn-link:hover { background: #222; color: #aaa; }
+
+.update-banner {
+  background: #1a2a1a;
+  border: 1px solid #25D36655;
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+  font-size: 13px;
+  color: #25D366;
+}
+#btn-install-update {
+  background: #25D366;
+  color: #000;
+  font-weight: 700;
+  font-size: 12px;
+  border: none;
+  border-radius: 6px;
+  padding: 6px 14px;
+  cursor: pointer;
+}
+
+.section-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-bottom: 10px;
+}
+
+.accounts-list {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.account-card {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  transition: border-color 0.2s;
+}
+.account-card:hover { border-color: #333; }
+
+.account-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #25D36622;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.account-info { flex: 1; min-width: 0; }
+.account-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: #e8e8e8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.account-phone { font-size: 12px; color: #666; margin-top: 2px; }
+.account-status { font-size: 11px; margin-top: 3px; }
+.status-connected { color: #25D366; }
+.status-connecting { color: #f0a500; }
+.status-disconnected { color: #555; }
+
+.account-action {
+  background: none;
+  border: 1px solid #333;
+  color: #aaa;
+  font-size: 12px;
+  border-radius: 6px;
+  padding: 6px 12px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+.account-action:hover { border-color: #25D366; color: #25D366; }
+.account-action.qr-btn { border-color: #f0a500; color: #f0a500; }
+.account-action.qr-btn:hover { background: #f0a50022; }
+
+.empty-state { color: #555; font-size: 14px; text-align: center; padding: 32px 0; }
+
+/* ── QR Modal ───────────────────────────────────────────────── */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.85);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modal {
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 24px;
+  text-align: center;
+  max-width: 340px;
+  width: 90%;
+}
+.modal h3 { font-size: 16px; margin-bottom: 8px; }
+.modal p { font-size: 12px; color: #888; margin-bottom: 16px; line-height: 1.5; }
+#qr-container canvas, #qr-container img { border-radius: 8px; max-width: 200px; }
+#btn-close-qr {
+  margin-top: 16px;
+  background: #2a2a2a;
+  border: 1px solid #333;
+  color: #aaa;
+  padding: 8px 24px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+}
+#btn-close-qr:hover { border-color: #555; }
+
+/* ── Footer ─────────────────────────────────────────────────── */
+
+.footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 14px;
+  border-top: 1px solid #222;
+  margin-top: 16px;
+}
+#user-name { font-size: 12px; color: #555; }
+#link-platform { font-size: 12px; color: #25D366; text-decoration: none; }
+#link-platform:hover { text-decoration: underline; }

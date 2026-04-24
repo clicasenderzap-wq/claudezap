@@ -1,12 +1,16 @@
 /**
- * WhatsApp service — HTTP client to the wa-gateway (Fly.io).
- * Emits the same events as the old Baileys-direct version so that
- * whatsappAccountController and the rest of the codebase are unchanged.
+ * WhatsApp service — routes commands to either:
+ *   1. The Electron desktop app (preferred, via WebSocket)
+ *   2. The wa-gateway on Fly.io (fallback)
+ *
+ * Both paths emit the same events so that the rest of the codebase is unchanged.
  */
 const { EventEmitter } = require('events');
 
 const GW_URL = (process.env.WA_GATEWAY_URL || '').replace(/\/$/, '');
 const GW_SECRET = process.env.GATEWAY_SECRET || '';
+
+// ── Fly.io gateway HTTP helper ────────────────────────────────────────────────
 
 function gwHeaders() {
   return {
@@ -40,14 +44,16 @@ async function gw(method, path, body, timeoutMs = 35_000) {
   }
 }
 
+// ── Main service ──────────────────────────────────────────────────────────────
+
 class WhatsAppService extends EventEmitter {
   constructor() {
     super();
     this._pendingQR = new Map();
-    this._connected = new Set();
+    this._connected = new Set();  // tracks connected accountIds (both desktop and gateway)
   }
 
-  // Called by the /api/webhooks/wa route — converts gateway webhook to local events
+  // Called by webhooks route (Fly.io gateway events)
   handleWebhook(payload) {
     const { type, accountId } = payload;
     switch (type) {
@@ -73,13 +79,47 @@ class WhatsAppService extends EventEmitter {
           isSync: payload.isSync,
         });
         break;
-      case 'message.update':
-        this.emit('message.update', { accountId, updates: payload.updates });
-        break;
     }
   }
 
+  // Called by desktopService events (Electron app events)
+  _bindDesktopEvents() {
+    const desktop = require('./desktopService');
+    desktop.on('qr', ({ accountId, qr }) => {
+      this._pendingQR.set(accountId, qr);
+      this.emit('qr', { accountId, qr });
+    });
+    desktop.on('ready', ({ accountId, phone }) => {
+      this._pendingQR.delete(accountId);
+      this._connected.add(accountId);
+      this.emit('ready', { accountId, phone });
+    });
+    desktop.on('disconnected', ({ accountId, code }) => {
+      this._pendingQR.delete(accountId);
+      this._connected.delete(accountId);
+      this.emit('disconnected', { accountId, code });
+    });
+    desktop.on('message.received', (data) => {
+      this.emit('message.received', data);
+    });
+  }
+
+  _desktop() {
+    return require('./desktopService');
+  }
+
+  // ── Public API ─────────────────────────────────────────────────────────────
+
   async connect(accountId) {
+    if (this._desktop().isAccountConnected(accountId)) {
+      return; // already managed by desktop app
+    }
+    // Try desktop (will throw if no desktop connected for this account's user)
+    try {
+      await this._desktop().connect(accountId);
+      return;
+    } catch {}
+    // Fall back to Fly.io gateway
     await gw('POST', `/sessions/${accountId}/connect`);
   }
 
@@ -89,11 +129,17 @@ class WhatsAppService extends EventEmitter {
   }
 
   async sendText(accountId, phone, text) {
+    if (this._desktop().isAccountConnected(accountId)) {
+      return this._desktop().sendText(accountId, phone, text);
+    }
     const data = await gw('POST', `/sessions/${accountId}/send/text`, { phone, text });
     return data.id;
   }
 
   async sendMedia(accountId, phone, mediaUrl, mediaType, fileName, caption = '') {
+    if (this._desktop().isAccountConnected(accountId)) {
+      return this._desktop().sendMedia(accountId, phone, mediaUrl, mediaType, fileName, caption);
+    }
     const data = await gw('POST', `/sessions/${accountId}/send/media`, {
       phone, mediaUrl, mediaType, fileName, caption,
     });
@@ -101,10 +147,14 @@ class WhatsAppService extends EventEmitter {
   }
 
   async disconnect(accountId) {
+    if (this._desktop().isAccountConnected(accountId)) {
+      return this._desktop().disconnect(accountId);
+    }
     await gw('DELETE', `/sessions/${accountId}`).catch(() => {});
   }
 
   getStatus(accountId) {
+    if (this._desktop().isAccountConnected(accountId)) return 'connected';
     return this._connected.has(accountId) ? 'connected' : 'connecting';
   }
 
@@ -113,8 +163,12 @@ class WhatsAppService extends EventEmitter {
   }
 
   getConnectionSummary() {
-    return { connected: 0, connecting: 0, disconnected: 0 };
+    return { connected: this._connected.size, connecting: 0, disconnected: 0 };
   }
 }
 
-module.exports = new WhatsAppService();
+const instance = new WhatsAppService();
+// Bind desktop events after module is fully loaded (avoids circular dep at require-time)
+setImmediate(() => instance._bindDesktopEvents());
+
+module.exports = instance;

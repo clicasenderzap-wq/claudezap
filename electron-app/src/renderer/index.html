@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ClaudeZap</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+
+  <!-- LOGIN SCREEN -->
+  <div id="screen-login" class="screen">
+    <div class="logo">
+      <img src="../assets/logo.png" alt="ClaudeZap" onerror="this.style.display='none'" />
+      <h1>ClaudeZap</h1>
+      <p class="tagline">Agente WhatsApp Desktop</p>
+    </div>
+    <form id="form-login">
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="input-email" placeholder="seu@email.com" required autocomplete="email" />
+      </div>
+      <div class="field">
+        <label>Senha</label>
+        <input type="password" id="input-password" placeholder="••••••••" required />
+      </div>
+      <div id="login-error" class="error-msg" style="display:none"></div>
+      <button type="submit" id="btn-login">Entrar</button>
+    </form>
+    <p class="help-text">Acesse <strong>clicaai.ia.br</strong> para criar sua conta.</p>
+  </div>
+
+  <!-- MAIN SCREEN -->
+  <div id="screen-main" class="screen" style="display:none">
+    <div class="header">
+      <div class="header-left">
+        <span id="status-dot" class="dot dot-disconnected"></span>
+        <span id="status-label">Conectando ao servidor...</span>
+      </div>
+      <button id="btn-logout" class="btn-link">Sair</button>
+    </div>
+
+    <div id="update-banner" style="display:none" class="update-banner">
+      <span id="update-text">Nova versão disponível!</span>
+      <button id="btn-install-update">Instalar</button>
+    </div>
+
+    <div class="section-title">Contas WhatsApp</div>
+    <div id="accounts-list" class="accounts-list">
+      <div class="empty-state">Carregando contas...</div>
+    </div>
+
+    <!-- QR Modal -->
+    <div id="qr-modal" style="display:none" class="modal-overlay">
+      <div class="modal">
+        <h3>Escaneie o QR Code</h3>
+        <p>Abra o WhatsApp no celular → Dispositivos vinculados → Vincular dispositivo</p>
+        <div id="qr-container"></div>
+        <button id="btn-close-qr">Fechar</button>
+      </div>
+    </div>
+
+    <div class="footer">
+      <span id="user-name"></span>
+      <a href="https://clicaai.ia.br" id="link-platform">Abrir plataforma</a>
+    </div>
+  </div>
+
+  <!-- KICKED SCREEN -->
+  <div id="screen-kicked" class="screen" style="display:none">
+    <div class="logo">
+      <h1>Sessão Encerrada</h1>
+      <p id="kicked-reason" class="tagline"></p>
+    </div>
+    <button id="btn-relogin">Fazer login novamente</button>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

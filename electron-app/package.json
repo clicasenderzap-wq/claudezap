@@ -1,0 +1,22 @@
+{
+  "name": "claudezap-desktop",
+  "version": "1.0.0",
+  "description": "ClaudeZap — Agente WhatsApp Desktop",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win --x64",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "dependencies": {
+    "electron-store": "^8.1.0",
+    "electron-updater": "^6.1.8",
+    "qrcode": "^1.5.3",
+    "whatsapp-web.js": "^1.23.0",
+    "ws": "^8.16.0"
+  },
+  "devDependencies": {
+    "electron": "^29.4.6",
+    "electron-builder": "^24.13.3"
+  }
+}

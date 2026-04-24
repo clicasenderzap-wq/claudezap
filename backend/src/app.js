@@ -68,6 +68,10 @@ const server = app.listen(PORT, () => {
   console.log(`[Server] rodando na porta ${PORT}`);
 });
 
+// Attach desktop WebSocket server (Electron app connections)
+const { setupDesktopWS } = require('./routes/desktop');
+setupDesktopWS(server);
+
 // Conecta ao banco e inicia o worker em background
 (async () => {
   try {
