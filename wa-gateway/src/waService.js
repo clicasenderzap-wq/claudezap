@@ -13,6 +13,7 @@ const CHROME_ARGS = [
   '--disable-extensions',
   '--disable-background-networking',
   '--mute-audio',
+  '--disable-blink-features=AutomationControlled',
 ];
 
 function findChrome() {
@@ -48,8 +49,9 @@ class WAService extends EventEmitter {
       authTimeoutMs: 0,
       puppeteer: {
         executablePath: CHROME_BIN,
-        headless: true,
+        headless: 'new',
         args: CHROME_ARGS,
+        ignoreDefaultArgs: ['--enable-automation'],
       },
     });
 
