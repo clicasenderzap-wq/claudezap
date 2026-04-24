@@ -32,6 +32,7 @@ nsis:
   createStartMenuShortcut: true
   runAfterFinish: true
   installerHeaderIcon: assets/icon.ico
+  include: assets/installer.nsh
 
 files:
   - src/**/*
