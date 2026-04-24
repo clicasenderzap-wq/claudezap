@@ -45,6 +45,7 @@ class WAService extends EventEmitter {
 
     const client = new Client({
       authStrategy: new LocalAuth({ clientId: accountId }),
+      authTimeoutMs: 0,
       puppeteer: {
         executablePath: CHROME_BIN,
         headless: true,
@@ -57,6 +58,10 @@ class WAService extends EventEmitter {
     client.on('qr', (qr) => {
       console.log(`[WA] ${accountId}: QR gerado`);
       this.emit('qr', { accountId, qr });
+    });
+
+    client.on('authenticated', () => {
+      console.log(`[WA] ${accountId}: QR escaneado — sincronizando...`);
     });
 
     client.on('ready', () => {
