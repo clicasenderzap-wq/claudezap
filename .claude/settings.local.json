@@ -15,7 +15,25 @@
       "Bash('/c/Program Files/nodejs/node.exe' -e ' *)",
       "Bash(git add *)",
       "Bash(git commit -m ' *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(git commit -m 'fix: wrap useSearchParams in Suspense on verify-email page for Next.js static build *)",
+      "Bash(git commit -m 'fix: email verification auto-activates trial + improve email error logging *)",
+      "Bash(git commit -m 'fix: resend verification email if user re-registers with unverified email *)",
+      "Bash(git commit -m 'feat: resend verification email endpoint + login page unverified state *)",
+      "Bash(git commit -m 'feat: fix opt-out + inbox page for incoming messages *)",
+      "Bash(git commit -m 'feat: replace email contacts with WhatsApp + update footer with CNPJ *)",
+      "Bash(node -e \"require\\('@aws-sdk/client-s3'\\); console.log\\('ok'\\)\")",
+      "Bash(xargs grep *)",
+      "Bash(node -e \"const b = require\\('@whiskeysockets/baileys'\\); console.log\\('proto:', typeof b.proto\\); console.log\\('BufferJSON:', typeof b.BufferJSON\\); console.log\\('initAuthCreds:', typeof b.initAuthCreds\\);\")",
+      "Bash(npm show *)",
+      "Bash(git commit -m 'fix: add root GET / route to avoid 404 on uptime monitors *)",
+      "Bash(git commit -m 'fix: clear stale QR on disconnect + fix once\\(\\) race condition in getQR *)",
+      "Bash(git commit -m 'feat: admin panel — force-disconnect WhatsApp accounts *)",
+      "Bash(git commit -m 'fix+feat: admin WA management — fix disconnect race condition + inline accounts per user *)",
+      "Bash(git commit -m 'feat: code-based WhatsApp pairing — bypasses cloud IP QR block *)",
+      "Bash(git commit -m 'feat: local pairing script — pair WhatsApp from residential IP, save session to Redis *)",
+      "Bash(git commit -m 'fix: use /tmp filesystem for initial WA pairing, migrate to Redis on connect *)",
+      "Bash(git commit -m 'feat: split WA service to Fly.io gateway — fixes Render/AWS IP block *)"
     ]
   }
 }

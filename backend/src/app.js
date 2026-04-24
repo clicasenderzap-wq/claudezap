@@ -83,7 +83,7 @@ const server = app.listen(PORT, () => {
     require('./services/warmupService').start();
     console.log('[Warmup] iniciado');
 
-    // Reconecta apenas contas que têm sessão salva no Redis (sem sessão = aguarda QR manual)
+    // Reconecta contas com sessão salva via gateway
     const whatsapp = require('./services/whatsappService');
     const { hasSession } = require('./services/waSessionStore');
     const { WhatsappAccount } = require('./models');
@@ -93,12 +93,12 @@ const server = app.listen(PORT, () => {
       const sessionExists = await hasSession(account.id).catch(() => false);
       if (sessionExists) {
         setTimeout(() => {
-          console.log(`[WA] Reconectando: ${account.label}`);
+          console.log(`[WA] Reconectando via gateway: ${account.label}`);
           whatsapp.connect(account.id).catch((e) => console.error(`[WA] Falha ao reconectar ${account.id}:`, e.message));
         }, delay);
         delay += 3000;
       } else {
-        console.log(`[WA] ${account.label}: sem sessão — aguardando QR scan`);
+        console.log(`[WA] ${account.label}: sem sessão — aguardando emparelhamento`);
         await WhatsappAccount.update({ status: 'disconnected' }, { where: { id: account.id } }).catch(() => {});
       }
     }

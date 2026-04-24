@@ -129,7 +129,7 @@ async function listWhatsappAccounts(req, res) {
   });
   const data = accounts.map((a) => ({
     ...a.toJSON(),
-    live_status: whatsapp.getStatus(a.id),
+    live_status: a.status,
   }));
   res.json(data);
 }

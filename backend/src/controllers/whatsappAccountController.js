@@ -68,13 +68,7 @@ async function list(req, res) {
     where: { user_id: req.user.id },
     order: [['created_at', 'ASC']],
   });
-  // Sincroniza status em memória
-  const data = accounts.map((a) => ({
-    ...a.toJSON(),
-    status: whatsapp.getStatus(a.id) === 'connected' ? 'connected'
-          : whatsapp.getStatus(a.id) === 'connecting' ? 'connecting'
-          : 'disconnected',
-  }));
+  const data = accounts.map((a) => a.toJSON());
   res.json(data);
 }
 
@@ -107,15 +101,14 @@ async function getQR(req, res) {
   const account = await WhatsappAccount.findOne({ where: { id: req.params.id, user_id: req.user.id } });
   if (!account) return res.status(404).json({ error: 'Conta não encontrada' });
 
-  if (whatsapp.getStatus(account.id) === 'connected') {
-    return res.json({ status: 'connected' });
-  }
+  if (account.status === 'connected') return res.json({ status: 'connected' });
 
   await whatsapp.connect(account.id);
   await account.update({ status: 'connecting' });
 
   const qr = await new Promise((resolve) => {
-    if (pendingQR.has(account.id)) return resolve(pendingQR.get(account.id));
+    const cached = whatsapp.getPendingQR(account.id);
+    if (cached) return resolve(cached);
     const onQR = ({ accountId: aid, qr: q }) => {
       if (aid !== account.id) return;
       whatsapp.off('qr', onQR);
@@ -139,9 +132,7 @@ async function requestPairingCode(req, res) {
   const account = await WhatsappAccount.findOne({ where: { id: req.params.id, user_id: req.user.id } });
   if (!account) return res.status(404).json({ error: 'Conta não encontrada' });
 
-  if (whatsapp.getStatus(account.id) === 'connected') {
-    return res.json({ status: 'connected' });
-  }
+  if (account.status === 'connected') return res.json({ status: 'connected' });
 
   await account.update({ status: 'connecting' });
   const code = await whatsapp.requestPairingCode(account.id, phone);
