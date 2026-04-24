@@ -44,7 +44,7 @@ function requireAdmin(req, res, next) {
 }
 
 function requireProBot(req, res, next) {
-  if (req.user.plan !== 'pro') {
+  if (!['pro', 'pro_cortesia'].includes(req.user.plan)) {
     return res.status(403).json({ error: 'O Bot de Atendimento com IA é exclusivo do plano Pro. Faça upgrade para acessar.' });
   }
   next();
