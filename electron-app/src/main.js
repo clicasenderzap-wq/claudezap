@@ -43,7 +43,7 @@ function createWindow() {
     width: 480,
     height: 640,
     resizable: false,
-    title: 'ClaudeZap',
+    title: 'Clica Aí',
     icon: path.join(__dirname, '..', 'assets', 'icon.png'),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -72,7 +72,7 @@ function createTray() {
   const iconPath = path.join(__dirname, '..', 'assets', 'tray.png');
   const icon = nativeImage.createFromPath(iconPath);
   tray = new Tray(icon.isEmpty() ? nativeImage.createEmpty() : icon);
-  tray.setToolTip('ClaudeZap');
+  tray.setToolTip('Clica Aí');
   updateTrayMenu();
 
   tray.on('double-click', () => {
@@ -83,7 +83,7 @@ function createTray() {
 function updateTrayMenu() {
   const connected = accounts.filter((a) => a.status === 'connected').length;
   const menu = Menu.buildFromTemplate([
-    { label: `ClaudeZap`, enabled: false },
+    { label: `Clica Aí`, enabled: false },
     { label: `${connected}/${accounts.length} conta(s) conectada(s)`, enabled: false },
     { type: 'separator' },
     { label: 'Abrir', click: () => mainWindow?.show() },
@@ -111,7 +111,7 @@ function setupUpdater() {
     dialog.showMessageBox(mainWindow, {
       type: 'info',
       title: 'Atualização disponível',
-      message: 'Uma nova versão do ClaudeZap foi baixada.',
+      message: 'Uma nova versão do Clica Aí foi baixada.',
       detail: 'Deseja instalar agora? O app será reiniciado.',
       buttons: ['Instalar agora', 'Mais tarde'],
       defaultId: 0,
