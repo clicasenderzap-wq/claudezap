@@ -77,31 +77,57 @@ async function callAI(config, messages) {
   return response.choices[0].message.content;
 }
 
+// Normalize phone to local digits (strip country code 55 for BR numbers)
+function normalizePhone(p) {
+  const digits = String(p).replace(/\D/g, '');
+  return digits.startsWith('55') && digits.length >= 12 ? digits.slice(2) : digits;
+}
+
 async function handleMessage(accountId, fromPhone, text) {
-  // Load account and verify user is on Pro plan
   const account = await WhatsappAccount.findByPk(accountId);
-  if (!account) return;
+  if (!account) { console.log(`[Bot] conta ${accountId} não encontrada`); return; }
 
   const user = await User.findByPk(account.user_id);
-  if (!user || !['pro', 'pro_cortesia'].includes(user.plan)) return;
+  if (!user || !['pro', 'pro_cortesia'].includes(user.plan)) {
+    console.log(`[Bot] user ${account.user_id} plano inelegível: ${user?.plan}`);
+    return;
+  }
 
   // Prevent bot loop: skip if sender is one of the user's own WhatsApp accounts
   const ownAccounts = await WhatsappAccount.findAll({ where: { user_id: account.user_id }, attributes: ['phone'] });
-  const ownPhones = ownAccounts.map((a) => String(a.phone || '').replace(/\D/g, '')).filter(Boolean);
-  const senderDigits = String(fromPhone).replace(/\D/g, '');
-  if (ownPhones.some((p) => p === senderDigits || p.endsWith(senderDigits) || senderDigits.endsWith(p))) return;
+  const ownPhones = ownAccounts.map((a) => normalizePhone(a.phone)).filter(Boolean);
+  const senderNorm = normalizePhone(fromPhone);
+  if (ownPhones.some((p) => p === senderNorm)) {
+    console.log(`[Bot] ignorando mensagem de conta própria: ${fromPhone}`);
+    return;
+  }
 
   const config = await BotConfig.findOne({ where: { account_id: accountId, enabled: true } });
-  if (!config) return;
+  if (!config) { console.log(`[Bot] nenhum bot ativo para conta ${accountId}`); return; }
 
   // Horário comercial
   if (config.business_hours_only) {
     const hour = new Date().getHours();
-    if (hour < config.start_hour || hour >= config.end_hour) return;
+    if (hour < config.start_hour || hour >= config.end_hour) {
+      console.log(`[Bot] fora do horário comercial (${hour}h, janela ${config.start_hour}-${config.end_hour})`);
+      return;
+    }
   }
 
   // Busca ou cria conversa
   let conv = await BotConversation.findOne({ where: { account_id: accountId, contact_phone: fromPhone } });
+
+  // Auto-reset: se conversa escalada/fechada há mais de 24h, reinicia
+  if (conv && (conv.status === 'escalated' || conv.status === 'closed')) {
+    const idleMs = Date.now() - new Date(conv.last_message_at || conv.created_at).getTime();
+    if (idleMs > 24 * 60 * 60 * 1000) {
+      console.log(`[Bot] reiniciando conversa escalada após ${Math.round(idleMs / 3600000)}h de inatividade`);
+      await conv.update({ status: 'active', messages: [], last_message_at: null });
+    } else {
+      console.log(`[Bot] conversa em status ${conv.status} — aguardando 24h para reiniciar`);
+      return;
+    }
+  }
 
   if (!conv) {
     // Enforce 500 conversations/month limit
@@ -127,9 +153,6 @@ async function handleMessage(accountId, fromPhone, text) {
       conv.messages = msgs;
     }
   }
-
-  // Conversa já escalada ou fechada: ignora
-  if (conv.status === 'escalated' || conv.status === 'closed') return;
 
   // Adiciona mensagem do cliente ao histórico
   const history = [...(conv.messages || []), { role: 'user', content: text, ts: Date.now() }];
