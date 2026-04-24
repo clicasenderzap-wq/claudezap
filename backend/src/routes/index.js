@@ -24,6 +24,5 @@ router.use('/warmup', auth, requireActive, require('./warmup'));
 router.use('/bot', auth, requireActive, require('./bot'));
 router.use('/admin', auth, require('./admin'));
 router.use('/media', auth, requireActive, require('./media'));
-router.use('/webhooks', require('./webhooks'));
 
 module.exports = router;
