@@ -225,7 +225,7 @@ function BotAccountCard({ account }: { account: any }) {
 
 export default function BotsPage() {
   const { user } = useAuthStore();
-  const isPro = (user as any)?.plan === 'pro';
+  const isPro = ['pro', 'pro_cortesia', 'admin'].includes((user as any)?.plan);
 
   const { data: accounts, isLoading } = useQuery({
     queryKey: ['whatsapp-accounts'],
@@ -259,7 +259,7 @@ export default function BotsPage() {
           <p className="text-gray-500 max-w-md text-sm leading-relaxed">
             O Bot de Atendimento com IA usa GPT-4o-mini para responder clientes automaticamente. Os custos de IA estão incluídos no plano Pro — até <strong>500 conversas por mês</strong> sem precisar configurar nenhuma chave de API.
           </p>
-          <Link href="/#precos" className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm">
+          <Link href="/planos" className="inline-flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold px-6 py-3 rounded-xl transition-colors text-sm">
             Ver planos e fazer upgrade
           </Link>
         </div>

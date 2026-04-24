@@ -18,10 +18,16 @@ const NAV = [
   { href: '/inbox', label: 'Caixa de Entrada', icon: Inbox },
 ];
 
-const PLAN_LABELS: Record<string, string> = { starter: 'Starter', pro: 'Pro' };
+const PLAN_LABELS: Record<string, string> = {
+  starter: 'Starter', pro: 'Pro',
+  starter_cortesia: 'Cortesia', pro_cortesia: 'Pro Cortesia', admin: 'Admin',
+};
 const PLAN_COLORS: Record<string, string> = {
   starter: 'bg-gray-100 text-gray-600',
   pro: 'bg-brand-100 text-brand-700',
+  starter_cortesia: 'bg-teal-100 text-teal-700',
+  pro_cortesia: 'bg-violet-100 text-violet-700',
+  admin: 'bg-orange-100 text-orange-700',
 };
 
 export default function Sidebar() {
