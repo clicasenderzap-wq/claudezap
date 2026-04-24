@@ -4,9 +4,14 @@ const {
   fetchLatestBaileysVersion,
   makeCacheableSignalKeyStore,
   Browsers,
+  useMultiFileAuthState,
 } = require('@whiskeysockets/baileys');
 const { EventEmitter } = require('events');
+const fs = require('fs');
+const path = require('path');
+const os = require('os');
 const { useRedisAuthState, deleteSession, hasSession } = require('./waSessionStore');
+const { redis } = require('../config/redis');
 
 const noop = () => {};
 const silentLogger = {
@@ -29,21 +34,46 @@ const BAD_SESSION_CODES = new Set([
   DisconnectReason.restartRequired,
 ]);
 
+// Copies /tmp session files into Redis after successful pairing.
+// useMultiFileAuthState saves files named exactly like our Redis keys (same fixFileName logic).
+async function _migrateTempToRedis(tempDir, accountId) {
+  const NS = 'wa:session';
+  const files = fs.readdirSync(tempDir).filter((f) => f.endsWith('.json'));
+  await Promise.all(files.map(async (file) => {
+    const key = file.slice(0, -5); // strip .json
+    const content = fs.readFileSync(path.join(tempDir, file), 'utf8');
+    await redis.set(`${NS}:${accountId}:${key}`, content);
+  }));
+  fs.rmSync(tempDir, { recursive: true, force: true });
+  console.log(`[WA] ${accountId}: sessão migrada de /tmp para Redis (${files.length} chaves)`);
+}
+
 class WhatsAppService extends EventEmitter {
   constructor() {
     super();
     this.sockets = new Map();
     this.reconnectAttempts = new Map();
+    // tracks which accounts are still in temp-dir pairing mode
+    this._tempDirs = new Map();
   }
 
-  // Shared socket factory used by both connect() and requestPairingCode()
   async _createSocket(accountId) {
+    const hasExisting = await hasSession(accountId).catch(() => false);
+
     let authState;
-    try {
+
+    if (!hasExisting) {
+      // New account: use real filesystem in /tmp for the pairing handshake.
+      // Our Redis store has latency that can corrupt the Signal protocol
+      // key exchange during the brief pairing window.
+      // After a successful 'open', we migrate everything to Redis.
+      const tempDir = path.join(os.tmpdir(), `wa_pair_${accountId}`);
+      fs.mkdirSync(tempDir, { recursive: true });
+      this._tempDirs.set(accountId, tempDir);
+      authState = await useMultiFileAuthState(tempDir);
+      console.log(`[WA] ${accountId}: nova conta — usando /tmp para emparelhamento`);
+    } else {
       authState = await useRedisAuthState(accountId);
-    } catch (err) {
-      console.error(`[WA] ${accountId}: erro ao carregar sessão do Redis:`, err.message);
-      throw err;
     }
 
     const { state, saveCreds } = authState;
@@ -81,12 +111,30 @@ class WhatsAppService extends EventEmitter {
         this.reconnectAttempts.delete(accountId);
         const phone = sock.user?.id?.split(':')[0] ?? null;
         console.log(`[WA] ${accountId}: conectado — número ${phone}`);
+
+        // If we used /tmp, migrate the fresh session to Redis now
+        const tempDir = this._tempDirs.get(accountId);
+        if (tempDir) {
+          this._tempDirs.delete(accountId);
+          _migrateTempToRedis(tempDir, accountId).catch((e) =>
+            console.error(`[WA] ${accountId}: erro ao migrar sessão para Redis:`, e.message)
+          );
+        }
+
         this.emit('ready', { accountId, phone });
       }
 
       if (connection === 'close') {
         const code = lastDisconnect?.error?.output?.statusCode;
         this.sockets.delete(accountId);
+
+        // Clean up any leftover temp dir on failure
+        const tempDir = this._tempDirs.get(accountId);
+        if (tempDir) {
+          this._tempDirs.delete(accountId);
+          fs.rmSync(tempDir, { recursive: true, force: true });
+        }
+
         this.emit('disconnected', { accountId, code });
 
         if (PERMANENT_FAILURES.has(code)) {
@@ -144,7 +192,6 @@ class WhatsAppService extends EventEmitter {
     return sock;
   }
 
-  // Close socket without touching Redis session (for forced reset before re-pairing)
   _closeSocket(accountId) {
     const sock = this.sockets.get(accountId);
     if (sock) {
@@ -163,9 +210,6 @@ class WhatsAppService extends EventEmitter {
     }
   }
 
-  // Code-based pairing — works on cloud IPs where QR scan fails.
-  // Closes any existing socket, creates a fresh one, and immediately
-  // requests a pairing code before WhatsApp can generate a QR.
   async requestPairingCode(accountId, phone) {
     this._closeSocket(accountId);
     const digits = String(phone).replace(/\D/g, '');
@@ -176,7 +220,7 @@ class WhatsAppService extends EventEmitter {
 
     const code = await sock.requestPairingCode(digits);
     console.log(`[WA] ${accountId}: código de emparelhamento gerado para ${digits}`);
-    return code; // e.g. 'ABCD-1234'
+    return code;
   }
 
   async sendText(accountId, phone, text) {
