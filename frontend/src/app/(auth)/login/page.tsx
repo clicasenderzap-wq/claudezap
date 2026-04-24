@@ -1,15 +1,37 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { MailWarning, Send } from 'lucide-react';
 import api from '@/lib/api';
 import { useAuthStore } from '@/store/authStore';
+
+// Handles auto-login when opened from the desktop app with ?autotoken=JWT
+function AutoLoginHandler() {
+  const searchParams = useSearchParams();
+  const router = useRouter();
+  const setAuth = useAuthStore((s) => s.setAuth);
+
+  useEffect(() => {
+    const autotoken = searchParams.get('autotoken');
+    if (!autotoken) return;
+    api.get('/auth/me', { headers: { Authorization: `Bearer ${autotoken}` } })
+      .then((res) => {
+        setAuth(autotoken, res.data);
+        router.replace('/dashboard');
+      })
+      .catch(() => {
+        router.replace('/login');
+      });
+  }, []);
+
+  return null;
+}
 
 const schema = z.object({
   email: z.string().email('Email inválido'),
@@ -97,6 +119,9 @@ export default function LoginPage() {
 
   return (
     <div className="card w-full max-w-sm p-8">
+      <Suspense fallback={null}>
+        <AutoLoginHandler />
+      </Suspense>
       <div className="text-center mb-8">
         <h1 className="text-2xl font-bold text-brand-600">Clica Aí</h1>
         <p className="text-gray-500 text-sm mt-1">Entre na sua conta</p>
@@ -129,3 +154,4 @@ export default function LoginPage() {
     </div>
   );
 }
+

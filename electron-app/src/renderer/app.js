@@ -186,10 +186,13 @@ api.onUpdateReady(() => {
   // Mandatory dialog is shown by main.js — nothing to do here
 });
 
-// Open external links in default browser
-document.getElementById('link-platform').addEventListener('click', (e) => {
-  e.preventDefault();
-  window.open('https://clicaai.ia.br');
+// Platform buttons
+document.getElementById('btn-open-platform').addEventListener('click', () => {
+  api.openPlatform();
+});
+
+document.getElementById('btn-open-register').addEventListener('click', () => {
+  api.openRegister();
 });
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -203,5 +206,11 @@ document.getElementById('link-platform').addEventListener('click', (e) => {
     renderAccounts(accounts);
   } else {
     show('screen-login');
+    // Pre-fill saved credentials
+    const saved = await api.getSavedCredentials();
+    if (saved?.email) {
+      document.getElementById('input-email').value = saved.email;
+      if (saved.password) document.getElementById('input-password').value = saved.password;
+    }
   }
 })();

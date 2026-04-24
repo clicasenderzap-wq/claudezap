@@ -39,4 +39,20 @@ function getUserInfo() {
   return { email: store.get('userEmail'), name: store.get('userName') };
 }
 
-module.exports = { getDeviceId, getToken, setToken, clearToken, setUserInfo, getUserInfo };
+function setSavedCredentials(email, encryptedBase64) {
+  store.set('savedEmail', email);
+  store.set('savedPasswordEnc', encryptedBase64);
+}
+
+function getSavedEmail() { return store.get('savedEmail', null); }
+function getSavedPasswordEncrypted() { return store.get('savedPasswordEnc', null); }
+
+function clearSavedCredentials() {
+  store.delete('savedEmail');
+  store.delete('savedPasswordEnc');
+}
+
+module.exports = {
+  getDeviceId, getToken, setToken, clearToken, setUserInfo, getUserInfo,
+  setSavedCredentials, getSavedEmail, getSavedPasswordEncrypted, clearSavedCredentials,
+};
