@@ -11,6 +11,12 @@ app.use(express.json({ limit: '2mb' }));
 const SECRET = process.env.GATEWAY_SECRET;
 const WEBHOOK_URL = process.env.WEBHOOK_URL;
 
+// Startup validation
+if (!WEBHOOK_URL) console.warn('[Gateway] ATENÇÃO: WEBHOOK_URL não definida — eventos QR/ready/disconnected NÃO chegarão ao backend!');
+else console.log('[Gateway] WEBHOOK_URL:', WEBHOOK_URL);
+if (!SECRET) console.warn('[Gateway] ATENÇÃO: GATEWAY_SECRET não definido — gateway sem autenticação!');
+console.log('[Gateway] REDIS_URL:', process.env.REDIS_URL ? process.env.REDIS_URL.slice(0, 30) + '...' : 'NÃO DEFINIDA');
+
 // Auth middleware
 app.use((req, res, next) => {
   if (req.path === '/health') return next();

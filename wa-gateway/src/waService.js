@@ -136,12 +136,50 @@ class WAService extends EventEmitter {
 
   async requestPairingCode(accountId, phone) {
     const old = this.sockets.get(accountId);
-    if (old) { this.sockets.delete(accountId); try { old.ws?.close(); } catch {} }
+    this.sockets.delete(accountId);
+    this.attempts.set(accountId, MAX_RECONNECT); // prevent auto-reconnect of old socket
+    if (old) { try { old.ws?.close(); } catch {} }
+
     const digits = String(phone).replace(/\D/g, '');
     if (!digits) throw new Error('Número inválido');
+
+    // Clear stale /tmp dir so we always start fresh
+    const dir = path.join(os.tmpdir(), `wa_${accountId}`);
+    fs.rmSync(dir, { recursive: true, force: true });
+
     const sock = await this._makeSocket(accountId);
     this.sockets.set(accountId, sock);
-    return await sock.requestPairingCode(digits);
+
+    // requestPairingCode must be called AFTER WhatsApp sends the QR challenge,
+    // which signals the WebSocket is connected and WA is ready to accept pairing.
+    return await new Promise((resolve, reject) => {
+      const tid = setTimeout(() => {
+        sock.ev.off('connection.update', onUpdate);
+        reject(new Error('Timeout: WhatsApp não respondeu em 30 segundos — verifique se o Fly.io tem acesso à internet'));
+      }, 30_000);
+
+      async function onUpdate({ qr, connection, lastDisconnect }) {
+        if (qr) {
+          sock.ev.off('connection.update', onUpdate);
+          clearTimeout(tid);
+          try {
+            console.log(`[WA] ${accountId}: QR recebido, solicitando código de emparelhamento...`);
+            const code = await sock.requestPairingCode(digits);
+            console.log(`[WA] ${accountId}: código gerado: ${code}`);
+            resolve(code);
+          } catch (e) {
+            console.error(`[WA] ${accountId}: erro ao solicitar código:`, e.message);
+            reject(e);
+          }
+        } else if (connection === 'close') {
+          sock.ev.off('connection.update', onUpdate);
+          clearTimeout(tid);
+          reject(new Error(`Conexão fechada antes do QR: ${lastDisconnect?.error?.message || 'razão desconhecida'}`));
+        }
+      }
+
+      sock.ev.on('connection.update', onUpdate);
+    });
   }
 
   async sendText(accountId, phone, text) {
