@@ -17,48 +17,30 @@ const CHROME_ARGS = [
   '--disable-blink-features=AutomationControlled',
 ];
 
-function findChrome(userDataPath) {
-  const candidates = [
-    // Chromium bundled by Puppeteer inside asar.unpacked
-    process.resourcesPath
-      ? path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'puppeteer', '.local-chromium')
-      : null,
-    process.env.CHROME_BIN,
+function findChrome() {
+  const candidates = [];
+
+  // 1. Bundled via extraResources (production build)
+  if (process.resourcesPath) {
+    candidates.push(path.join(process.resourcesPath, 'chrome', 'chrome.exe'));
+  }
+
+  // 2. Puppeteer's managed cache (development / puppeteer default)
+  try {
+    const puppeteer = require('puppeteer');
+    const exe = puppeteer.executablePath();
+    if (exe) candidates.push(exe);
+  } catch {}
+
+  // 3. System Chrome (fallback)
+  candidates.push(
     'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
     'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
     path.join(process.env.LOCALAPPDATA || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
     '/usr/bin/chromium-browser',
     '/usr/bin/chromium',
     '/usr/bin/google-chrome',
-  ].filter(Boolean);
-
-  // Check puppeteer bundled chromium (look inside .local-chromium for win64)
-  if (process.resourcesPath) {
-    const baseDir = path.join(process.resourcesPath, 'app.asar.unpacked', 'node_modules', 'puppeteer', '.local-chromium');
-    if (fs.existsSync(baseDir)) {
-      const builds = fs.readdirSync(baseDir);
-      for (const build of builds) {
-        const exe = path.join(baseDir, build, 'chrome-win', 'chrome.exe');
-        if (fs.existsSync(exe)) {
-          console.log('[WA] Chromium bundled encontrado:', exe);
-          return exe;
-        }
-      }
-    }
-  }
-
-  // Also check development path (npm install downloaded it)
-  const devChromiumBase = path.join(__dirname, '..', 'node_modules', 'puppeteer', '.local-chromium');
-  if (fs.existsSync(devChromiumBase)) {
-    const builds = fs.readdirSync(devChromiumBase);
-    for (const build of builds) {
-      const exe = path.join(devChromiumBase, build, 'chrome-win', 'chrome.exe');
-      if (fs.existsSync(exe)) {
-        console.log('[WA] Chromium dev encontrado:', exe);
-        return exe;
-      }
-    }
-  }
+  );
 
   for (const p of candidates) {
     if (p && fs.existsSync(p)) {
@@ -66,7 +48,8 @@ function findChrome(userDataPath) {
       return p;
     }
   }
-  return null; // will use puppeteer default
+  console.warn('[WA] Chrome não encontrado — puppeteer usará padrão');
+  return null;
 }
 
 class WAManager extends EventEmitter {

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Tray icon: minimal — just the bolt on transparent background -->
+  <!-- High contrast for visibility on both light and dark taskbars -->
+  <defs>
+    <linearGradient id="trayBolt" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#4dff8a"/>
+      <stop offset="100%" stop-color="#25D366"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Dark pill background for visibility -->
+  <rect width="64" height="64" rx="14" fill="#0d1a0f" opacity="0.92"/>
+
+  <!-- Lightning bolt — simplified for small size -->
+  <path d="M 38 8
+           L 24 33
+           L 32 33
+           L 27 56
+           L 43 30
+           L 34 30
+           Z"
+        fill="url(#trayBolt)"/>
+</svg>

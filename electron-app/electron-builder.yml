@@ -12,6 +12,12 @@ directories:
   output: dist
   buildResources: assets
 
+extraResources:
+  - from: chrome-dist/
+    to: chrome
+    filter:
+      - "**/*"
+
 win:
   target:
     - target: nsis
@@ -30,10 +36,6 @@ nsis:
 files:
   - src/**/*
   - assets/**/*
-  - "!node_modules/puppeteer/.local-chromium/linux*"
-  - "!node_modules/puppeteer/.local-chromium/mac*"
   - "!**/*.map"
-
-asarUnpack:
-  - "node_modules/puppeteer/.local-chromium/**/*"
-  - "node_modules/@puppeteer/**/*"
+  - "!node_modules/puppeteer/.local-chromium/**"
+  - "!node_modules/.cache/**"

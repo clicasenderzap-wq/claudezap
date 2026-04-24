@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 200">
+  <!-- Login screen logo: icon + wordmark side by side -->
+  <defs>
+    <linearGradient id="bgL" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#141f17"/>
+      <stop offset="100%" stop-color="#0a0f0c"/>
+    </linearGradient>
+    <radialGradient id="circL" cx="38%" cy="35%" r="65%">
+      <stop offset="0%" stop-color="#34e874"/>
+      <stop offset="60%" stop-color="#25D366"/>
+      <stop offset="100%" stop-color="#1a9e50"/>
+    </radialGradient>
+    <linearGradient id="boltL" x1="0" y1="0" x2="0.3" y2="1">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#d0ffe0"/>
+    </linearGradient>
+    <radialGradient id="hlL" cx="35%" cy="28%" r="50%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0"/>
+    </radialGradient>
+    <filter id="glowL" x="-25%" y="-25%" width="150%" height="150%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="b"/>
+      <feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="shadowL" x="-20%" y="-10%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000" flood-opacity="0.5"/>
+    </filter>
+  </defs>
+
+  <!-- Icon portion (left side, 200x200) -->
+  <rect x="0" y="0" width="200" height="200" rx="40" fill="url(#bgL)"/>
+  <rect x="0" y="0" width="200" height="200" rx="40" fill="none"
+        stroke="#25D36620" stroke-width="1.5"/>
+  <circle cx="100" cy="97" r="70" fill="url(#circL)" filter="url(#shadowL)"/>
+  <circle cx="100" cy="97" r="70" fill="url(#hlL)"/>
+  <circle cx="100" cy="97" r="70" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.15"/>
+  <path d="M 118 28 L 76 102 L 101 102 L 86 169 L 133 92 L 107 92 Z"
+        fill="url(#boltL)" filter="url(#glowL)"/>
+
+  <!-- Wordmark (right side) -->
+  <text x="218" y="85" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        font-size="44" font-weight="800" fill="#ffffff" letter-spacing="-1">Claude</text>
+  <text x="218" y="138" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        font-size="44" font-weight="800" fill="#25D366" letter-spacing="-1">Zap</text>
+  <text x="220" y="165" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        font-size="15" font-weight="400" fill="#55aa77" letter-spacing="2">DESKTOP AGENT</text>
+</svg>
