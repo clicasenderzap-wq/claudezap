@@ -41,12 +41,12 @@ class WAService extends EventEmitter {
   async connect(accountId) {
     if (this.clients.has(accountId)) {
       const existing = this.clients.get(accountId);
-      // If already ready (has info), no need to reconnect
       if (existing.info) {
-        console.log(`[WA] ${accountId}: já conectado`);
+        console.log(`[WA] ${accountId}: já conectado — reemitindo ready`);
+        // Re-emit so the backend can resync its in-memory state after a restart
+        this.emit('ready', { accountId, phone: existing.info.wid?.user ?? null });
         return;
       }
-      // Still initializing — leave it running
       console.log(`[WA] ${accountId}: inicialização em andamento`);
       return;
     }
@@ -115,11 +115,30 @@ class WAService extends EventEmitter {
     }
   }
 
-  _handleSendError(accountId, e) {
-    if (e.message?.includes('getChat') || e.message?.includes('Execution context') || e.message?.includes('Target closed')) {
-      console.error(`[WA] ${accountId}: contexto perdido — reconectando`);
-      this.clients.delete(accountId);
-      this.emit('disconnected', { accountId, code: 'CONTEXT_LOST' });
+  _isContextError(e) {
+    return e.message?.includes('getChat') ||
+           e.message?.includes('Execution context') ||
+           e.message?.includes('Target closed') ||
+           e.message?.includes('Session closed');
+  }
+
+  async _trySend(accountId, fn) {
+    for (let attempt = 1; attempt <= 2; attempt++) {
+      try {
+        return await fn();
+      } catch (e) {
+        if (this._isContextError(e) && attempt === 1) {
+          console.warn(`[WA] ${accountId}: contexto perdido, aguardando 4s e tentando novamente...`);
+          await new Promise((r) => setTimeout(r, 4000));
+          continue;
+        }
+        if (this._isContextError(e)) {
+          console.error(`[WA] ${accountId}: contexto perdido após retry — desconectando`);
+          this.clients.delete(accountId);
+          this.emit('disconnected', { accountId, code: 'CONTEXT_LOST' });
+        }
+        throw e;
+      }
     }
   }
 
@@ -127,13 +146,7 @@ class WAService extends EventEmitter {
     const client = this.clients.get(accountId);
     if (!client) throw new Error('Não conectado');
     const chatId = `${String(phone).replace(/\D/g, '')}@c.us`;
-    try {
-      const msg = await client.sendMessage(chatId, text);
-      return msg.id._serialized;
-    } catch (e) {
-      this._handleSendError(accountId, e);
-      throw e;
-    }
+    return this._trySend(accountId, () => client.sendMessage(chatId, text).then((m) => m.id._serialized));
   }
 
   async sendMedia(accountId, phone, mediaUrl, mediaType, fileName, caption = '') {
@@ -141,15 +154,12 @@ class WAService extends EventEmitter {
     if (!client) throw new Error('Não conectado');
     const { MessageMedia } = require('whatsapp-web.js');
     const chatId = `${String(phone).replace(/\D/g, '')}@c.us`;
-    try {
+    return this._trySend(accountId, async () => {
       const media = await MessageMedia.fromUrl(mediaUrl, { unsafeMime: true });
       if (fileName) media.filename = fileName;
       const msg = await client.sendMessage(chatId, media, { caption });
       return msg.id._serialized;
-    } catch (e) {
-      this._handleSendError(accountId, e);
-      throw e;
-    }
+    });
   }
 
   status(accountId) {
