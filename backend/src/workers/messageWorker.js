@@ -11,6 +11,9 @@ const worker = new Worker(
     const message = await Message.findByPk(messageId);
     if (!message) throw new Error(`Message ${messageId} not found`);
 
+    const maxAttempts = job.opts?.attempts ?? 3;
+    const isLastAttempt = job.attemptsMade >= maxAttempts - 1;
+
     // accountId from job takes priority; fall back to first connected account for the user
     let senderId = accountId;
     const isConnected = (id) => whatsapp.getStatus(id) === 'connected';
@@ -23,7 +26,9 @@ const worker = new Worker(
     }
 
     if (!senderId) {
-      await message.update({ status: 'failed', error_message: 'Nenhuma conta WhatsApp conectada' });
+      if (isLastAttempt) {
+        await message.update({ status: 'failed', error_message: 'Nenhuma conta WhatsApp conectada' });
+      }
       throw new Error('Nenhuma conta WhatsApp conectada');
     }
 
@@ -43,9 +48,11 @@ const worker = new Worker(
         ).catch(() => {});
       }
     } catch (err) {
-      await message.update({ status: 'failed', error_message: err.message });
-      if (message.campaign_id) {
-        await Campaign.increment('failed_count', { where: { id: message.campaign_id } }).catch(() => {});
+      if (isLastAttempt) {
+        await message.update({ status: 'failed', error_message: err.message });
+        if (message.campaign_id) {
+          await Campaign.increment('failed_count', { where: { id: message.campaign_id } }).catch(() => {});
+        }
       }
       throw err;
     }
@@ -61,11 +68,17 @@ const worker = new Worker(
 );
 
 worker.on('completed', (job) => {
-  console.log(`[Worker] job ${job.id} completed`);
+  console.log(`[Worker] job ${job.id} concluído`);
 });
 
 worker.on('failed', (job, err) => {
-  console.error(`[Worker] job ${job?.id} failed:`, err.message);
+  const maxAttempts = job?.opts?.attempts ?? 3;
+  const made = (job?.attemptsMade ?? 0) + 1;
+  if (made >= maxAttempts) {
+    console.error(`[Worker] job ${job?.id} falhou definitivamente após ${made} tentativas: ${err.message}`);
+  } else {
+    console.log(`[Worker] job ${job?.id} tentativa ${made}/${maxAttempts} falhou, aguardando retry: ${err.message}`);
+  }
 });
 
 console.log('[Worker] message worker started');

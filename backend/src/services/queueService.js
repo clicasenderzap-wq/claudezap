@@ -46,7 +46,13 @@ async function enqueueScheduled(messageId, userId, accountId, phone, content, sc
   const job = await messageQueue.add(
     'send',
     { messageId, userId, accountId, phone, content },
-    { delay }
+    {
+      delay,
+      // Retry up to 10x with 5-min base backoff (exponential: 5m, 10m, 20m...)
+      // giving the desktop app time to reconnect before the message is lost
+      attempts: 10,
+      backoff: { type: 'exponential', delay: 300_000 },
+    }
   );
   return job.id;
 }
