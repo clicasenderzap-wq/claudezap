@@ -15,19 +15,29 @@ function gwHeaders() {
   };
 }
 
-async function gw(method, path, body) {
-  if (!GW_URL) throw new Error('WA_GATEWAY_URL não configurado');
-  const res = await fetch(`${GW_URL}${path}`, {
-    method,
-    headers: gwHeaders(),
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }));
-    throw new Error(err.error || res.statusText);
+async function gw(method, path, body, timeoutMs = 35_000) {
+  if (!GW_URL) throw new Error('WA_GATEWAY_URL não configurado nas variáveis de ambiente do Render');
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
+  try {
+    const res = await fetch(`${GW_URL}${path}`, {
+      method,
+      headers: gwHeaders(),
+      body: body ? JSON.stringify(body) : undefined,
+      signal: ctrl.signal,
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ error: res.statusText }));
+      throw new Error(err.error || `Gateway retornou ${res.status}`);
+    }
+    if (res.status === 204) return null;
+    return res.json();
+  } catch (e) {
+    if (e.name === 'AbortError') throw new Error('Gateway não respondeu — verifique se o serviço Fly.io está no ar');
+    throw e;
+  } finally {
+    clearTimeout(timer);
   }
-  if (res.status === 204) return null;
-  return res.json();
 }
 
 class WhatsAppService extends EventEmitter {
