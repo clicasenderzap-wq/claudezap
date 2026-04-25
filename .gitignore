@@ -7,3 +7,4 @@ build/
 wa_sessions/
 logs/
 *.log
+.claude/settings.local.json

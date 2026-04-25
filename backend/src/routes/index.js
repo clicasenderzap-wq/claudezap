@@ -14,6 +14,11 @@ const optinLimiter = rateLimit({
 router.get('/optin/:userId', optin.getOptinInfo);
 router.post('/optin/:userId', optinLimiter, optin.submitOptin);
 
+// Public email tracking (no auth)
+const emailCtrl = require('../controllers/emailController');
+router.get('/email/open/:id',   emailCtrl.trackOpen);
+router.get('/email/unsub/:token', emailCtrl.unsubscribe);
+
 router.get('/plans/prices', async (req, res, next) => {
   try {
     const { SystemSetting } = require('../models');
@@ -38,5 +43,6 @@ router.use('/warmup', auth, requireActive, require('./warmup'));
 router.use('/bot', auth, requireActive, require('./bot'));
 router.use('/admin', auth, require('./admin'));
 router.use('/media', auth, requireActive, require('./media'));
+router.use('/email/campaigns', auth, requireActive, require('./email'));
 
 module.exports = router;
