@@ -15,6 +15,7 @@ import { useAuthStore } from '@/store/authStore';
 const schema = z.object({
   name: z.string().min(1, 'Obrigatório'),
   phone: z.string().min(8, 'Telefone inválido'),
+  email: z.string().email('Email inválido').optional().or(z.literal('')),
   notes: z.string().optional(),
   tags: z.string().optional(),
   consent_source: z.string().optional(),
@@ -32,6 +33,7 @@ interface Contact {
   id: string;
   name: string;
   phone: string;
+  email?: string;
   notes?: string;
   opt_out: boolean;
   tags: string[];
@@ -104,7 +106,7 @@ export default function ContactsPage() {
 
   const createMutation = useMutation({
     mutationFn: (d: FormData) =>
-      api.post('/contacts', { ...d, tags: parseTags(d.tags || '') }),
+      api.post('/contacts', { ...d, email: d.email || null, tags: parseTags(d.tags || '') }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contacts'] });
       qc.invalidateQueries({ queryKey: ['contact-tags'] });
@@ -117,7 +119,7 @@ export default function ContactsPage() {
 
   const updateMutation = useMutation({
     mutationFn: ({ id, data }: { id: string; data: FormData }) =>
-      api.put(`/contacts/${id}`, { ...data, tags: parseTags(data.tags || '') }),
+      api.put(`/contacts/${id}`, { ...data, email: data.email || null, tags: parseTags(data.tags || '') }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['contacts'] });
       qc.invalidateQueries({ queryKey: ['contact-tags'] });
@@ -177,6 +179,7 @@ export default function ContactsPage() {
     editForm.reset({
       name: contact.name,
       phone: contact.phone,
+      email: contact.email ?? '',
       notes: contact.notes ?? '',
       tags: (contact.tags || []).join(', '),
     });
@@ -504,6 +507,11 @@ export default function ContactsPage() {
             {createForm.formState.errors.phone && <p className="text-red-500 text-xs mt-1">{createForm.formState.errors.phone.message}</p>}
           </div>
           <div>
+            <label className="label">Email (opcional)</label>
+            <input {...createForm.register('email')} className="input" type="email" placeholder="contato@exemplo.com" />
+            {createForm.formState.errors.email && <p className="text-red-500 text-xs mt-1">{createForm.formState.errors.email.message}</p>}
+          </div>
+          <div>
             <label className="label">Tags</label>
             <input {...createForm.register('tags')} className="input" placeholder="CLIENTE, VIP (separadas por vírgula)" />
             <p className="text-xs text-gray-400 mt-1">Separe por vírgula. Ex: DEVEDOR, CAMPANHA2024</p>
@@ -537,6 +545,11 @@ export default function ContactsPage() {
           <div>
             <label className="label">Telefone *</label>
             <input {...editForm.register('phone')} className="input" placeholder="5511999999999" />
+          </div>
+          <div>
+            <label className="label">Email (opcional)</label>
+            <input {...editForm.register('email')} className="input" type="email" placeholder="contato@exemplo.com" />
+            {editForm.formState.errors.email && <p className="text-red-500 text-xs mt-1">{editForm.formState.errors.email.message}</p>}
           </div>
           <div>
             <label className="label">Tags</label>

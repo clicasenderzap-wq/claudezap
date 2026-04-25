@@ -64,14 +64,28 @@ async function sendCampaign(req, res, next) {
       return res.status(400).json({ error: 'Campanha já foi enviada ou está em andamento' });
     }
 
-    const { scheduled_for, tag_filter } = req.body;
+    const { scheduled_for, tag_filter, manual_emails } = req.body;
 
-    // Build contact list
+    // Build contact list from database
+    const recipients = []; // { to_email, to_name, contact_id }
     const where = { user_id: req.user.id, email_opt_out: false, email: { [Op.and]: [{ [Op.not]: null }, { [Op.ne]: '' }] } };
     if (tag_filter) where.tags = { [Op.contains]: [tag_filter] };
-
     const contacts = await Contact.findAll({ where, attributes: ['id', 'name', 'email'] });
-    if (contacts.length === 0) return res.status(400).json({ error: 'Nenhum contato com email válido encontrado' });
+    for (const c of contacts) recipients.push({ to_email: c.email, to_name: c.name, contact_id: c.id });
+
+    // Add manual emails (dedup against contacts already in list)
+    if (Array.isArray(manual_emails) && manual_emails.length > 0) {
+      const existingEmails = new Set(recipients.map((r) => r.to_email.toLowerCase()));
+      for (const email of manual_emails) {
+        const normalized = email.trim().toLowerCase();
+        if (normalized && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized) && !existingEmails.has(normalized)) {
+          recipients.push({ to_email: normalized, to_name: null, contact_id: null });
+          existingEmails.add(normalized);
+        }
+      }
+    }
+
+    if (recipients.length === 0) return res.status(400).json({ error: 'Nenhum destinatário com email válido encontrado' });
 
     const scheduledAt = scheduled_for ? new Date(scheduled_for) : null;
     const startOffset = scheduledAt ? Math.max(0, scheduledAt.getTime() - Date.now()) : 0;
@@ -79,7 +93,7 @@ async function sendCampaign(req, res, next) {
     await campaign.update({
       status: scheduledAt ? 'scheduled' : 'running',
       scheduled_for: scheduledAt,
-      total_contacts: contacts.length,
+      total_contacts: recipients.length,
       sent_count: 0,
       failed_count: 0,
       open_count: 0,
@@ -87,14 +101,14 @@ async function sendCampaign(req, res, next) {
     });
 
     // Create EmailMessage records and enqueue
-    for (let i = 0; i < contacts.length; i++) {
-      const c = contacts[i];
+    for (let i = 0; i < recipients.length; i++) {
+      const r = recipients[i];
       const msg = await EmailMessage.create({
         campaign_id: campaign.id,
         user_id: req.user.id,
-        contact_id: c.id,
-        to_email: c.email,
-        to_name: c.name,
+        contact_id: r.contact_id,
+        to_email: r.to_email,
+        to_name: r.to_name,
         status: 'queued',
       });
       const delayMs = startOffset + i * (campaign.delay_ms ?? 1000);
@@ -102,7 +116,7 @@ async function sendCampaign(req, res, next) {
       await msg.update({ queue_job_id: String(jobId) });
     }
 
-    res.json({ ok: true, total: contacts.length });
+    res.json({ ok: true, total: recipients.length });
   } catch (e) { next(e); }
 }
 

@@ -75,13 +75,14 @@ async function create(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
 
-  const { name, phone, notes, tags, consent_source } = req.body;
+  const { name, phone, email, notes, tags, consent_source } = req.body;
   const normalizedTags = Array.isArray(tags) ? tags.map(normalizeTag).filter(Boolean) : [];
   try {
     const contact = await Contact.create({
       user_id: req.user.id,
       name,
       phone: normalizePhone(phone),
+      email: email || null,
       notes,
       tags: normalizedTags,
       consent_source: consent_source || 'manual',
@@ -103,10 +104,11 @@ async function update(req, res) {
   const contact = await Contact.findOne({ where: { id: req.params.id, user_id: req.user.id } });
   if (!contact) return res.status(404).json({ error: 'Contato não encontrado' });
 
-  const { name, phone, notes, opt_out, tags } = req.body;
+  const { name, phone, email, notes, opt_out, tags } = req.body;
   const updates = {
     ...(name !== undefined && { name }),
     ...(phone !== undefined && { phone: normalizePhone(phone) }),
+    ...('email' in req.body && { email: email || null }),
     ...(notes !== undefined && { notes }),
     ...(opt_out !== undefined && { opt_out }),
     ...(tags !== undefined && { tags: Array.isArray(tags) ? tags.map(normalizeTag).filter(Boolean) : [] }),

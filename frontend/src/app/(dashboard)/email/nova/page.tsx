@@ -26,6 +26,7 @@ function NovaCampanhaForm() {
     name: '', subject: '', from_name: '', html_body: DEFAULT_HTML, delay_ms: 1500,
   });
   const [sendOpts, setSendOpts] = useState({ tag_filter: '', scheduled_for: '' });
+  const [manualEmails, setManualEmails] = useState('');
   const [preview, setPreview] = useState(false);
   const [step, setStep] = useState<'edit' | 'send'>('edit');
   const [savedId, setSavedId] = useState<string | null>(null);
@@ -91,9 +92,14 @@ function NovaCampanhaForm() {
 
   function handleSend() {
     if (!savedId) return;
+    const parsed = manualEmails
+      .split(/[\n,;]+/)
+      .map((e) => e.trim().toLowerCase())
+      .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
     sendMutation.mutate({
       tag_filter: sendOpts.tag_filter || undefined,
       scheduled_for: sendOpts.scheduled_for || undefined,
+      manual_emails: parsed.length > 0 ? parsed : undefined,
     });
   }
 
@@ -212,6 +218,24 @@ function NovaCampanhaForm() {
               </select>
               <p className="text-xs text-gray-400 mt-1">
                 Apenas contatos com email cadastrado e sem opt-out serão incluídos.
+              </p>
+            </div>
+          </div>
+
+          <div className="card p-5 space-y-4">
+            <h2 className="font-semibold text-gray-800 flex items-center gap-2">
+              <Users size={16} /> Emails manuais (opcional)
+            </h2>
+            <div>
+              <label className="label">Cole endereços de email (um por linha ou separados por vírgula)</label>
+              <textarea
+                className="input font-mono text-xs min-h-24 resize-none"
+                value={manualEmails}
+                onChange={(e) => setManualEmails(e.target.value)}
+                placeholder={'joao@exemplo.com\nmaria@empresa.com\ncliente@gmail.com'}
+              />
+              <p className="text-xs text-gray-400 mt-1">
+                Estes emails serão enviados além dos contatos filtrados acima. Útil para testes rápidos.
               </p>
             </div>
           </div>

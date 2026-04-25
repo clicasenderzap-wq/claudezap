@@ -7,7 +7,7 @@ import { useAuthStore } from '@/store/authStore';
 
 const SUPPORT_WA = '5535999153639';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'https://claudezap-api.onrender.com';
-const DEFAULT_PRO_PRICE = 197;
+const DEFAULT_PRO_PRICE = '117,90';
 
 const PRO_FEATURES = [
   { icon: Bot, text: 'Bot de atendimento com IA (GPT-4o-mini) — até 500 conversas/mês incluídas' },
@@ -23,12 +23,15 @@ export default function PlanosPage() {
   const { user } = useAuthStore();
   const router = useRouter();
   const plan = (user as any)?.plan ?? 'starter';
-  const [proPrice, setProPrice] = useState<number>(DEFAULT_PRO_PRICE);
+  const [proPrice, setProPrice] = useState<string>(DEFAULT_PRO_PRICE);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/plans/prices`)
       .then((r) => r.json())
-      .then((d) => { if (d?.pro) setProPrice(Number(d.pro)); })
+      .then((d) => {
+        const raw = d?.pro?.price ?? d?.pro;
+        if (raw) setProPrice(String(raw).replace('.', ','));
+      })
       .catch(() => {});
   }, []);
 
