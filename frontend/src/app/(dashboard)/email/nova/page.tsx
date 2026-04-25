@@ -54,7 +54,9 @@ function NovaCampanhaForm() {
     queryKey: ['contact-tags'],
     queryFn: () => api.get('/contacts/tags').then((r) => r.data).catch(() => []),
   });
-  const tags: string[] = Array.isArray(tagsData) ? tagsData : [];
+  const tags: string[] = Array.isArray(tagsData)
+    ? tagsData.map((t: any) => (typeof t === 'string' ? t : t.tag ?? ''))
+    : [];
 
   const saveMutation = useMutation({
     mutationFn: (body: object) =>
