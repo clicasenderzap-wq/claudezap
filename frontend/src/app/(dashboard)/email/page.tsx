@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Mail, Plus, Trash2, BarChart2, Send, Clock, XCircle, Eye, Pencil } from 'lucide-react';
+import { Mail, Plus, Trash2, BarChart2, Send, Clock, CheckCircle2, XCircle, Eye, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
