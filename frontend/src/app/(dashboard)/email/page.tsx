@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Mail, Plus, Trash2, BarChart2, Send, Clock, CheckCircle2, XCircle, Eye } from 'lucide-react';
+import { Mail, Plus, Trash2, BarChart2, Send, Clock, XCircle, Eye, Pencil } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
@@ -162,7 +162,7 @@ export default function EmailPage() {
               )}
               {c.status === 'draft' && (
                 <Link href={`/email/nova?id=${c.id}`} className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar">
-                  <CheckCircle2 size={16} />
+                  <Pencil size={16} />
                 </Link>
               )}
               {['draft', 'completed', 'failed'].includes(c.status) && (
