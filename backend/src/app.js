@@ -93,6 +93,9 @@ setupDesktopWS(server);
     require('./workers/messageWorker');
     console.log('[Worker] iniciado');
 
+    require('./workers/emailWorker');
+    console.log('[EmailWorker] iniciado');
+
     require('./services/warmupService').start();
     console.log('[Warmup] iniciado');
 

@@ -44,6 +44,14 @@ const Contact = sequelize.define('Contact', {
     type: DataTypes.DATE,
     allowNull: true,
   },
+  email: {
+    type: DataTypes.STRING(255),
+    allowNull: true,
+  },
+  email_opt_out: {
+    type: DataTypes.BOOLEAN,
+    defaultValue: false,
+  },
 }, {
   tableName: 'contacts',
   underscored: true,

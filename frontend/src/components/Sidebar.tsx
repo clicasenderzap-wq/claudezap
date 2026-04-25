@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, MessageSquare, Megaphone, Smartphone, Flame, Bot, ShieldCheck, LogOut, AlertTriangle, BookOpen, MailWarning, Clock, Inbox } from 'lucide-react';
+import { LayoutDashboard, Users, MessageSquare, Megaphone, Smartphone, Flame, Bot, ShieldCheck, LogOut, AlertTriangle, BookOpen, MailWarning, Clock, Inbox, Mail } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
 
@@ -16,6 +16,7 @@ const NAV = [
   { href: '/warmup', label: 'Aquecimento', icon: Flame },
   { href: '/bots', label: 'Bot de Atendimento', icon: Bot },
   { href: '/inbox', label: 'Caixa de Entrada', icon: Inbox },
+  { href: '/email', label: 'Campanhas de Email', icon: Mail },
 ];
 
 const PLAN_LABELS: Record<string, string> = {

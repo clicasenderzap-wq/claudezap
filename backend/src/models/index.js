@@ -11,6 +11,8 @@ const BotConfig = require('./BotConfig');
 const BotConversation = require('./BotConversation');
 const IncomingMessage = require('./IncomingMessage');
 const SystemSetting = require('./SystemSetting');
+const EmailCampaign = require('./EmailCampaign');
+const EmailMessage = require('./EmailMessage');
 
 // Associations
 User.hasMany(Contact, { foreignKey: 'user_id', onDelete: 'CASCADE' });
@@ -48,4 +50,13 @@ BotConversation.belongsTo(WhatsappAccount, { foreignKey: 'account_id' });
 WhatsappAccount.hasMany(IncomingMessage, { foreignKey: 'account_id', onDelete: 'CASCADE', as: 'account' });
 IncomingMessage.belongsTo(WhatsappAccount, { foreignKey: 'account_id', as: 'account' });
 
-module.exports = { sequelize, User, AuditLog, Contact, Campaign, Message, WhatsappAccount, WarmupConfig, WarmupLog, BotConfig, BotConversation, IncomingMessage, SystemSetting };
+User.hasMany(EmailCampaign, { foreignKey: 'user_id', onDelete: 'CASCADE' });
+EmailCampaign.belongsTo(User, { foreignKey: 'user_id' });
+
+EmailCampaign.hasMany(EmailMessage, { foreignKey: 'campaign_id', onDelete: 'CASCADE' });
+EmailMessage.belongsTo(EmailCampaign, { foreignKey: 'campaign_id' });
+
+Contact.hasMany(EmailMessage, { foreignKey: 'contact_id', onDelete: 'SET NULL' });
+EmailMessage.belongsTo(Contact, { foreignKey: 'contact_id' });
+
+module.exports = { sequelize, User, AuditLog, Contact, Campaign, Message, WhatsappAccount, WarmupConfig, WarmupLog, BotConfig, BotConversation, IncomingMessage, SystemSetting, EmailCampaign, EmailMessage };

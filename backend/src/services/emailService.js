@@ -97,4 +97,21 @@ async function sendAdminNewUserNotification(user) {
   });
 }
 
-module.exports = { sendVerificationEmail, sendApprovalEmail, sendRejectionEmail, sendAdminNewUserNotification };
+// ── Campaign emails (throws on error, returns Resend ID) ─────────────────────
+
+async function sendCampaignEmail({ fromName, to, subject, html }) {
+  if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY não configurado no servidor');
+  const fromAddr = FROM_EMAIL.match(/<(.+)>/)?.[1] || 'noreply@clicaai.ia.br';
+  const from = fromName ? `${fromName} <${fromAddr}>` : FROM_EMAIL;
+
+  const res = await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ from, to, subject, html }),
+  });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.message || `Resend HTTP ${res.status}`);
+  return body.id;
+}
+
+module.exports = { sendVerificationEmail, sendApprovalEmail, sendRejectionEmail, sendAdminNewUserNotification, sendCampaignEmail };
