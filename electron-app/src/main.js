@@ -41,6 +41,18 @@ app.whenReady().then(() => {
   }
 });
 
+// Redirect external links (wa.me, etc.) to the system browser instead of opening
+// inside an Electron webview — WhatsApp Web requires Chrome 85+ and rejects the
+// built-in Chromium user-agent unless opened via the real system browser.
+app.on('web-contents-created', (_event, contents) => {
+  contents.setWindowOpenHandler(({ url }) => {
+    const isInternal = url.startsWith('https://clicaai.ia.br') || url.startsWith('http://localhost');
+    if (isInternal) return { action: 'allow' };
+    shell.openExternal(url);
+    return { action: 'deny' };
+  });
+});
+
 app.on('window-all-closed', (e) => {
   // Don't quit when window is closed — stay in tray
   e.preventDefault();
