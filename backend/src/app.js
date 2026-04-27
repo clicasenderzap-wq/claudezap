@@ -81,6 +81,15 @@ setupDesktopWS(server);
     await sequelize.sync({ alter: true });
     console.log('[DB] Modelos sincronizados');
 
+    // Ensure email columns exist on contacts (idempotent raw migration)
+    try {
+      await sequelize.query(`ALTER TABLE contacts ADD COLUMN IF NOT EXISTS email VARCHAR(255)`);
+      await sequelize.query(`ALTER TABLE contacts ADD COLUMN IF NOT EXISTS email_opt_out BOOLEAN NOT NULL DEFAULT FALSE`);
+      console.log('[DB] Colunas de email em contacts verificadas');
+    } catch (e) {
+      console.error('[DB] Migração de colunas email:', e.message);
+    }
+
     // Garante que a conta admin nunca conta como plano pago
     const { User } = require('./models');
     const adminEmail = 'clicasenderzap@gmail.com';
