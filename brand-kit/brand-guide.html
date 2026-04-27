@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>Clica Aí — Brand Guide</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',Arial,sans-serif;background:#f9fafb;color:#111827}
+  header{background:linear-gradient(135deg,#16a34a,#059652);padding:60px 80px;color:white}
+  header h1{font-size:52px;font-weight:900;letter-spacing:-1px}
+  header h1 span{color:rgba(255,255,255,0.7)}
+  header p{margin-top:8px;font-size:20px;opacity:.7}
+  .section{padding:60px 80px;border-bottom:1px solid #e5e7eb}
+  .section h2{font-size:28px;font-weight:900;margin-bottom:32px;color:#111827;display:flex;align-items:center;gap:12px}
+  .section h2::before{content:'';display:block;width:6px;height:28px;background:#16a34a;border-radius:3px}
+  /* Colors */
+  .colors{display:flex;gap:20px;flex-wrap:wrap}
+  .swatch{width:180px}
+  .swatch-box{height:120px;border-radius:16px;margin-bottom:12px;box-shadow:0 4px 16px rgba(0,0,0,.08)}
+  .swatch-name{font-weight:700;font-size:15px;color:#111827}
+  .swatch-hex{font-family:monospace;font-size:14px;color:#6b7280;margin-top:2px}
+  .swatch-use{font-size:13px;color:#9ca3af;margin-top:4px}
+  /* Logo section */
+  .logo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}
+  .logo-card{background:white;border:1px solid #e5e7eb;border-radius:16px;padding:32px;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .logo-card.dark{background:#111827}
+  .logo-card.green{background:linear-gradient(135deg,#16a34a,#059652)}
+  .logo-card img{max-width:100%;height:auto}
+  .logo-label{font-size:14px;color:#6b7280;font-weight:600}
+  /* Typography */
+  .type-demo{background:white;border:1px solid #e5e7eb;border-radius:16px;padding:40px;space-y:16px}
+  .t1{font-family:'Arial Black',Arial,sans-serif;font-weight:900;font-size:48px;color:#111827;line-height:1.1}
+  .t2{font-family:'Arial Black',Arial,sans-serif;font-weight:900;font-size:32px;color:#16a34a;line-height:1.2;margin-top:8px}
+  .t3{font-size:20px;color:#374151;margin-top:16px;line-height:1.6}
+  .t4{font-size:15px;color:#6b7280;margin-top:8px;line-height:1.6}
+  /* Voice */
+  .voice-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+  .voice-card{background:white;border:1px solid #e5e7eb;border-radius:16px;padding:28px}
+  .voice-card h3{font-size:16px;font-weight:700;margin-bottom:12px}
+  .voice-card.do h3{color:#16a34a}
+  .voice-card.dont h3{color:#dc2626}
+  .voice-card ul{padding-left:18px;color:#374151;font-size:15px;line-height:2}
+  /* Files */
+  .files-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .file-card{background:white;border:1px solid #e5e7eb;border-radius:12px;padding:20px;text-align:center}
+  .file-icon{font-size:36px;margin-bottom:8px}
+  .file-name{font-size:13px;font-weight:700;color:#111827;word-break:break-all}
+  .file-desc{font-size:12px;color:#9ca3af;margin-top:4px}
+  /* Slogans */
+  .slogan-list{display:flex;flex-direction:column;gap:16px}
+  .slogan{background:white;border-left:4px solid #16a34a;border-radius:0 12px 12px 0;padding:20px 28px;font-size:22px;font-weight:700;color:#111827}
+  .slogan span{color:#16a34a}
+  footer{background:#111827;color:#6b7280;padding:40px 80px;font-size:15px;text-align:center}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Clica Aí <span>— Brand Guide</span></h1>
+  <p>Identidade visual · Paleta de cores · Tipografia · Tom de voz · Arquivos</p>
+</header>
+
+<!-- COLORS -->
+<div class="section">
+  <h2>Paleta de Cores</h2>
+  <div class="colors">
+    <div class="swatch">
+      <div class="swatch-box" style="background:#16a34a"></div>
+      <div class="swatch-name">Verde Principal</div>
+      <div class="swatch-hex">#16a34a</div>
+      <div class="swatch-use">Botões, destaques, ícone, CTAs</div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-box" style="background:#4ade80"></div>
+      <div class="swatch-name">Verde Claro</div>
+      <div class="swatch-hex">#4ade80</div>
+      <div class="swatch-use">Accents, badges, tags</div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-box" style="background:#4f46e5"></div>
+      <div class="swatch-name">Índigo</div>
+      <div class="swatch-hex">#4f46e5</div>
+      <div class="swatch-use">Email, recursos premium</div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-box" style="background:#fbbf24"></div>
+      <div class="swatch-name">Âmbar</div>
+      <div class="swatch-hex">#fbbf24</div>
+      <div class="swatch-use">CTAs secundários, promoções</div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-box" style="background:#111827"></div>
+      <div class="swatch-name">Cinza Escuro</div>
+      <div class="swatch-hex">#111827</div>
+      <div class="swatch-use">Texto, fundos escuros</div>
+    </div>
+    <div class="swatch">
+      <div class="swatch-box" style="background:#f9fafb;border:1px solid #e5e7eb"></div>
+      <div class="swatch-name">Cinza Claro</div>
+      <div class="swatch-hex">#f9fafb</div>
+      <div class="swatch-use">Fundo de telas e posts claros</div>
+    </div>
+  </div>
+</div>
+
+<!-- LOGOS -->
+<div class="section">
+  <h2>Logotipos</h2>
+  <div class="logo-grid">
+    <div class="logo-card">
+      <img src="logo-primary.svg" alt="Logo Principal"/>
+      <div class="logo-label">Logo Principal — fundo claro</div>
+    </div>
+    <div class="logo-card dark">
+      <img src="logo-white.svg" alt="Logo Branca"/>
+      <div class="logo-label" style="color:#6b7280">Logo Branca — fundo escuro</div>
+    </div>
+    <div class="logo-card green" style="align-items:center;justify-content:center">
+      <img src="logo-icon.svg" alt="Ícone" style="width:120px"/>
+      <div class="logo-label" style="color:rgba(255,255,255,0.7)">Ícone — perfil, favicon</div>
+    </div>
+  </div>
+  <p style="margin-top:20px;font-size:14px;color:#9ca3af">
+    ⚠️ Mantenha sempre espaço livre ao redor do logo equivalente à altura da letra "C". Não distorça, não altere as cores, não adicione efeitos.
+  </p>
+</div>
+
+<!-- TYPOGRAPHY -->
+<div class="section">
+  <h2>Tipografia</h2>
+  <div class="type-demo">
+    <div class="t1">Clica Aí</div>
+    <div class="t2">Automação de mensagens inteligente</div>
+    <div class="t3">Fonte para títulos: <strong>Arial Black / Inter 900</strong><br>Use em headlines, nome da marca e CTAs principais.</div>
+    <div class="t4">Fonte para corpo: <strong>Arial / Inter 400–600</strong><br>Use em parágrafos, descrições e legendas. Tamanho mínimo: 12px impresso, 14px digital.</div>
+  </div>
+</div>
+
+<!-- SLOGANS -->
+<div class="section">
+  <h2>Slogans & Taglines</h2>
+  <div class="slogan-list">
+    <div class="slogan">Automação de mensagens <span>inteligente</span></div>
+    <div class="slogan"><span>Clique.</span> Envie. Converta.</div>
+    <div class="slogan">Do WhatsApp ao e-mail — <span>tudo automatizado</span></div>
+    <div class="slogan">Mais mensagens, <span>menos trabalho</span></div>
+    <div class="slogan"><span>Seu negócio</span> rodando no piloto automático</div>
+  </div>
+</div>
+
+<!-- VOICE -->
+<div class="section">
+  <h2>Tom de Voz</h2>
+  <div class="voice-grid">
+    <div class="voice-card do">
+      <h3>✓ Use</h3>
+      <ul>
+        <li>Direto e objetivo</li>
+        <li>Confiante mas acessível</li>
+        <li>Focado em resultados ("venda mais", "economize tempo")</li>
+        <li>Linguagem próxima, sem jargão técnico</li>
+        <li>Exemplos práticos e concretos</li>
+        <li>Emojis com moderação em redes sociais</li>
+      </ul>
+    </div>
+    <div class="voice-card dont">
+      <h3>✗ Evite</h3>
+      <ul>
+        <li>Termos muito técnicos (API, webhook, SDK…)</li>
+        <li>Promessas exageradas ou garantias irreais</li>
+        <li>Tom corporativo e distante</li>
+        <li>Texto longo sem hierarquia visual</li>
+        <li>Muitas exclamações seguidas!!!</li>
+        <li>Comparações agressivas com concorrentes</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- FILES -->
+<div class="section">
+  <h2>Arquivos do Brand Kit</h2>
+  <div class="files-grid">
+    <div class="file-card">
+      <div class="file-icon">🎨</div>
+      <div class="file-name">logo-primary.svg</div>
+      <div class="file-desc">Logo completo — fundo claro</div>
+    </div>
+    <div class="file-card">
+      <div class="file-icon">⚪</div>
+      <div class="file-name">logo-white.svg</div>
+      <div class="file-desc">Logo — fundo escuro/verde</div>
+    </div>
+    <div class="file-card">
+      <div class="file-icon">🟢</div>
+      <div class="file-name">logo-icon.svg</div>
+      <div class="file-desc">Ícone isolado — perfil / favicon</div>
+    </div>
+    <div class="file-card">
+      <div class="file-icon">🎨</div>
+      <div class="file-name">paleta-cores.svg</div>
+      <div class="file-desc">Referência visual das cores</div>
+    </div>
+    <div class="file-card">
+      <div class="file-icon">📷</div>
+      <div class="file-name">instagram-perfil.svg</div>
+      <div class="file-desc">1080×1080 — foto de perfil</div>
+    </div>
+    <div class="file-card">
+      <div class="file-icon">🖼</div>
+      <div class="file-name">instagram-post-apresentacao.svg</div>
+      <div class="file-desc">1080×1080 — post escuro</div>
+    </div>
+    <div class="file-card">
+      <div class="file-icon">💡</div>
+      <div class="file-name">instagram-post-dica.svg</div>
+      <div class="file-desc">1080×1080 — post dica/tip</div>
+    </div>
+    <div class="file-card">
+      <div class="file-icon">🔥</div>
+      <div class="file-name">instagram-post-promo.svg</div>
+      <div class="file-desc">1080×1080 — post promocional</div>
+    </div>
+    <div class="file-card">
+      <div class="file-icon">📱</div>
+      <div class="file-name">instagram-story.svg</div>
+      <div class="file-desc">1080×1920 — story completo</div>
+    </div>
+    <div class="file-card">
+      <div class="file-icon">📖</div>
+      <div class="file-name">brand-guide.html</div>
+      <div class="file-desc">Este guia completo</div>
+    </div>
+  </div>
+  <p style="margin-top:24px;font-size:14px;color:#9ca3af">
+    💡 Para exportar os SVGs como PNG em alta resolução, abra no navegador → clique direito → "Salvar como imagem", ou use o Inkscape (gratuito) para exportar em qualquer resolução.
+  </p>
+</div>
+
+<footer>Clica Aí — Identidade Visual v1.0 · clicaai.ia.br</footer>
+</body>
+</html>

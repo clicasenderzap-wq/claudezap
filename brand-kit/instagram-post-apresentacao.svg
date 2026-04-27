@@ -1,0 +1,77 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0d1f12"/>
+      <stop offset="100%" stop-color="#111827"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#16a34a"/>
+      <stop offset="100%" stop-color="#059652"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#16a34a" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#16a34a" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="blur">
+      <feGaussianBlur stdDeviation="60"/>
+    </filter>
+  </defs>
+
+  <!-- Background dark -->
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+
+  <!-- Glow circles -->
+  <circle cx="200" cy="200" r="300" fill="url(#glow)" filter="url(#blur)" opacity="0.8"/>
+  <circle cx="900" cy="900" r="280" fill="#4f46e5" opacity="0.08" filter="url(#blur)"/>
+
+  <!-- Top accent line -->
+  <rect x="80" y="80" width="120" height="6" rx="3" fill="#16a34a"/>
+
+  <!-- Logo top-left -->
+  <!-- Icon small -->
+  <rect x="80" y="106" width="52" height="52" rx="12" fill="url(#green)"/>
+  <path d="M91 117 L91 147 L99 139 L103 150 L108 148 L104 137 L114 137 Z" fill="white" opacity="0.95"/>
+  <circle cx="122" cy="122" r="6" fill="#4ade80" opacity="0.8"/>
+  <circle cx="122" cy="122" r="3.5" fill="white"/>
+  <!-- Wordmark -->
+  <text x="143" y="142" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="28" fill="white">Clica</text>
+  <text x="231" y="142" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="28" fill="#16a34a"> Aí</text>
+
+  <!-- Main headline -->
+  <text x="80" y="380" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
+        font-size="86" fill="white" letter-spacing="-2">Automatize</text>
+  <text x="80" y="476" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
+        font-size="86" fill="white" letter-spacing="-2">suas mensagens.</text>
+
+  <!-- Green highlight line -->
+  <text x="80" y="572" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
+        font-size="86" fill="#16a34a" letter-spacing="-2">Venda mais.</text>
+
+  <!-- Divider -->
+  <rect x="80" y="618" width="80" height="5" rx="2.5" fill="#16a34a"/>
+
+  <!-- Body text -->
+  <text x="80" y="670" font-family="Arial, sans-serif" font-size="32" fill="#9ca3af">WhatsApp · Email · Campanhas · Bot de IA</text>
+
+  <!-- Feature pills -->
+  <rect x="80" y="720" width="220" height="52" rx="26" fill="#16a34a" opacity="0.15" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="190" y="752" font-family="Arial, sans-serif" font-weight="700" font-size="22" fill="#4ade80" text-anchor="middle">✓ WhatsApp</text>
+
+  <rect x="316" y="720" width="200" height="52" rx="26" fill="#4f46e5" opacity="0.15" stroke="#4f46e5" stroke-width="1.5"/>
+  <text x="416" y="752" font-family="Arial, sans-serif" font-weight="700" font-size="22" fill="#818cf8" text-anchor="middle">✓ Email</text>
+
+  <rect x="532" y="720" width="220" height="52" rx="26" fill="#16a34a" opacity="0.15" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="642" y="752" font-family="Arial, sans-serif" font-weight="700" font-size="22" fill="#4ade80" text-anchor="middle">✓ Bot com IA</text>
+
+  <!-- Large icon watermark right side -->
+  <rect x="650" y="280" width="320" height="320" rx="72" fill="url(#green)" opacity="0.12"/>
+  <rect x="668" y="298" width="320" height="320" rx="72" fill="url(#green)" opacity="0.08"/>
+  <path d="M730 350 L730 530 L790 470 L822 550 L856 536 L824 456 L886 456 Z"
+        fill="white" opacity="0.10"/>
+
+  <!-- Bottom bar -->
+  <rect x="0" y="980" width="1080" height="100" fill="#16a34a" opacity="0.12"/>
+  <rect x="0" y="980" width="1080" height="3" fill="#16a34a"/>
+  <text x="80" y="1040" font-family="Arial, sans-serif" font-size="26" fill="#6b7280">clicaai.ia.br</text>
+  <text x="1000" y="1040" font-family="Arial, sans-serif" font-size="26" fill="#6b7280" text-anchor="end">@clicaai</text>
+</svg>

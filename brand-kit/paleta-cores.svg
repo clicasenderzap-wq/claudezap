@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 420" width="900" height="420">
+  <defs>
+    <linearGradient id="headerGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#16a34a"/>
+      <stop offset="100%" stop-color="#4f46e5"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="420" fill="#f9fafb" rx="20"/>
+
+  <!-- Header bar -->
+  <rect width="900" height="70" rx="20" fill="url(#headerGrad)"/>
+  <rect y="50" width="900" height="20" fill="url(#headerGrad)"/>
+
+  <!-- Title -->
+  <text x="40" y="44" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="24" fill="white">Clica Aí — Paleta de Cores</text>
+
+  <!-- Color swatches row 1 -->
+  <!-- Verde Principal -->
+  <rect x="40" y="100" width="150" height="150" rx="16" fill="#16a34a"/>
+  <text x="115" y="180" font-family="Arial, sans-serif" font-weight="700" font-size="22" fill="white" text-anchor="middle">Aa</text>
+  <text x="115" y="270" font-family="Arial, sans-serif" font-weight="700" font-size="13" fill="#111827" text-anchor="middle">Verde Principal</text>
+  <text x="115" y="288" font-family="'Courier New', monospace" font-size="12" fill="#6b7280" text-anchor="middle">#16a34a</text>
+  <text x="115" y="306" font-family="Arial, sans-serif" font-size="11" fill="#9ca3af" text-anchor="middle">RGB 22 · 163 · 74</text>
+
+  <!-- Verde Claro -->
+  <rect x="210" y="100" width="150" height="150" rx="16" fill="#4ade80"/>
+  <text x="285" y="180" font-family="Arial, sans-serif" font-weight="700" font-size="22" fill="white" text-anchor="middle">Aa</text>
+  <text x="285" y="270" font-family="Arial, sans-serif" font-weight="700" font-size="13" fill="#111827" text-anchor="middle">Verde Claro</text>
+  <text x="285" y="288" font-family="'Courier New', monospace" font-size="12" fill="#6b7280" text-anchor="middle">#4ade80</text>
+  <text x="285" y="306" font-family="Arial, sans-serif" font-size="11" fill="#9ca3af" text-anchor="middle">RGB 74 · 222 · 128</text>
+
+  <!-- Índigo -->
+  <rect x="380" y="100" width="150" height="150" rx="16" fill="#4f46e5"/>
+  <text x="455" y="180" font-family="Arial, sans-serif" font-weight="700" font-size="22" fill="white" text-anchor="middle">Aa</text>
+  <text x="455" y="270" font-family="Arial, sans-serif" font-weight="700" font-size="13" fill="#111827" text-anchor="middle">Índigo (Email)</text>
+  <text x="455" y="288" font-family="'Courier New', monospace" font-size="12" fill="#6b7280" text-anchor="middle">#4f46e5</text>
+  <text x="455" y="306" font-family="Arial, sans-serif" font-size="11" fill="#9ca3af" text-anchor="middle">RGB 79 · 70 · 229</text>
+
+  <!-- Cinza Escuro -->
+  <rect x="550" y="100" width="150" height="150" rx="16" fill="#111827"/>
+  <text x="625" y="180" font-family="Arial, sans-serif" font-weight="700" font-size="22" fill="white" text-anchor="middle">Aa</text>
+  <text x="625" y="270" font-family="Arial, sans-serif" font-weight="700" font-size="13" fill="#111827" text-anchor="middle">Cinza Escuro</text>
+  <text x="625" y="288" font-family="'Courier New', monospace" font-size="12" fill="#6b7280" text-anchor="middle">#111827</text>
+  <text x="625" y="306" font-family="Arial, sans-serif" font-size="11" fill="#9ca3af" text-anchor="middle">RGB 17 · 24 · 39</text>
+
+  <!-- Branco -->
+  <rect x="720" y="100" width="150" height="150" rx="16" fill="#ffffff" stroke="#e5e7eb" stroke-width="1.5"/>
+  <text x="795" y="180" font-family="Arial, sans-serif" font-weight="700" font-size="22" fill="#111827" text-anchor="middle">Aa</text>
+  <text x="795" y="270" font-family="Arial, sans-serif" font-weight="700" font-size="13" fill="#111827" text-anchor="middle">Branco</text>
+  <text x="795" y="288" font-family="'Courier New', monospace" font-size="12" fill="#6b7280" text-anchor="middle">#ffffff</text>
+  <text x="795" y="306" font-family="Arial, sans-serif" font-size="11" fill="#9ca3af" text-anchor="middle">RGB 255 · 255 · 255</text>
+
+  <!-- Typography note -->
+  <text x="40" y="360" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="15" fill="#111827">Tipografia:</text>
+  <text x="160" y="360" font-family="Arial, sans-serif" font-size="14" fill="#6b7280">Títulos — Arial Black / Inter Bold &nbsp;·&nbsp; Corpo — Arial / Inter Regular</text>
+  <text x="40" y="382" font-family="Arial, sans-serif" font-size="13" fill="#9ca3af">Slogan: "Automação de mensagens inteligente" &nbsp;·&nbsp; Tagline curta: "Clique. Envie. Converta."</text>
+</svg>

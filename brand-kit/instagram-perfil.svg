@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#16a34a"/>
+      <stop offset="60%" stop-color="#059652"/>
+      <stop offset="100%" stop-color="#047840"/>
+    </linearGradient>
+    <linearGradient id="dotG" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4ade80"/>
+      <stop offset="100%" stop-color="#16a34a"/>
+    </linearGradient>
+    <clipPath id="circle">
+      <circle cx="540" cy="540" r="540"/>
+    </clipPath>
+  </defs>
+
+  <!-- Circle clip for Instagram -->
+  <circle cx="540" cy="540" r="540" fill="url(#bg)"/>
+
+  <!-- Subtle inner light top -->
+  <ellipse cx="540" cy="200" rx="380" ry="260" fill="white" opacity="0.06"/>
+
+  <!-- Cursor arrow centered -->
+  <path d="M360 290 L360 680 L460 580 L510 710 L590 680 L540 550 L660 550 Z"
+        fill="white" opacity="0.95"/>
+
+  <!-- Notification dot -->
+  <circle cx="700" cy="350" r="90" fill="url(#dotG)" opacity="0.8"/>
+  <circle cx="700" cy="350" r="52" fill="white"/>
+
+  <!-- Bottom wordmark -->
+  <text x="540" y="860" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
+        font-size="120" fill="white" text-anchor="middle" opacity="0.95">Clica</text>
+  <text x="540" y="980" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
+        font-size="120" fill="rgba(255,255,255,0.7)" text-anchor="middle">Aí</text>
+</svg>

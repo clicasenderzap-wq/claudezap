@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1920" width="1080" height="1920">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="30%" y2="100%">
+      <stop offset="0%" stop-color="#0d1f12"/>
+      <stop offset="60%" stop-color="#111827"/>
+      <stop offset="100%" stop-color="#0a1628"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#16a34a"/>
+      <stop offset="100%" stop-color="#059652"/>
+    </linearGradient>
+    <linearGradient id="indigo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5"/>
+      <stop offset="100%" stop-color="#6366f1"/>
+    </linearGradient>
+    <linearGradient id="glow1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#16a34a" stop-opacity="0.4"/>
+      <stop offset="100%" stop-color="#16a34a" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="glow2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#4f46e5" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#4f46e5" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="blur3"><feGaussianBlur stdDeviation="80"/></filter>
+    <filter id="shadow3">
+      <feDropShadow dx="0" dy="10" stdDeviation="30" flood-color="#16a34a" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1080" height="1920" fill="url(#bg)"/>
+
+  <!-- Glow blobs -->
+  <circle cx="200" cy="400" r="400" fill="url(#glow1)" filter="url(#blur3)"/>
+  <circle cx="900" cy="1400" r="380" fill="url(#glow2)" filter="url(#blur3)"/>
+
+  <!-- Top accent -->
+  <rect x="80" y="100" width="100" height="7" rx="3.5" fill="#16a34a"/>
+  <rect x="196" y="100" width="40" height="7" rx="3.5" fill="#16a34a" opacity="0.4"/>
+
+  <!-- Logo area -->
+  <rect x="80" y="128" width="68" height="68" rx="18" fill="url(#green)"/>
+  <path d="M94 142 L94 182 L106 170 L112 186 L120 183 L114 167 L128 167 Z" fill="white" opacity="0.95"/>
+  <circle cx="148" cy="150" r="9" fill="#4ade80" opacity="0.8"/>
+  <circle cx="148" cy="150" r="5" fill="white"/>
+  <text x="162" y="172" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="36" fill="white">Clica</text>
+  <text x="290" y="172" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="36" fill="#16a34a"> Aí</text>
+
+  <!-- Big icon hero -->
+  <rect x="240" y="280" width="600" height="600" rx="120" fill="url(#green)" opacity="0.12"/>
+  <rect x="260" y="300" width="600" height="600" rx="120" fill="url(#green)" opacity="0.07"/>
+  <!-- Cursor large -->
+  <path d="M390 380 L390 760 L490 660 L540 790 L610 762 L560 632 L680 632 Z"
+        fill="white" opacity="0.92"/>
+  <!-- Dot large -->
+  <circle cx="720" cy="420" r="80" fill="url(#indigo)" opacity="0.7"/>
+  <circle cx="720" cy="420" r="46" fill="white"/>
+
+  <!-- Headline -->
+  <text x="80" y="1010" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
+        font-size="90" fill="white" letter-spacing="-2">Envie mais.</text>
+  <text x="80" y="1110" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
+        font-size="90" fill="#16a34a" letter-spacing="-2">Venda mais.</text>
+  <text x="80" y="1210" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
+        font-size="90" fill="white" letter-spacing="-2">Cresça mais.</text>
+
+  <!-- Divider -->
+  <rect x="80" y="1260" width="120" height="6" rx="3" fill="#16a34a"/>
+
+  <!-- Body -->
+  <text x="80" y="1320" font-family="Arial, sans-serif" font-size="38" fill="#9ca3af">Automatize WhatsApp e Email</text>
+  <text x="80" y="1370" font-family="Arial, sans-serif" font-size="38" fill="#9ca3af">com inteligência artificial.</text>
+
+  <!-- Feature cards -->
+  <rect x="80" y="1420" width="420" height="130" rx="22" fill="rgba(22,163,74,0.12)" stroke="#16a34a" stroke-width="1.5"/>
+  <text x="160" y="1475" font-family="Arial, sans-serif" font-size="46" fill="#16a34a" text-anchor="middle">💬</text>
+  <text x="290" y="1470" font-family="Arial, sans-serif" font-weight="700" font-size="28" fill="white">WhatsApp</text>
+  <text x="290" y="1504" font-family="Arial, sans-serif" font-size="22" fill="#6b7280">Campanhas em massa</text>
+
+  <rect x="580" y="1420" width="420" height="130" rx="22" fill="rgba(79,70,229,0.12)" stroke="#4f46e5" stroke-width="1.5"/>
+  <text x="660" y="1475" font-family="Arial, sans-serif" font-size="46" fill="#818cf8" text-anchor="middle">✉️</text>
+  <text x="790" y="1470" font-family="Arial, sans-serif" font-weight="700" font-size="28" fill="white">Email</text>
+  <text x="790" y="1504" font-family="Arial, sans-serif" font-size="22" fill="#6b7280">Newsletter e promos</text>
+
+  <rect x="80" y="1574" width="420" height="130" rx="22" fill="rgba(251,191,36,0.1)" stroke="#fbbf24" stroke-width="1.5"/>
+  <text x="160" y="1629" font-family="Arial, sans-serif" font-size="46" fill="#fbbf24" text-anchor="middle">🤖</text>
+  <text x="290" y="1624" font-family="Arial, sans-serif" font-weight="700" font-size="28" fill="white">Bot de IA</text>
+  <text x="290" y="1658" font-family="Arial, sans-serif" font-size="22" fill="#6b7280">Atendimento 24 horas</text>
+
+  <rect x="580" y="1574" width="420" height="130" rx="22" fill="rgba(16,185,129,0.1)" stroke="#10b981" stroke-width="1.5"/>
+  <text x="660" y="1629" font-family="Arial, sans-serif" font-size="46" fill="#10b981" text-anchor="middle">📊</text>
+  <text x="790" y="1624" font-family="Arial, sans-serif" font-weight="700" font-size="28" fill="white">Dashboard</text>
+  <text x="790" y="1658" font-family="Arial, sans-serif" font-size="22" fill="#6b7280">Resultados em tempo real</text>
+
+  <!-- CTA button -->
+  <rect x="80" y="1748" width="920" height="100" rx="28" fill="url(#green)" filter="url(#shadow3)"/>
+  <text x="540" y="1810" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
+        font-size="40" fill="white" text-anchor="middle">Comece grátis → clicaai.ia.br</text>
+
+  <!-- Bottom -->
+  <text x="540" y="1890" font-family="Arial, sans-serif" font-size="26" fill="#4b5563" text-anchor="middle">@clicaai · Automação de mensagens inteligente</text>
+</svg>

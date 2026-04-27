@@ -1,0 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#f0fdf4"/>
+      <stop offset="100%" stop-color="#dcfce7"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="100%" stop-color="#f9fafb"/>
+    </linearGradient>
+    <linearGradient id="green" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#16a34a"/>
+      <stop offset="100%" stop-color="#059652"/>
+    </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="8" stdDeviation="24" flood-color="#16a34a" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <!-- Background -->
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+
+  <!-- Decorative circles background -->
+  <circle cx="980" cy="120" r="180" fill="#16a34a" opacity="0.06"/>
+  <circle cx="100" cy="980" r="200" fill="#16a34a" opacity="0.05"/>
+
+  <!-- Top logo bar -->
+  <rect x="0" y="0" width="1080" height="110" fill="url(#green)"/>
+  <!-- Logo in bar -->
+  <rect x="64" y="28" width="54" height="54" rx="14" fill="rgba(255,255,255,0.2)"/>
+  <path d="M75 39 L75 71 L84 62 L89 74 L95 71 L90 59 L101 59 Z" fill="white" opacity="0.95"/>
+  <circle cx="113" cy="44" r="7" fill="rgba(255,255,255,0.4)"/>
+  <circle cx="113" cy="44" r="4" fill="white"/>
+  <text x="130" y="72" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="32" fill="white">Clica Aí</text>
+  <!-- Dica badge -->
+  <rect x="820" y="28" width="196" height="54" rx="27" fill="rgba(255,255,255,0.2)"/>
+  <text x="918" y="62" font-family="Arial, sans-serif" font-weight="700" font-size="26" fill="white" text-anchor="middle">💡 Dica do dia</text>
+
+  <!-- Main card -->
+  <rect x="64" y="150" width="952" height="780" rx="32" fill="url(#card)" filter="url(#shadow)"/>
+
+  <!-- Number circle -->
+  <circle cx="540" cy="280" r="80" fill="url(#green)"/>
+  <text x="540" y="304" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="72" fill="white" text-anchor="middle">01</text>
+
+  <!-- Main tip headline -->
+  <text x="540" y="420" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
+        font-size="62" fill="#111827" text-anchor="middle">Use tags para</text>
+  <text x="540" y="494" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
+        font-size="62" fill="#16a34a" text-anchor="middle">segmentar contatos</text>
+
+  <!-- Divider -->
+  <rect x="440" y="526" width="200" height="4" rx="2" fill="#16a34a" opacity="0.3"/>
+
+  <!-- Tip body -->
+  <text x="540" y="594" font-family="Arial, sans-serif" font-size="34" fill="#374151" text-anchor="middle">Organize seus contatos com tags como</text>
+  <text x="540" y="640" font-family="Arial, sans-serif" font-size="34" fill="#374151" text-anchor="middle">CLIENTE, LEAD ou VIP e envie campanhas</text>
+  <text x="540" y="686" font-family="Arial, sans-serif" font-size="34" fill="#374151" text-anchor="middle">personalizadas para cada grupo.</text>
+
+  <!-- Tag examples -->
+  <rect x="164" y="726" width="188" height="58" rx="29" fill="#dcfce7"/>
+  <text x="258" y="762" font-family="Arial, sans-serif" font-weight="700" font-size="28" fill="#16a34a" text-anchor="middle">CLIENTE</text>
+
+  <rect x="370" y="726" width="160" height="58" rx="29" fill="#fef3c7"/>
+  <text x="450" y="762" font-family="Arial, sans-serif" font-weight="700" font-size="28" fill="#d97706" text-anchor="middle">LEAD</text>
+
+  <rect x="548" y="726" width="140" height="58" rx="29" fill="#ede9fe"/>
+  <text x="618" y="762" font-family="Arial, sans-serif" font-weight="700" font-size="28" fill="#7c3aed" text-anchor="middle">VIP</text>
+
+  <rect x="706" y="726" width="220" height="58" rx="29" fill="#fee2e2"/>
+  <text x="816" y="762" font-family="Arial, sans-serif" font-weight="700" font-size="28" fill="#dc2626" text-anchor="middle">INATIVO</text>
+
+  <!-- Bottom link -->
+  <text x="540" y="868" font-family="Arial, sans-serif" font-size="26" fill="#9ca3af" text-anchor="middle">Acesse agora: clicaai.ia.br</text>
+
+  <!-- Bottom footer -->
+  <rect x="0" y="988" width="1080" height="92" fill="url(#green)" opacity="0.95"/>
+  <text x="540" y="1044" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
+        font-size="28" fill="white" text-anchor="middle">Clica Aí — Automação de mensagens inteligente</text>
+</svg>

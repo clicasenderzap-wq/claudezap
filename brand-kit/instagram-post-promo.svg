@@ -1,0 +1,89 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1080 1080" width="1080" height="1080">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#16a34a"/>
+      <stop offset="50%" stop-color="#059652"/>
+      <stop offset="100%" stop-color="#047840"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="rgba(255,255,255,0.14)"/>
+      <stop offset="100%" stop-color="rgba(255,255,255,0.06)"/>
+    </linearGradient>
+    <linearGradient id="price" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#fbbf24"/>
+      <stop offset="100%" stop-color="#f59e0b"/>
+    </linearGradient>
+    <filter id="blur2"><feGaussianBlur stdDeviation="50"/></filter>
+    <filter id="shadow2">
+      <feDropShadow dx="0" dy="12" stdDeviation="28" flood-color="#000" flood-opacity="0.2"/>
+    </filter>
+  </defs>
+
+  <!-- BG -->
+  <rect width="1080" height="1080" fill="url(#bg)"/>
+
+  <!-- Glow blobs -->
+  <circle cx="900" cy="200" r="300" fill="#4ade80" opacity="0.08" filter="url(#blur2)"/>
+  <circle cx="180" cy="900" r="260" fill="#f59e0b" opacity="0.06" filter="url(#blur2)"/>
+
+  <!-- Grid lines decoration -->
+  <line x1="0" y1="200" x2="1080" y2="200" stroke="white" stroke-width="1" opacity="0.06"/>
+  <line x1="0" y1="400" x2="1080" y2="400" stroke="white" stroke-width="1" opacity="0.06"/>
+  <line x1="0" y1="600" x2="1080" y2="600" stroke="white" stroke-width="1" opacity="0.06"/>
+  <line x1="0" y1="800" x2="1080" y2="800" stroke="white" stroke-width="1" opacity="0.06"/>
+  <line x1="200" y1="0" x2="200" y2="1080" stroke="white" stroke-width="1" opacity="0.06"/>
+  <line x1="400" y1="0" x2="400" y2="1080" stroke="white" stroke-width="1" opacity="0.06"/>
+  <line x1="600" y1="0" x2="600" y2="1080" stroke="white" stroke-width="1" opacity="0.06"/>
+  <line x1="800" y1="0" x2="800" y2="1080" stroke="white" stroke-width="1" opacity="0.06"/>
+
+  <!-- Logo -->
+  <rect x="72" y="68" width="54" height="54" rx="14" fill="rgba(255,255,255,0.2)"/>
+  <path d="M83 79 L83 111 L92 102 L97 114 L103 111 L98 99 L109 99 Z" fill="white" opacity="0.95"/>
+  <circle cx="121" cy="84" r="7" fill="rgba(255,255,255,0.3)"/>
+  <circle cx="121" cy="84" r="4" fill="white"/>
+  <text x="138" y="112" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="32" fill="white">Clica Aí</text>
+
+  <!-- OFERTA badge -->
+  <rect x="800" y="62" width="220" height="66" rx="33" fill="url(#price)"/>
+  <text x="910" y="104" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="30" fill="#111827" text-anchor="middle">🔥 OFERTA</text>
+
+  <!-- Main heading -->
+  <text x="72" y="280" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
+        font-size="76" fill="white" letter-spacing="-1">Comece agora</text>
+  <text x="72" y="366" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
+        font-size="76" fill="white" letter-spacing="-1">e automatize seu</text>
+  <text x="72" y="452" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
+        font-size="76" fill="#fbbf24" letter-spacing="-1">WhatsApp.</text>
+
+  <!-- Features card -->
+  <rect x="72" y="498" width="936" height="360" rx="28" fill="url(#card)" filter="url(#shadow2)"/>
+  <rect x="72" y="498" width="936" height="360" rx="28" stroke="rgba(255,255,255,0.15)" stroke-width="1.5" fill="none"/>
+
+  <!-- Feature rows -->
+  <text x="120" y="572" font-family="Arial, sans-serif" font-size="34" fill="white">✓</text>
+  <text x="165" y="572" font-family="Arial, sans-serif" font-size="34" fill="white">Campanhas em massa no WhatsApp</text>
+
+  <text x="120" y="632" font-family="Arial, sans-serif" font-size="34" fill="white">✓</text>
+  <text x="165" y="632" font-family="Arial, sans-serif" font-size="34" fill="white">Bot de atendimento com IA 24h</text>
+
+  <text x="120" y="692" font-family="Arial, sans-serif" font-size="34" fill="white">✓</text>
+  <text x="165" y="692" font-family="Arial, sans-serif" font-size="34" fill="white">Envio de e-mails em massa</text>
+
+  <text x="120" y="752" font-family="Arial, sans-serif" font-size="34" fill="white">✓</text>
+  <text x="165" y="752" font-family="Arial, sans-serif" font-size="34" fill="white">Agendamentos e listas segmentadas</text>
+
+  <text x="120" y="812" font-family="Arial, sans-serif" font-size="34" fill="white">✓</text>
+  <text x="165" y="812" font-family="Arial, sans-serif" font-size="34" fill="white">Dashboard completo de resultados</text>
+
+  <!-- Price section -->
+  <rect x="72" y="900" width="450" height="110" rx="22" fill="rgba(255,255,255,0.12)"/>
+  <text x="150" y="950" font-family="Arial, sans-serif" font-size="24" fill="rgba(255,255,255,0.7)">A partir de</text>
+  <text x="150" y="996" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="46" fill="white">R$ 67,90</text>
+  <text x="370" y="996" font-family="Arial, sans-serif" font-size="22" fill="rgba(255,255,255,0.6)">/mês</text>
+
+  <!-- CTA -->
+  <rect x="558" y="900" width="450" height="110" rx="22" fill="#fbbf24"/>
+  <text x="783" y="966" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
+        font-size="36" fill="#111827" text-anchor="middle">Teste grátis 7 dias</text>
+  <text x="783" y="1000" font-family="Arial, sans-serif" font-size="24" fill="#374151" text-anchor="middle">clicaai.ia.br</text>
+</svg>
