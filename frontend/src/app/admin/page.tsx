@@ -790,7 +790,7 @@ function InfraTab({ stats }: { stats: any }) {
         <div className="grid sm:grid-cols-3 gap-4">
           <div className="bg-gray-50 rounded-xl p-4">
             <p className="text-xs text-gray-400 mb-1">Versão atual</p>
-            <p className="font-black text-xl text-gray-800">v1.0.5</p>
+            <p className="font-black text-xl text-gray-800">v1.0.6</p>
             <p className="text-xs text-gray-400 mt-1">Windows x64</p>
           </div>
           <div className="bg-gray-50 rounded-xl p-4">
