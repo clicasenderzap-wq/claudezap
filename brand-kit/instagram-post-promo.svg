@@ -37,10 +37,13 @@
   <line x1="800" y1="0" x2="800" y2="1080" stroke="white" stroke-width="1" opacity="0.06"/>
 
   <!-- Logo -->
-  <rect x="72" y="68" width="54" height="54" rx="14" fill="rgba(255,255,255,0.2)"/>
-  <path d="M83 79 L83 111 L92 102 L97 114 L103 111 L98 99 L109 99 Z" fill="white" opacity="0.95"/>
-  <circle cx="121" cy="84" r="7" fill="rgba(255,255,255,0.3)"/>
-  <circle cx="121" cy="84" r="4" fill="white"/>
+  <!-- Logo top-left — standardized icon scale(0.27), glass style for green bg -->
+  <g transform="translate(72,68) scale(0.27)">
+    <rect x="8" y="8" width="184" height="184" rx="44" fill="rgba(255,255,255,0.2)" stroke="rgba(255,255,255,0.25)" stroke-width="3"/>
+    <path d="M52 50 L52 118 L72 98 L86 132 L100 126 L86 92 L110 92 Z" fill="white" opacity="0.95"/>
+    <circle cx="132" cy="62" r="18" fill="rgba(255,255,255,0.35)"/>
+    <circle cx="132" cy="62" r="10" fill="white"/>
+  </g>
   <text x="138" y="112" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="32" fill="white">Clica Aí</text>
 
   <!-- OFERTA badge -->

@@ -27,15 +27,15 @@
   <!-- Top accent line -->
   <rect x="80" y="80" width="120" height="6" rx="3" fill="#16a34a"/>
 
-  <!-- Logo top-left -->
-  <!-- Icon small -->
-  <rect x="80" y="106" width="52" height="52" rx="12" fill="url(#green)"/>
-  <path d="M91 117 L91 147 L99 139 L103 150 L108 148 L104 137 L114 137 Z" fill="white" opacity="0.95"/>
-  <circle cx="122" cy="122" r="6" fill="#4ade80" opacity="0.8"/>
-  <circle cx="122" cy="122" r="3.5" fill="white"/>
-  <!-- Wordmark -->
-  <text x="143" y="142" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="28" fill="white">Clica</text>
-  <text x="231" y="142" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="28" fill="#16a34a"> Aí</text>
+  <!-- Logo top-left — standardized icon scale(0.27) -->
+  <g transform="translate(80,106) scale(0.27)">
+    <rect x="8" y="8" width="184" height="184" rx="44" fill="url(#green)"/>
+    <rect x="8" y="8" width="184" height="90" rx="44" fill="white" opacity="0.06"/>
+    <path d="M52 50 L52 118 L72 98 L86 132 L100 126 L86 92 L110 92 Z" fill="white" opacity="0.95"/>
+    <circle cx="132" cy="62" r="18" fill="#4ade80" opacity="0.85"/>
+    <circle cx="132" cy="62" r="10" fill="white"/>
+  </g>
+  <text x="143" y="142" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="28" fill="white">Clica <tspan fill="#4ade80">Aí</tspan></text>
 
   <!-- Main headline -->
   <text x="80" y="380" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
@@ -73,5 +73,5 @@
   <rect x="0" y="980" width="1080" height="100" fill="#16a34a" opacity="0.12"/>
   <rect x="0" y="980" width="1080" height="3" fill="#16a34a"/>
   <text x="80" y="1040" font-family="Arial, sans-serif" font-size="26" fill="#6b7280">clicaai.ia.br</text>
-  <text x="1000" y="1040" font-family="Arial, sans-serif" font-size="26" fill="#6b7280" text-anchor="end">@clicaai</text>
+  <text x="1000" y="1040" font-family="Arial, sans-serif" font-size="26" fill="#6b7280" text-anchor="end">@clicaia.ai.br</text>
 </svg>

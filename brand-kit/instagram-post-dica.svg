@@ -26,12 +26,14 @@
 
   <!-- Top logo bar -->
   <rect x="0" y="0" width="1080" height="110" fill="url(#green)"/>
-  <!-- Logo in bar -->
-  <rect x="64" y="28" width="54" height="54" rx="14" fill="rgba(255,255,255,0.2)"/>
-  <path d="M75 39 L75 71 L84 62 L89 74 L95 71 L90 59 L101 59 Z" fill="white" opacity="0.95"/>
-  <circle cx="113" cy="44" r="7" fill="rgba(255,255,255,0.4)"/>
-  <circle cx="113" cy="44" r="4" fill="white"/>
-  <text x="130" y="72" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="32" fill="white">Clica Aí</text>
+  <!-- Logo in bar — standardized icon scale(0.27), glass style for green bg -->
+  <g transform="translate(64,28) scale(0.27)">
+    <rect x="8" y="8" width="184" height="184" rx="44" fill="rgba(255,255,255,0.25)" stroke="rgba(255,255,255,0.3)" stroke-width="3"/>
+    <path d="M52 50 L52 118 L72 98 L86 132 L100 126 L86 92 L110 92 Z" fill="white" opacity="0.95"/>
+    <circle cx="132" cy="62" r="18" fill="rgba(255,255,255,0.4)"/>
+    <circle cx="132" cy="62" r="10" fill="white"/>
+  </g>
+  <text x="130" y="72" font-family="'Arial Black', Arial, sans-serif" font-weight="900" font-size="32" fill="white">Clica <tspan fill="rgba(255,255,255,0.85)">Aí</tspan></text>
   <!-- Dica badge -->
   <rect x="820" y="28" width="196" height="54" rx="27" fill="rgba(255,255,255,0.2)"/>
   <text x="918" y="62" font-family="Arial, sans-serif" font-weight="700" font-size="26" fill="white" text-anchor="middle">💡 Dica do dia</text>
@@ -76,5 +78,5 @@
   <!-- Bottom footer -->
   <rect x="0" y="988" width="1080" height="92" fill="url(#green)" opacity="0.95"/>
   <text x="540" y="1044" font-family="'Arial Black', Arial, sans-serif" font-weight="900"
-        font-size="28" fill="white" text-anchor="middle">Clica Aí — Automação de mensagens inteligente</text>
+        font-size="28" fill="white" text-anchor="middle">Clica Aí — Automação Inteligente de mensagens</text>
 </svg>
