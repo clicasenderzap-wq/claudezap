@@ -8,6 +8,7 @@ on:
       - 'electron-app/assets/**'
       - 'electron-app/electron-builder.yml'
       - 'electron-app/scripts/**'
+  workflow_dispatch:
 
 permissions:
   contents: write
