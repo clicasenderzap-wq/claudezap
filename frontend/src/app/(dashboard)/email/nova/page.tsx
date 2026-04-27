@@ -1,9 +1,13 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
-import { Mail, Send, Clock, Eye, Users, ChevronLeft, Check } from 'lucide-react';
+import {
+  Mail, Send, Clock, Users, ChevronLeft, Check,
+  Bold, Italic, Underline, Heading2, Type, List,
+  AlignLeft, AlignCenter, AlignRight, Link2, Image as ImageIcon, Minus,
+} from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 
@@ -17,6 +21,147 @@ const DEFAULT_HTML = `<div style="font-family:sans-serif;max-width:600px;margin:
   </p>
 </div>`;
 
+type EditorMode = 'visual' | 'html' | 'preview';
+
+function VisualEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const editorRef = useRef<HTMLDivElement>(null);
+  const [mode, setMode] = useState<EditorMode>('visual');
+
+  useEffect(() => {
+    if (mode === 'visual' && editorRef.current) {
+      editorRef.current.innerHTML = value;
+    }
+  }, [mode]);
+
+  function switchMode(next: EditorMode) {
+    if (mode === 'visual' && editorRef.current) onChange(editorRef.current.innerHTML);
+    setMode(next);
+  }
+
+  function cmd(command: string, val?: string) {
+    if (!editorRef.current) return;
+    editorRef.current.focus();
+    document.execCommand(command, false, val);
+    onChange(editorRef.current.innerHTML);
+  }
+
+  function insertLink() {
+    const url = window.prompt('URL do link (ex: https://seusite.com):');
+    if (url) cmd('createLink', url);
+  }
+
+  function insertImage() {
+    const url = window.prompt('URL da imagem:');
+    if (!url) return;
+    cmd('insertHTML', `<img src="${url}" alt="" style="max-width:100%;height:auto;display:block;margin:12px 0" />`);
+  }
+
+  function insertButton() {
+    const text = window.prompt('Texto do botão:', 'Saiba mais');
+    if (!text) return;
+    const url = window.prompt('URL do botão:');
+    if (!url) return;
+    cmd('insertHTML',
+      `<table cellpadding="0" cellspacing="0" style="margin:16px 0">` +
+      `<tr><td style="background:#16a34a;border-radius:8px;padding:13px 28px;text-align:center">` +
+      `<a href="${url}" target="_blank" style="color:#ffffff;font-weight:700;font-size:15px;` +
+      `text-decoration:none;font-family:sans-serif">${text}</a></td></tr></table>`
+    );
+  }
+
+  const Sep = () => <span className="w-px h-4 bg-gray-200 mx-0.5 self-center" />;
+
+  function ToolBtn({ onClick, title, children }: { onClick: () => void; title: string; children: React.ReactNode }) {
+    return (
+      <button
+        type="button"
+        title={title}
+        onMouseDown={(e) => { e.preventDefault(); onClick(); }}
+        className="p-1.5 rounded hover:bg-gray-100 text-gray-600 hover:text-gray-800 transition-colors"
+      >
+        {children}
+      </button>
+    );
+  }
+
+  return (
+    <div className="border border-gray-200 rounded-xl overflow-hidden">
+      {/* Mode tabs */}
+      <div className="flex items-center gap-1 px-3 py-2 bg-gray-50 border-b border-gray-200">
+        {(['visual', 'html', 'preview'] as EditorMode[]).map((m) => (
+          <button
+            key={m}
+            type="button"
+            onClick={() => switchMode(m)}
+            className={`text-xs px-3 py-1 rounded-md font-medium transition-colors ${
+              mode === m ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+            }`}
+          >
+            {m === 'visual' ? 'Visual' : m === 'html' ? 'HTML' : 'Pré-visualizar'}
+          </button>
+        ))}
+        <span className="ml-auto text-xs text-gray-400">
+          {mode === 'visual' && 'Editor visual — sem precisar de código'}
+          {mode === 'html' && 'Edição direta do HTML'}
+        </span>
+      </div>
+
+      {/* Formatting toolbar — visual only */}
+      {mode === 'visual' && (
+        <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-100 bg-white">
+          <ToolBtn onClick={() => cmd('bold')} title="Negrito (Ctrl+B)"><Bold size={13} /></ToolBtn>
+          <ToolBtn onClick={() => cmd('italic')} title="Itálico (Ctrl+I)"><Italic size={13} /></ToolBtn>
+          <ToolBtn onClick={() => cmd('underline')} title="Sublinhado (Ctrl+U)"><Underline size={13} /></ToolBtn>
+          <Sep />
+          <ToolBtn onClick={() => cmd('formatBlock', 'h2')} title="Título"><Heading2 size={13} /></ToolBtn>
+          <ToolBtn onClick={() => cmd('formatBlock', 'p')} title="Parágrafo"><Type size={13} /></ToolBtn>
+          <ToolBtn onClick={() => cmd('insertUnorderedList')} title="Lista com marcadores"><List size={13} /></ToolBtn>
+          <Sep />
+          <ToolBtn onClick={() => cmd('justifyLeft')} title="Alinhar à esquerda"><AlignLeft size={13} /></ToolBtn>
+          <ToolBtn onClick={() => cmd('justifyCenter')} title="Centralizar"><AlignCenter size={13} /></ToolBtn>
+          <ToolBtn onClick={() => cmd('justifyRight')} title="Alinhar à direita"><AlignRight size={13} /></ToolBtn>
+          <Sep />
+          <ToolBtn onClick={insertLink} title="Inserir link"><Link2 size={13} /></ToolBtn>
+          <ToolBtn onClick={insertImage} title="Inserir imagem por URL"><ImageIcon size={13} /></ToolBtn>
+          <ToolBtn onClick={insertButton} title="Inserir botão de chamada para ação">
+            <span className="text-[10px] font-bold px-1.5 py-0.5 bg-green-600 text-white rounded leading-none">BTN</span>
+          </ToolBtn>
+          <ToolBtn onClick={() => cmd('insertHorizontalRule')} title="Linha divisória"><Minus size={13} /></ToolBtn>
+        </div>
+      )}
+
+      {/* Editor content */}
+      {mode === 'visual' && (
+        <div
+          ref={editorRef}
+          contentEditable
+          suppressContentEditableWarning
+          onInput={() => editorRef.current && onChange(editorRef.current.innerHTML)}
+          className="min-h-80 p-4 focus:outline-none text-sm leading-relaxed"
+          style={{ fontFamily: 'sans-serif' }}
+        />
+      )}
+      {mode === 'html' && (
+        <textarea
+          className="w-full min-h-80 p-3 font-mono text-xs focus:outline-none resize-none"
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
+      )}
+      {mode === 'preview' && (
+        <iframe
+          srcDoc={value
+            .replace(/\{\{name\}\}/gi, 'João Silva')
+            .replace(/\{\{email\}\}/gi, 'joao@exemplo.com')
+            .replace(/\{\{unsubscribe_url\}\}/gi, '#')}
+          className="w-full min-h-80 bg-white"
+          sandbox="allow-same-origin"
+        />
+      )}
+    </div>
+  );
+}
+
 function NovaCampanhaForm() {
   const router = useRouter();
   const params = useSearchParams();
@@ -27,7 +172,6 @@ function NovaCampanhaForm() {
   });
   const [sendOpts, setSendOpts] = useState({ tag_filter: '', scheduled_for: '' });
   const [manualEmails, setManualEmails] = useState('');
-  const [preview, setPreview] = useState(false);
   const [step, setStep] = useState<'edit' | 'send'>('edit');
   const [savedId, setSavedId] = useState<string | null>(null);
 
@@ -174,31 +318,13 @@ function NovaCampanhaForm() {
             </div>
           </div>
 
-          {/* Right: HTML editor */}
+          {/* Right: Visual editor */}
           <div className="card p-5 space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="font-semibold text-gray-800">Conteúdo HTML</h2>
-              <button onClick={() => setPreview(!preview)}
-                className="text-xs flex items-center gap-1 text-indigo-600 hover:text-indigo-700 font-medium">
-                <Eye size={13} /> {preview ? 'Ver código' : 'Pré-visualizar'}
-              </button>
-            </div>
-            {preview ? (
-              <iframe
-                srcDoc={form.html_body
-                  .replace(/\{\{name\}\}/gi, 'João Silva')
-                  .replace(/\{\{email\}\}/gi, 'joao@exemplo.com')
-                  .replace(/\{\{unsubscribe_url\}\}/gi, '#')}
-                className="w-full h-96 border border-gray-200 rounded-lg bg-white"
-                sandbox="allow-same-origin"
-              />
-            ) : (
-              <textarea
-                className="input font-mono text-xs min-h-96 resize-none"
-                value={form.html_body}
-                onChange={(e) => setForm({ ...form, html_body: e.target.value })}
-              />
-            )}
+            <h2 className="font-semibold text-gray-800">Conteúdo do email</h2>
+            <VisualEditor
+              value={form.html_body}
+              onChange={(v) => setForm({ ...form, html_body: v })}
+            />
           </div>
         </div>
       )}
