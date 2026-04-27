@@ -7,6 +7,7 @@ import {
   Clock, CheckCircle2, XCircle, Smartphone, WifiOff, Trash2,
   ChevronDown, ChevronRight, TrendingUp, DollarSign,
   Activity, Server, Database, Monitor, Zap, BarChart2, Edit3, Save,
+  Mail, Cloud, ExternalLink,
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -667,6 +668,38 @@ function PricesTab() {
 
 // ─── Infrastructure Tab ───────────────────────────────────────────────────────
 
+function CostRow({ icon, bg, service, detail, usd, brl, type, note, link }: {
+  icon: React.ReactNode; bg: string; service: string; detail: string;
+  usd: string; brl: string; type: 'free' | 'fixed' | 'variable'; note?: string; link: string;
+}) {
+  const badge = type === 'free'
+    ? 'bg-gray-100 text-gray-500'
+    : type === 'fixed'
+    ? 'bg-blue-100 text-blue-700'
+    : 'bg-orange-100 text-orange-700';
+  const label = type === 'free' ? 'Grátis' : type === 'fixed' ? 'Fixo' : 'Variável';
+  return (
+    <div className="flex items-center gap-3 py-2.5 border-b border-gray-50 last:border-0">
+      <div className={`p-2 rounded-lg ${bg} shrink-0`}>{icon}</div>
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-semibold text-gray-800">{service}</p>
+          <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded-full ${badge}`}>{label}</span>
+        </div>
+        <p className="text-xs text-gray-400">{detail}</p>
+        {note && <p className="text-xs text-gray-400 mt-0.5 italic">{note}</p>}
+      </div>
+      <div className="text-right shrink-0">
+        <p className="text-sm font-bold text-gray-800">{usd}<span className="text-xs font-normal text-gray-400">/mês</span></p>
+        <p className="text-xs text-gray-400">{type !== 'free' ? `≈ ${brl}` : ''}</p>
+      </div>
+      <a href={link} target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-gray-500 shrink-0">
+        <ExternalLink size={13} />
+      </a>
+    </div>
+  );
+}
+
 function InfraTab({ stats }: { stats: any }) {
   const backendBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api').replace(/\/api\/?$/, '');
 
@@ -773,33 +806,142 @@ function InfraTab({ stats }: { stats: any }) {
         </div>
       </div>
 
-      {/* Cost estimates */}
+      {/* Cost Dashboard */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-          <BarChart2 size={16} className="text-orange-500" /> Custos Estimados da Infraestrutura
+        <h2 className="font-bold text-gray-800 mb-5 flex items-center gap-2">
+          <DollarSign size={18} className="text-emerald-600" /> Custos Mensais da Infraestrutura
         </h2>
-        <div className="space-y-3">
-          {[
-            { service: 'Render — Backend (Starter Plan)', cost: '~$7 USD', brl: '~R$ 40', color: 'text-blue-600' },
-            { service: 'Render — PostgreSQL (Starter)', cost: '~$7 USD', brl: '~R$ 40', color: 'text-indigo-600' },
-            { service: 'Vercel — Frontend', cost: '$0', brl: 'Grátis', color: 'text-gray-500' },
-            { service: 'GitHub — Repositório + Releases', cost: '$0', brl: 'Grátis', color: 'text-gray-500' },
-            { service: 'Cloudflare R2 — Armazenamento de mídia', cost: '~$0–5', brl: '~R$ 0–30', color: 'text-orange-500' },
-          ].map((item) => (
-            <div key={item.service} className="flex items-center justify-between py-2.5 border-b border-gray-100 last:border-0">
-              <span className="text-sm text-gray-600">{item.service}</span>
-              <div className="text-right">
-                <span className={`text-sm font-bold ${item.color}`}>{item.cost}/mês</span>
-                <span className="text-xs text-gray-400 ml-2">({item.brl})</span>
-              </div>
-            </div>
-          ))}
-          <div className="flex items-center justify-between pt-2 bg-gray-50 rounded-lg px-3 py-2">
-            <span className="text-sm font-bold text-gray-700">Total estimado</span>
-            <span className="text-sm font-black text-gray-800">~$14 USD/mês (~R$ 80)</span>
+
+        {/* Summary cards */}
+        <div className="grid grid-cols-3 gap-3 mb-6">
+          <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
+            <p className="text-xs text-blue-500 font-medium mb-1">Custos fixos</p>
+            <p className="text-xl font-black text-blue-700">$14 <span className="text-sm font-semibold">USD</span></p>
+            <p className="text-xs text-blue-400 mt-0.5">≈ R$ 84/mês</p>
+          </div>
+          <div className="bg-orange-50 rounded-xl p-4 border border-orange-100">
+            <p className="text-xs text-orange-500 font-medium mb-1">Custos variáveis</p>
+            <p className="text-xl font-black text-orange-700">$0–28 <span className="text-sm font-semibold">USD</span></p>
+            <p className="text-xs text-orange-400 mt-0.5">conforme uso</p>
+          </div>
+          <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
+            <p className="text-xs text-emerald-600 font-medium mb-1">Total estimado</p>
+            <p className="text-xl font-black text-emerald-700">$14–42 <span className="text-sm font-semibold">USD</span></p>
+            <p className="text-xs text-emerald-500 mt-0.5">≈ R$ 84–252/mês</p>
           </div>
         </div>
-        <p className="text-xs text-gray-400 mt-3">* Custos podem variar conforme uso de armazenamento e tráfego. USD convertido aproximado.</p>
+
+        {/* Services table */}
+        <div className="space-y-1">
+
+          {/* Group: Servidor */}
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider pt-2 pb-1">Servidor</p>
+          {[
+            {
+              icon: <Server size={14} className="text-blue-600" />,
+              bg: 'bg-blue-50',
+              service: 'Render — Backend API',
+              detail: 'Node.js · Starter Plan',
+              usd: '$7',
+              brl: 'R$ 42',
+              type: 'fixed' as const,
+              link: 'https://dashboard.render.com',
+            },
+            {
+              icon: <Database size={14} className="text-indigo-600" />,
+              bg: 'bg-indigo-50',
+              service: 'Render — PostgreSQL',
+              detail: 'Banco de dados · Starter',
+              usd: '$7',
+              brl: 'R$ 42',
+              type: 'fixed' as const,
+              link: 'https://dashboard.render.com',
+            },
+          ].map((item) => <CostRow key={item.service} {...item} />)}
+
+          {/* Group: Fila & Cache */}
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider pt-3 pb-1">Fila & Cache</p>
+          {[
+            {
+              icon: <Zap size={14} className="text-yellow-600" />,
+              bg: 'bg-yellow-50',
+              service: 'Upstash Redis',
+              detail: 'BullMQ · Pay as you go',
+              usd: '$0–3',
+              brl: 'R$ 0–18',
+              type: 'variable' as const,
+              note: '10k req/dia grátis; $0,20 por 100k extras',
+              link: 'https://console.upstash.com',
+            },
+          ].map((item) => <CostRow key={item.service} {...item} />)}
+
+          {/* Group: Email */}
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider pt-3 pb-1">Email</p>
+          {[
+            {
+              icon: <Mail size={14} className="text-violet-600" />,
+              bg: 'bg-violet-50',
+              service: 'Resend',
+              detail: 'Envio de emails · Free/Pro',
+              usd: '$0–20',
+              brl: 'R$ 0–120',
+              type: 'variable' as const,
+              note: '3.000 emails/mês grátis; Pro $20 = 50k emails',
+              link: 'https://resend.com/overview',
+            },
+          ].map((item) => <CostRow key={item.service} {...item} />)}
+
+          {/* Group: Armazenamento & Outros */}
+          <p className="text-xs font-bold text-gray-400 uppercase tracking-wider pt-3 pb-1">Armazenamento & Outros</p>
+          {[
+            {
+              icon: <Cloud size={14} className="text-orange-500" />,
+              bg: 'bg-orange-50',
+              service: 'Cloudflare R2',
+              detail: 'Mídia enviada pelos clientes',
+              usd: '$0–5',
+              brl: 'R$ 0–30',
+              type: 'variable' as const,
+              note: '10 GB/mês grátis; $0,015/GB extra',
+              link: 'https://dash.cloudflare.com',
+            },
+            {
+              icon: <Monitor size={14} className="text-gray-500" />,
+              bg: 'bg-gray-50',
+              service: 'Vercel — Frontend',
+              detail: 'Next.js · Hobby Plan',
+              usd: '$0',
+              brl: 'Grátis',
+              type: 'free' as const,
+              link: 'https://vercel.com/dashboard',
+            },
+            {
+              icon: <Monitor size={14} className="text-gray-500" />,
+              bg: 'bg-gray-50',
+              service: 'GitHub',
+              detail: 'Repositório + Releases',
+              usd: '$0',
+              brl: 'Grátis',
+              type: 'free' as const,
+              link: 'https://github.com',
+            },
+          ].map((item) => <CostRow key={item.service} {...item} />)}
+        </div>
+
+        {/* Visual bar */}
+        <div className="mt-5 pt-4 border-t border-gray-100">
+          <p className="text-xs text-gray-500 mb-2">Distribuição dos custos fixos</p>
+          <div className="flex rounded-full overflow-hidden h-3 gap-0.5">
+            <div className="bg-blue-500 flex-1" title="Render Backend $7" />
+            <div className="bg-indigo-500 flex-1" title="Render PostgreSQL $7" />
+          </div>
+          <div className="flex gap-4 mt-2">
+            <span className="flex items-center gap-1 text-xs text-gray-500"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" /> Render Backend ($7)</span>
+            <span className="flex items-center gap-1 text-xs text-gray-500"><span className="w-2 h-2 rounded-full bg-indigo-500 inline-block" /> PostgreSQL ($7)</span>
+          </div>
+        </div>
+
+        <p className="text-xs text-gray-400 mt-4">* Câmbio aproximado: USD 1 = R$ 6. Custos variáveis dependem do volume de uso mensal.</p>
       </div>
     </div>
   );
