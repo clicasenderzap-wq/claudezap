@@ -1,4 +1,6 @@
-nome,telefone,observacoes
-João Silva,11999999999,Cliente VIP
-Maria Souza,21988888888,
-Pedro Lima,31977777777,Lead quente
+nome,telefone,tag,observacoes
+João Silva,35999990001,CLIENTE,Cliente desde 2024
+Maria Souza,11988880002,LEAD,Interessada no produto X
+Pedro Costa,21977770003,VIP,Cliente premium
+Ana Lima,31966660004,LEAD,
+Carlos Mendes,51955550005,CLIENTE,Comprou em janeiro
