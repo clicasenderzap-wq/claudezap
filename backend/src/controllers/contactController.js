@@ -192,11 +192,15 @@ async function importCSV(req, res) {
     const rawTag = String(row.tag || row.tags || row.tipo || row.grupo || row.etiqueta || row.category || '').trim();
     const tags = rawTag ? [normalizeTag(rawTag)] : [];
 
+    // Lê email (opcional)
+    const email = String(row.email || row.e_mail || row['e-mail'] || '').trim().toLowerCase() || null;
+
     if (name && phone) {
       results.push({
         user_id: req.user.id,
         name,
         phone: normalizePhone(phone),
+        email: email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) ? email : null,
         notes: String(row.observacoes || row.notes || '').trim() || null,
         tags,
         consent_source,
@@ -219,9 +223,14 @@ async function importCSV(req, res) {
         try {
           const existing = await Contact.findOne({ where: { user_id: row.user_id, phone: row.phone } });
           if (existing) {
-            // Merge tags: mantém existentes + adiciona novas
             const merged = [...new Set([...(existing.tags || []), ...row.tags].map(normalizeTag))];
-            await existing.update({ name: row.name, notes: row.notes || existing.notes, tags: merged });
+            await existing.update({
+              name: row.name,
+              notes: row.notes || existing.notes,
+              tags: merged,
+              // Só sobrescreve email se vier um novo valor válido
+              ...(row.email && { email: row.email }),
+            });
           }
           imported++;
           duplicates++;

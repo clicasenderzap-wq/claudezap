@@ -1,6 +1,6 @@
-nome,telefone,tag,observacoes
-João Silva,35999990001,CLIENTE,Cliente desde 2024
-Maria Souza,11988880002,LEAD,Interessada no produto X
-Pedro Costa,21977770003,VIP,Cliente premium
-Ana Lima,31966660004,LEAD,
-Carlos Mendes,51955550005,CLIENTE,Comprou em janeiro
+nome,telefone,email,tag,observacoes
+João Silva,35999990001,joao@email.com,CLIENTE,Cliente desde 2024
+Maria Souza,11988880002,maria@email.com,LEAD,Interessada no produto X
+Pedro Costa,21977770003,pedro@email.com,VIP,Cliente premium
+Ana Lima,31966660004,,LEAD,
+Carlos Mendes,51955550005,carlos@email.com,CLIENTE,Comprou em janeiro
