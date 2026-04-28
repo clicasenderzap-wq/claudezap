@@ -135,10 +135,17 @@ async function sendCampaign(req, res) {
       content: m.content,
     }));
 
+    let queuedJobs;
     if (batch_mode) {
-      await enqueueBatched(jobs, delay_ms, batchSz, batchIntervalMs, startOffset);
+      queuedJobs = await enqueueBatched(jobs, delay_ms, batchSz, batchIntervalMs, startOffset);
     } else {
-      await enqueueBulk(jobs, delay_ms, startOffset);
+      queuedJobs = await enqueueBulk(jobs, delay_ms, startOffset);
+    }
+    // Store BullMQ job IDs so pause/resume can cancel or re-enqueue specific jobs
+    if (queuedJobs?.length) {
+      await Promise.all(messages.map((m, i) =>
+        queuedJobs[i]?.id ? m.update({ queue_job_id: String(queuedJobs[i].id) }) : null
+      ));
     }
     res.status(201).json({ campaign, queued: messages.length });
   } catch (err) {

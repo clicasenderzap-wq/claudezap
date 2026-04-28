@@ -10,6 +10,7 @@ import {
   X, Smartphone, BarChart2, Send, CheckCircle2, XCircle, Clock,
   ChevronRight, Timer, Repeat2, Tag, Users, CalendarClock, ShieldCheck,
   Layers, AlertTriangle, UserX, Paperclip, FileText, Image, Film, Music, Loader2, WifiOff,
+  Pause, Play, RotateCcw,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
@@ -143,6 +144,40 @@ export default function CampaignsPage() {
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/campaigns/${id}`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['campaigns'] }); toast.success('Campanha removida'); },
+  });
+
+  const pauseMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/campaigns/${id}/pause`),
+    onSuccess: (_res, id) => {
+      qc.invalidateQueries({ queryKey: ['campaigns'] });
+      qc.invalidateQueries({ queryKey: ['running-campaigns-banner'] });
+      setDetailCampaign((prev: any) => prev?.id === id ? { ...prev, status: 'paused' } : prev);
+      toast.success('Campanha pausada. As mensagens na fila foram canceladas.');
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao pausar campanha'),
+  });
+
+  const resumeMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/campaigns/${id}/resume`),
+    onSuccess: (res, id) => {
+      qc.invalidateQueries({ queryKey: ['campaigns'] });
+      qc.invalidateQueries({ queryKey: ['running-campaigns-banner'] });
+      setDetailCampaign((prev: any) => prev?.id === id ? { ...prev, status: 'running' } : prev);
+      toast.success(res.data.resumed
+        ? `Campanha retomada! ${res.data.queued} mensagens na fila.`
+        : (res.data.message || 'Campanha concluída.'));
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao retomar campanha'),
+  });
+
+  const resendFailedMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/campaigns/${id}/resend-failed`),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['campaigns'] });
+      qc.invalidateQueries({ queryKey: ['running-campaigns-banner'] });
+      toast.success(`Reenvio das falhas iniciado! ${res.data.queued} mensagens na fila.`);
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao reenviar falhas'),
   });
 
   const { data: detail, isLoading: loadingDetail } = useQuery({
@@ -299,22 +334,56 @@ export default function CampaignsPage() {
                     </span>
                   </td>
                   <td className="px-4 py-3">
-                    <div className="flex gap-2">
-                      <button
-                        onClick={() => { if (confirm(`Reenviar campanha "${c.name}"?`)) resendMutation.mutate(c.id); }}
-                        title="Reenviar"
-                        className="text-gray-400 hover:text-brand-600 transition-colors"
-                        disabled={resendMutation.isPending}
-                      >
-                        <RefreshCw size={16} />
-                      </button>
-                      <button
-                        onClick={() => { if (confirm('Remover campanha?')) deleteMutation.mutate(c.id); }}
-                        title="Remover"
-                        className="text-gray-400 hover:text-red-500 transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                    <div className="flex gap-1.5">
+                      {c.status === 'running' && (
+                        <button
+                          onClick={() => { if (confirm(`Pausar "${c.name}"?\nAs mensagens na fila serão canceladas e poderão ser retomadas depois.`)) pauseMutation.mutate(c.id); }}
+                          title="Pausar campanha"
+                          className="text-gray-400 hover:text-yellow-600 transition-colors"
+                          disabled={pauseMutation.isPending}
+                        >
+                          <Pause size={16} />
+                        </button>
+                      )}
+                      {c.status === 'paused' && (
+                        <button
+                          onClick={() => { if (confirm(`Retomar campanha "${c.name}"?`)) resumeMutation.mutate(c.id); }}
+                          title="Retomar campanha"
+                          className="text-gray-400 hover:text-brand-600 transition-colors"
+                          disabled={resumeMutation.isPending}
+                        >
+                          <Play size={16} />
+                        </button>
+                      )}
+                      {(c.failed_count ?? 0) > 0 && c.status !== 'running' && (
+                        <button
+                          onClick={() => { if (confirm(`Reenviar ${c.failed_count} mensagens com falha de "${c.name}"?`)) resendFailedMutation.mutate(c.id); }}
+                          title={`Reenviar ${c.failed_count} falhas`}
+                          className="text-gray-400 hover:text-orange-500 transition-colors"
+                          disabled={resendFailedMutation.isPending}
+                        >
+                          <RotateCcw size={16} />
+                        </button>
+                      )}
+                      {c.status !== 'running' && c.status !== 'paused' && (
+                        <button
+                          onClick={() => { if (confirm(`Reenviar "${c.name}" para todos os contatos?`)) resendMutation.mutate(c.id); }}
+                          title="Reenviar para todos"
+                          className="text-gray-400 hover:text-brand-600 transition-colors"
+                          disabled={resendMutation.isPending}
+                        >
+                          <RefreshCw size={16} />
+                        </button>
+                      )}
+                      {c.status !== 'running' && (
+                        <button
+                          onClick={() => { if (confirm('Remover campanha?')) deleteMutation.mutate(c.id); }}
+                          title="Remover"
+                          className="text-gray-400 hover:text-red-500 transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>
@@ -708,7 +777,36 @@ export default function CampaignsPage() {
               </div>
                 </div>
               </div>
-              <button onClick={() => setDetailCampaign(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
+              <div className="flex items-center gap-2 shrink-0">
+                {detailCampaign.status === 'running' && (
+                  <button
+                    onClick={() => { if (confirm(`Pausar "${detailCampaign.name}"?\nAs mensagens na fila serão canceladas e poderão ser retomadas depois.`)) pauseMutation.mutate(detailCampaign.id); }}
+                    disabled={pauseMutation.isPending}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200 transition-colors"
+                  >
+                    <Pause size={13} /> Pausar
+                  </button>
+                )}
+                {detailCampaign.status === 'paused' && (
+                  <button
+                    onClick={() => { if (confirm(`Retomar campanha "${detailCampaign.name}"?`)) resumeMutation.mutate(detailCampaign.id); }}
+                    disabled={resumeMutation.isPending}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100 border border-brand-200 transition-colors"
+                  >
+                    <Play size={13} /> Retomar
+                  </button>
+                )}
+                {(detailCampaign.failed_count ?? 0) > 0 && detailCampaign.status !== 'running' && (
+                  <button
+                    onClick={() => { if (confirm(`Reenviar ${detailCampaign.failed_count} mensagens com falha?`)) resendFailedMutation.mutate(detailCampaign.id); }}
+                    disabled={resendFailedMutation.isPending}
+                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 transition-colors"
+                  >
+                    <RotateCcw size={13} /> {detailCampaign.failed_count} falhas
+                  </button>
+                )}
+                <button onClick={() => setDetailCampaign(null)} className="text-gray-400 hover:text-gray-600 ml-1"><X size={20} /></button>
+              </div>
             </div>
 
             {/* WhatsApp disconnect warning */}

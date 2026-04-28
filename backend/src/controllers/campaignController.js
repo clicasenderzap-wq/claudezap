@@ -89,7 +89,10 @@ async function resend(req, res) {
     content: m.content,
   }));
 
-  await enqueueBulk(jobs, original.delay_ms);
+  const queuedJobs = await enqueueBulk(jobs, original.delay_ms);
+  await Promise.all(messages.map((m, i) =>
+    queuedJobs[i]?.id ? m.update({ queue_job_id: String(queuedJobs[i].id) }) : null
+  ));
 
   res.status(201).json({ campaign: newCampaign, queued: messages.length });
 }
@@ -126,6 +129,160 @@ async function messages(req, res) {
   });
 }
 
+async function pause(req, res) {
+  try {
+    const campaign = await Campaign.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    if (!campaign) return res.status(404).json({ error: 'Campanha não encontrada' });
+    if (!['running', 'scheduled'].includes(campaign.status)) {
+      return res.status(400).json({ error: 'Somente campanhas em execução podem ser pausadas' });
+    }
+
+    const { cancelJob } = require('../services/queueService');
+    const pendingMessages = await Message.findAll({
+      where: { campaign_id: campaign.id, status: 'queued' },
+      attributes: ['id', 'queue_job_id'],
+    });
+
+    let cancelled = 0;
+    for (const msg of pendingMessages) {
+      if (msg.queue_job_id) {
+        await cancelJob(msg.queue_job_id).catch(() => {});
+        cancelled++;
+      }
+    }
+
+    await campaign.update({ status: 'paused' });
+    res.json({ paused: true, cancelled, remaining: pendingMessages.length });
+  } catch (err) {
+    console.error('[pause]', err.message);
+    res.status(500).json({ error: 'Erro ao pausar campanha' });
+  }
+}
+
+async function resume(req, res) {
+  try {
+    const campaign = await Campaign.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    if (!campaign) return res.status(404).json({ error: 'Campanha não encontrada' });
+    if (campaign.status !== 'paused') {
+      return res.status(400).json({ error: 'Somente campanhas pausadas podem ser retomadas' });
+    }
+
+    const { WhatsappAccount } = require('../models');
+    const whatsapp = require('../services/whatsappService');
+    const allAccounts = await WhatsappAccount.findAll({ where: { user_id: req.user.id } });
+    const connectedAccounts = allAccounts.filter((a) => whatsapp.getStatus(a.id) === 'connected');
+    if (!connectedAccounts.length) {
+      return res.status(400).json({ error: 'Nenhuma conta WhatsApp conectada' });
+    }
+
+    const pendingMessages = await Message.findAll({
+      where: { campaign_id: campaign.id, status: 'queued' },
+      include: [{ model: Contact, attributes: ['phone'] }],
+      order: [['created_at', 'ASC']],
+    });
+
+    if (!pendingMessages.length) {
+      await campaign.update({ status: 'completed' });
+      return res.json({ resumed: false, message: 'Nenhuma mensagem pendente. Campanha marcada como concluída.' });
+    }
+
+    const { enqueueBulk } = require('../services/queueService');
+    const jobs = pendingMessages.map((msg) => ({
+      messageId: msg.id,
+      userId: req.user.id,
+      accountId: msg.account_id,
+      phone: msg.Contact.phone,
+      content: msg.content,
+    }));
+
+    const queuedJobs = await enqueueBulk(jobs, campaign.delay_ms || 5000);
+    await Promise.all(
+      pendingMessages.map((msg, i) =>
+        queuedJobs[i]?.id ? msg.update({ queue_job_id: String(queuedJobs[i].id) }) : null
+      )
+    );
+
+    await campaign.update({ status: 'running' });
+    res.json({ resumed: true, queued: pendingMessages.length });
+  } catch (err) {
+    console.error('[resume]', err.message);
+    res.status(500).json({ error: 'Erro ao retomar campanha' });
+  }
+}
+
+async function resendFailed(req, res) {
+  try {
+    const original = await Campaign.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    if (!original) return res.status(404).json({ error: 'Campanha não encontrada' });
+
+    const failedMessages = await Message.findAll({
+      where: { campaign_id: original.id, status: 'failed' },
+      include: [{ model: Contact, attributes: ['id', 'name', 'phone', 'opt_out'] }],
+    });
+
+    if (!failedMessages.length) {
+      return res.status(400).json({ error: 'Nenhuma mensagem com falha nesta campanha' });
+    }
+
+    const contacts = failedMessages.map((m) => m.Contact).filter((c) => c && !c.opt_out);
+    if (!contacts.length) {
+      return res.status(400).json({ error: 'Nenhum contato ativo entre os que falharam' });
+    }
+
+    const { WhatsappAccount } = require('../models');
+    const whatsapp = require('../services/whatsappService');
+    const allAccounts = await WhatsappAccount.findAll({ where: { user_id: req.user.id } });
+    const connectedAccounts = allAccounts.filter((a) => whatsapp.getStatus(a.id) === 'connected');
+    const originalAccountIds = original.account_ids || [];
+    let accountsToUse = connectedAccounts.filter((a) => originalAccountIds.includes(a.id));
+    if (!accountsToUse.length) accountsToUse = connectedAccounts;
+    if (!accountsToUse.length) return res.status(400).json({ error: 'Nenhuma conta WhatsApp conectada' });
+
+    const rotateEvery = Math.max(1, original.rotate_every || 1);
+    const { enqueueBulk } = require('../services/queueService');
+
+    const newCampaign = await Campaign.create({
+      user_id: req.user.id,
+      name: `${original.name} (Reenvio de falhas)`,
+      message_template: original.message_template,
+      status: 'running',
+      total_contacts: contacts.length,
+      delay_ms: original.delay_ms,
+      rotate_every: rotateEvery,
+      account_ids: accountsToUse.map((a) => a.id),
+    });
+
+    const newMessages = await Message.bulkCreate(
+      contacts.map((c, i) => ({
+        user_id: req.user.id,
+        contact_id: c.id,
+        campaign_id: newCampaign.id,
+        account_id: accountsToUse[Math.floor(i / rotateEvery) % accountsToUse.length].id,
+        content: applyTemplate(original.message_template, c) + '\n\nPara sair desta lista, responda: SAIR',
+        status: 'queued',
+      }))
+    );
+
+    const jobs = newMessages.map((m, i) => ({
+      messageId: m.id,
+      userId: req.user.id,
+      accountId: accountsToUse[Math.floor(i / rotateEvery) % accountsToUse.length].id,
+      phone: contacts[i].phone,
+      content: m.content,
+    }));
+
+    const queuedJobs = await enqueueBulk(jobs, original.delay_ms);
+    await Promise.all(newMessages.map((m, i) =>
+      queuedJobs[i]?.id ? m.update({ queue_job_id: String(queuedJobs[i].id) }) : null
+    ));
+
+    res.status(201).json({ campaign: newCampaign, queued: newMessages.length });
+  } catch (err) {
+    console.error('[resendFailed]', err.message);
+    res.status(500).json({ error: 'Erro ao reenviar falhas' });
+  }
+}
+
 async function remove(req, res) {
   const campaign = await Campaign.findOne({
     where: { id: req.params.id, user_id: req.user.id },
@@ -135,4 +292,4 @@ async function remove(req, res) {
   res.status(204).send();
 }
 
-module.exports = { list, messages, resend, remove };
+module.exports = { list, messages, resend, pause, resume, resendFailed, remove };
