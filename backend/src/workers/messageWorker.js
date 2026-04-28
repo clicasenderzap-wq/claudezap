@@ -4,6 +4,9 @@ const { Message, Campaign, Contact } = require('../models');
 const { Op } = require('sequelize');
 const whatsapp = require('../services/whatsappService');
 
+// Each campaign already paces itself via per-job delay values.
+// concurrency: 5 lets up to 5 accounts send simultaneously (different users / different accounts).
+// No global rate limiter — it was shared across all users and caused one campaign to freeze everyone else.
 const worker = new Worker(
   'messages',
   async (job) => {
@@ -78,11 +81,7 @@ const worker = new Worker(
   },
   {
     connection,
-    concurrency: 1,
-    limiter: {
-      max: Number(process.env.MSG_RATE_LIMIT_PER_MIN) || 20,
-      duration: 60_000,
-    },
+    concurrency: 5,
   }
 );
 
