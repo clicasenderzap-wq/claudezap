@@ -77,8 +77,13 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: true,
   },
-  // Changed on every login — invalidates all previous JWTs
+  // Web UI session — invalidated by new web logins only
   session_token: {
+    type: DataTypes.STRING(64),
+    allowNull: true,
+  },
+  // Desktop app session — invalidated by new desktop logins only
+  session_token_desktop: {
     type: DataTypes.STRING(64),
     allowNull: true,
   },

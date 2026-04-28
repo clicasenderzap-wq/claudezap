@@ -36,11 +36,11 @@ function setupDesktopWS(httpServer) {
       const payload = jwt.verify(token, process.env.JWT_SECRET);
       userId = payload.sub;
 
-      // Reject stale JWTs if session was replaced by a newer login
-      if (payload.st) {
+      // Reject stale desktop JWTs if a newer desktop login happened
+      if (payload.st && payload.src === 'desktop') {
         const { User } = require('../models');
-        const user = await User.findByPk(userId, { attributes: ['session_token'] });
-        if (user?.session_token && user.session_token !== payload.st) {
+        const user = await User.findByPk(userId, { attributes: ['session_token_desktop'] });
+        if (user?.session_token_desktop && user.session_token_desktop !== payload.st) {
           ws.close(1008, 'Sessão inválida. Faça login novamente no app.');
           return;
         }

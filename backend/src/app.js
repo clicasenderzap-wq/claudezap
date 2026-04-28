@@ -90,10 +90,11 @@ setupDesktopWS(server);
       console.error('[DB] Migração de colunas email:', e.message);
     }
 
-    // Ensure session_token exists on users (idempotent)
+    // Ensure session_token columns exist on users (idempotent)
     try {
       await sequelize.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token VARCHAR(64)`);
-      console.log('[DB] Coluna session_token em users verificada');
+      await sequelize.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token_desktop VARCHAR(64)`);
+      console.log('[DB] Colunas session_token em users verificadas');
     } catch (e) {
       console.error('[DB] Migração session_token:', e.message);
     }

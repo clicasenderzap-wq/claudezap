@@ -333,7 +333,7 @@ ipcMain.handle('auth:login', async (_, { email, password }) => {
     const res = await fetch(`${API_URL}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, source: 'desktop' }),
     });
     const data = await res.json();
     if (!res.ok) return { error: data.error || 'Falha no login' };

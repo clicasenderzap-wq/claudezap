@@ -4,9 +4,9 @@ const { validationResult } = require('express-validator');
 const { User, AuditLog } = require('../models');
 const emailSvc = require('../services/emailService');
 
-function signToken(userId, sessionToken) {
+function signToken(userId, sessionToken, source = 'web') {
   return jwt.sign(
-    { sub: userId, ...(sessionToken && { st: sessionToken }) },
+    { sub: userId, ...(sessionToken && { st: sessionToken, src: source }) },
     process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
   );
@@ -156,15 +156,16 @@ async function login(req, res) {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
-    // Login bem-sucedido — zera o contador de falhas e gera novo session_token
+    // Login bem-sucedido — gera novo session_token para o tipo de origem (web ou desktop)
+    const source = req.body.source === 'desktop' ? 'desktop' : 'web';
     const sessionToken = crypto.randomBytes(32).toString('hex');
-    await user.update({ login_failed_count: 0, login_locked_until: null, session_token: sessionToken });
-
-    // Kick any existing desktop WebSocket session for this user
-    try {
-      const desktopService = require('../services/desktopService');
-      desktopService.kickUser(user.id, 'Você entrou em outro dispositivo ou navegador. Esta sessão foi encerrada.');
-    } catch { /* non-blocking */ }
+    const updateFields = { login_failed_count: 0, login_locked_until: null };
+    if (source === 'desktop') {
+      updateFields.session_token_desktop = sessionToken;
+    } else {
+      updateFields.session_token = sessionToken;
+    }
+    await user.update(updateFields);
 
     // null = legado (pré-verificação), passa; false = aguardando verificação
     if (user.email_verified === false) {
@@ -182,7 +183,7 @@ async function login(req, res) {
     }
 
     await audit(user.id, 'login', req);
-    const token = signToken(user.id, sessionToken);
+    const token = signToken(user.id, sessionToken, source);
     res.json({ token, user: safeUser(user) });
   } catch {
     res.status(500).json({ error: 'Erro interno' });
