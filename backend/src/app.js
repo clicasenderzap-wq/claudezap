@@ -90,6 +90,14 @@ setupDesktopWS(server);
       console.error('[DB] Migração de colunas email:', e.message);
     }
 
+    // Ensure session_token exists on users (idempotent)
+    try {
+      await sequelize.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token VARCHAR(64)`);
+      console.log('[DB] Coluna session_token em users verificada');
+    } catch (e) {
+      console.error('[DB] Migração session_token:', e.message);
+    }
+
     // Garante que a conta admin nunca conta como plano pago
     const { User } = require('./models');
     const adminEmail = 'clicasenderzap@gmail.com';

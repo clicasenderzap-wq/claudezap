@@ -41,6 +41,16 @@ class DesktopService extends EventEmitter {
     });
   }
 
+  kickUser(userId, reason = 'Sessão encerrada.') {
+    const session = this._sessions.get(userId);
+    if (session && session.ws.readyState === 1) {
+      try {
+        session.ws.send(JSON.stringify({ type: 'session_kicked', reason }));
+        session.ws.close(1000);
+      } catch {}
+    }
+  }
+
   isUserConnected(userId) {
     const s = this._sessions.get(userId);
     return s != null && s.ws.readyState === 1;

@@ -4,10 +4,12 @@ const { validationResult } = require('express-validator');
 const { User, AuditLog } = require('../models');
 const emailSvc = require('../services/emailService');
 
-function signToken(userId) {
-  return jwt.sign({ sub: userId }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRES_IN || '7d',
-  });
+function signToken(userId, sessionToken) {
+  return jwt.sign(
+    { sub: userId, ...(sessionToken && { st: sessionToken }) },
+    process.env.JWT_SECRET,
+    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+  );
 }
 
 function safeUser(user) {
@@ -154,8 +156,15 @@ async function login(req, res) {
       return res.status(401).json({ error: 'Credenciais inválidas' });
     }
 
-    // Login bem-sucedido — zera o contador de falhas
-    await user.update({ login_failed_count: 0, login_locked_until: null });
+    // Login bem-sucedido — zera o contador de falhas e gera novo session_token
+    const sessionToken = crypto.randomBytes(32).toString('hex');
+    await user.update({ login_failed_count: 0, login_locked_until: null, session_token: sessionToken });
+
+    // Kick any existing desktop WebSocket session for this user
+    try {
+      const desktopService = require('../services/desktopService');
+      desktopService.kickUser(user.id, 'Você entrou em outro dispositivo ou navegador. Esta sessão foi encerrada.');
+    } catch { /* non-blocking */ }
 
     // null = legado (pré-verificação), passa; false = aguardando verificação
     if (user.email_verified === false) {
@@ -173,7 +182,7 @@ async function login(req, res) {
     }
 
     await audit(user.id, 'login', req);
-    const token = signToken(user.id);
+    const token = signToken(user.id, sessionToken);
     res.json({ token, user: safeUser(user) });
   } catch {
     res.status(500).json({ error: 'Erro interno' });

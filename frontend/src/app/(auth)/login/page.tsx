@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -24,6 +24,14 @@ export default function LoginPage() {
   const [unverifiedEmail, setUnverifiedEmail] = useState('');
   const [resending, setResending] = useState(false);
   const [resentOk, setResentOk] = useState(false);
+
+  useEffect(() => {
+    const notice = sessionStorage.getItem('auth_notice');
+    if (notice) {
+      sessionStorage.removeItem('auth_notice');
+      toast.error(notice, { duration: 6000 });
+    }
+  }, []);
 
   const { register, handleSubmit, getValues, formState: { errors, isSubmitting } } = useForm<FormData>({
     resolver: zodResolver(schema),

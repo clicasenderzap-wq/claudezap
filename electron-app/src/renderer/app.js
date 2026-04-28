@@ -187,8 +187,12 @@ api.onUpdateReady(() => {
 });
 
 // Platform buttons
-document.getElementById('btn-open-platform').addEventListener('click', () => {
-  window.open('https://clicaai.ia.br');
+document.getElementById('btn-open-platform').addEventListener('click', async () => {
+  const token = await api.getToken().catch(() => null);
+  const url = token
+    ? `https://clicaai.ia.br/auto-login?t=${encodeURIComponent(token)}`
+    : 'https://clicaai.ia.br/login';
+  window.open(url);
 });
 
 document.getElementById('btn-open-register').addEventListener('click', () => {

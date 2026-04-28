@@ -11,9 +11,17 @@ async function auth(req, res, next) {
   try {
     const payload = jwt.verify(token, process.env.JWT_SECRET);
     const user = await User.findByPk(payload.sub, {
-      attributes: ['id', 'name', 'email', 'role', 'plan', 'status', 'trial_ends_at'],
+      attributes: ['id', 'name', 'email', 'role', 'plan', 'status', 'trial_ends_at', 'session_token'],
     });
     if (!user) return res.status(401).json({ error: 'Usuário não encontrado' });
+
+    if (payload.st && user.session_token && payload.st !== user.session_token) {
+      return res.status(401).json({
+        code: 'SESSION_REPLACED',
+        error: 'Sua sessão foi encerrada pois sua conta foi acessada em outro lugar.',
+      });
+    }
+
     req.user = user;
     next();
   } catch {

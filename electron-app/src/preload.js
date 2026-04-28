@@ -5,6 +5,7 @@ contextBridge.exposeInMainWorld('claudezap', {
   login: (email, password) => ipcRenderer.invoke('auth:login', { email, password }),
   logout: () => ipcRenderer.invoke('auth:logout'),
   getSession: () => ipcRenderer.invoke('auth:getSession'),
+  getToken: () => ipcRenderer.invoke('auth:getToken'),
 
   // Accounts
   getAccounts: () => ipcRenderer.invoke('accounts:get'),

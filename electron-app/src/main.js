@@ -383,6 +383,8 @@ ipcMain.handle('accounts:disconnect', async (_, accountId) => {
   }
 });
 
+ipcMain.handle('auth:getToken', () => store.getToken());
+
 ipcMain.handle('update:install', () => {
   autoUpdater.quitAndInstall(false, true);
 });

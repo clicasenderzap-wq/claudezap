@@ -77,6 +77,11 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING,
     allowNull: true,
   },
+  // Changed on every login — invalidates all previous JWTs
+  session_token: {
+    type: DataTypes.STRING(64),
+    allowNull: true,
+  },
 }, {
   tableName: 'users',
   underscored: true,

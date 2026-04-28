@@ -16,8 +16,12 @@ api.interceptors.response.use(
   (res) => res,
   (err) => {
     if (err.response?.status === 401 && typeof window !== 'undefined') {
+      const code = err.response?.data?.code;
       localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      localStorage.removeItem('auth');
+      if (code === 'SESSION_REPLACED') {
+        sessionStorage.setItem('auth_notice', 'Sua sessão foi encerrada pois sua conta foi acessada em outro lugar.');
+      }
       window.location.href = '/login';
     }
     return Promise.reject(err);
