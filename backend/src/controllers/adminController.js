@@ -253,4 +253,55 @@ async function getRevenue(req, res) {
   });
 }
 
-module.exports = { listUsers, getUser, updateUser, approveUser, rejectUser, getStats, listWhatsappAccounts, disconnectWhatsappAccount, removeWhatsappAccount, getPlanPrices, updatePlanPrices, getRevenue };
+async function getQueueStatus(req, res) {
+  try {
+    const { messageQueue } = require('../services/queueService');
+    const [waiting, active, delayed, failed, completed] = await Promise.all([
+      messageQueue.getWaitingCount(),
+      messageQueue.getActiveCount(),
+      messageQueue.getDelayedCount(),
+      messageQueue.getFailedCount(),
+      messageQueue.getCompletedCount(),
+    ]);
+
+    // Grab up to 20 active jobs for inspection
+    const activeJobs = await messageQueue.getActive(0, 19);
+    const failedJobs = await messageQueue.getFailed(0, 9);
+
+    const desktopService = require('../services/desktopService');
+    const whatsapp = require('../services/whatsappService');
+    const { WhatsappAccount } = require('../models');
+    const accounts = await WhatsappAccount.findAll({ attributes: ['id', 'user_id', 'label', 'status'] });
+
+    res.json({
+      queue: { waiting, active, delayed, failed, completed },
+      active_jobs: activeJobs.map((j) => ({
+        id: j.id,
+        messageId: j.data?.messageId,
+        phone: j.data?.phone,
+        accountId: j.data?.accountId,
+        attempts: j.attemptsMade,
+        processedOn: j.processedOn,
+      })),
+      failed_jobs: failedJobs.map((j) => ({
+        id: j.id,
+        messageId: j.data?.messageId,
+        phone: j.data?.phone,
+        error: j.failedReason,
+        attempts: j.attemptsMade,
+      })),
+      whatsapp_accounts: accounts.map((a) => ({
+        id: a.id,
+        label: a.label,
+        db_status: a.status,
+        live_status: whatsapp.getStatus(a.id),
+        desktop_connected: desktopService.isUserConnected(a.user_id),
+      })),
+    });
+  } catch (err) {
+    console.error('[getQueueStatus]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = { listUsers, getUser, updateUser, approveUser, rejectUser, getStats, listWhatsappAccounts, disconnectWhatsappAccount, removeWhatsappAccount, getPlanPrices, updatePlanPrices, getRevenue, getQueueStatus };

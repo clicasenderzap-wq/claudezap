@@ -4,9 +4,18 @@ const { Message, Campaign, Contact } = require('../models');
 const { Op } = require('sequelize');
 const whatsapp = require('../services/whatsappService');
 
-// Each campaign already paces itself via per-job delay values.
-// concurrency: 5 lets up to 5 accounts send simultaneously (different users / different accounts).
-// No global rate limiter — it was shared across all users and caused one campaign to freeze everyone else.
+// Per-account send serializer: at most 1 concurrent send per WhatsApp account.
+// Prevents WhatsApp rate-limiting when multiple campaign jobs for the same account
+// become active simultaneously. Different accounts still run in parallel (concurrency: 5).
+const _accountQueues = new Map(); // accountId → Promise (current chain tail)
+
+function withAccountLock(accountId, fn) {
+  const prev = _accountQueues.get(accountId) || Promise.resolve();
+  const current = prev.then(() => fn(), () => fn()); // run fn regardless of prev outcome
+  _accountQueues.set(accountId, current.catch(() => {})); // chain tail never rejects
+  return current; // can reject so BullMQ retries on failure
+}
+
 const worker = new Worker(
   'messages',
   async (job) => {
@@ -23,7 +32,7 @@ const worker = new Worker(
     const isConnected = (id) => whatsapp.getStatus(id) === 'connected';
     if (!senderId || !isConnected(senderId)) {
       const { WhatsappAccount } = require('../models');
-      // check in-memory first, then fall back to DB status
+      // check in-memory first, then fall back to DB status (handles backend restarts)
       const accounts = await WhatsappAccount.findAll({ where: { user_id: userId } });
       const connected = accounts.find((a) => isConnected(a.id)) || accounts.find((a) => a.status === 'connected');
       if (connected) senderId = connected.id;
@@ -38,11 +47,14 @@ const worker = new Worker(
 
     try {
       let waId;
-      if (message.media_url) {
-        waId = await whatsapp.sendMedia(senderId, phone, message.media_url, message.media_type, message.media_filename, content);
-      } else {
-        waId = await whatsapp.sendText(senderId, phone, content);
-      }
+      // Serialize sends per account — prevents concurrent WhatsApp sends from the same number
+      await withAccountLock(senderId, async () => {
+        if (message.media_url) {
+          waId = await whatsapp.sendMedia(senderId, phone, message.media_url, message.media_type, message.media_filename, content);
+        } else {
+          waId = await whatsapp.sendText(senderId, phone, content);
+        }
+      });
       await message.update({ status: 'sent', wa_message_id: waId, sent_at: new Date(), account_id: senderId });
       if (message.campaign_id) {
         await Campaign.increment('sent_count', { where: { id: message.campaign_id } }).catch(() => {});
@@ -82,21 +94,30 @@ const worker = new Worker(
   {
     connection,
     concurrency: 5,
+    // Higher lockDuration prevents BullMQ from marking a job as "stalled" while it
+    // is legitimately waiting for the per-account queue lock (worst case: 4 × 25s = 100s)
+    lockDuration: 120_000,
   }
 );
 
 worker.on('completed', (job) => {
-  console.log(`[Worker] job ${job.id} concluído`);
+  const { messageId, phone } = job.data;
+  console.log(`[Worker] ✓ job ${job.id} | msg ${messageId} → ${phone}`);
 });
 
 worker.on('failed', (job, err) => {
   const maxAttempts = job?.opts?.attempts ?? 3;
   const made = (job?.attemptsMade ?? 0) + 1;
+  const { messageId, phone } = job?.data ?? {};
   if (made >= maxAttempts) {
-    console.error(`[Worker] job ${job?.id} falhou definitivamente após ${made} tentativas: ${err.message}`);
+    console.error(`[Worker] ✗ job ${job?.id} | msg ${messageId} → ${phone} | FALHOU DEFINITIVAMENTE após ${made} tentativas: ${err.message}`);
   } else {
-    console.log(`[Worker] job ${job?.id} tentativa ${made}/${maxAttempts} falhou, aguardando retry: ${err.message}`);
+    console.warn(`[Worker] ↺ job ${job?.id} | msg ${messageId} → ${phone} | tentativa ${made}/${maxAttempts}: ${err.message}`);
   }
+});
+
+worker.on('stalled', (jobId) => {
+  console.warn(`[Worker] ⚠ job ${jobId} marcado como stalled — será reprocessado`);
 });
 
 console.log('[Worker] message worker started');

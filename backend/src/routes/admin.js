@@ -19,4 +19,6 @@ router.get('/plan-prices', ctrl.getPlanPrices);
 router.put('/plan-prices', ctrl.updatePlanPrices);
 router.get('/revenue', ctrl.getRevenue);
 
+router.get('/queue-status', ctrl.getQueueStatus);
+
 module.exports = router;
