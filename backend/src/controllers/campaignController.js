@@ -11,10 +11,12 @@ function applyTemplate(template, contact) {
 }
 
 async function list(req, res) {
-  const { page = 1, limit = 20 } = req.query;
+  const { page = 1, limit = 20, status } = req.query;
+  const where = { user_id: req.user.id };
+  if (status) where.status = status;
 
   const { count, rows } = await Campaign.findAndCountAll({
-    where: { user_id: req.user.id },
+    where,
     order: [['created_at', 'DESC']],
     limit: Number(limit),
     offset: (Number(page) - 1) * Number(limit),

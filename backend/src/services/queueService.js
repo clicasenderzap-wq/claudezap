@@ -23,7 +23,13 @@ async function enqueueBulk(messages, baseDelayMs = 3000, startOffset = 0) {
   const jobs = messages.map((msg, index) => ({
     name: 'send',
     data: msg,
-    opts: { delay: startOffset + index * baseDelayMs },
+    opts: {
+      delay: startOffset + index * baseDelayMs,
+      // 8 retries with 30s base exponential backoff (~63 min total)
+      // gives the WhatsApp connection plenty of time to reconnect
+      attempts: 8,
+      backoff: { type: 'exponential', delay: 30_000 },
+    },
   }));
   return messageQueue.addBulk(jobs);
 }
@@ -35,7 +41,11 @@ async function enqueueBatched(messages, baseDelayMs = 3000, batchSize = 50, batc
     return {
       name: 'send',
       data: msg,
-      opts: { delay: startOffset + batchIndex * batchIntervalMs + posInBatch * baseDelayMs },
+      opts: {
+        delay: startOffset + batchIndex * batchIntervalMs + posInBatch * baseDelayMs,
+        attempts: 8,
+        backoff: { type: 'exponential', delay: 30_000 },
+      },
     };
   });
   return messageQueue.addBulk(jobs);

@@ -9,7 +9,7 @@ import {
   Megaphone, Check, RefreshCw, Trash2, Plus, History,
   X, Smartphone, BarChart2, Send, CheckCircle2, XCircle, Clock,
   ChevronRight, Timer, Repeat2, Tag, Users, CalendarClock, ShieldCheck,
-  Layers, AlertTriangle, UserX, Paperclip, FileText, Image, Film, Music, Loader2,
+  Layers, AlertTriangle, UserX, Paperclip, FileText, Image, Film, Music, Loader2, WifiOff,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
@@ -710,6 +710,21 @@ export default function CampaignsPage() {
               </div>
               <button onClick={() => setDetailCampaign(null)} className="text-gray-400 hover:text-gray-600"><X size={20} /></button>
             </div>
+
+            {/* WhatsApp disconnect warning */}
+            {detailCampaign.status === 'running' && connectedAccounts.length === 0 && (
+              <div className="mx-6 mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                <WifiOff size={16} className="text-amber-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">WhatsApp desconectado</p>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    Nenhum número conectado. As mensagens na fila aguardam reconexão automática —
+                    serão enviadas assim que o WhatsApp reconectar (até 8 tentativas ao longo de ~60 min).{' '}
+                    <a href="/whatsapp" className="underline font-medium">Reconectar agora</a>
+                  </p>
+                </div>
+              </div>
+            )}
 
             {loadingDetail ? (
               <p className="px-6 py-12 text-center text-gray-400">Carregando...</p>

@@ -1,6 +1,7 @@
 const { Worker } = require('bullmq');
 const { connection } = require('../config/redis');
 const { Message, Campaign, Contact } = require('../models');
+const { Op } = require('sequelize');
 const whatsapp = require('../services/whatsappService');
 
 const worker = new Worker(
@@ -46,12 +47,30 @@ const worker = new Worker(
           { last_campaign_sent_at: new Date() },
           { where: { id: message.contact_id } }
         ).catch(() => {});
+        const remaining = await Message.count({
+          where: { campaign_id: message.campaign_id, status: { [Op.in]: ['queued', 'pending'] } },
+        }).catch(() => 1);
+        if (remaining === 0) {
+          await Campaign.update(
+            { status: 'completed' },
+            { where: { id: message.campaign_id, status: 'running' } }
+          ).catch(() => {});
+        }
       }
     } catch (err) {
       if (isLastAttempt) {
         await message.update({ status: 'failed', error_message: err.message });
         if (message.campaign_id) {
           await Campaign.increment('failed_count', { where: { id: message.campaign_id } }).catch(() => {});
+          const remaining = await Message.count({
+            where: { campaign_id: message.campaign_id, status: { [Op.in]: ['queued', 'pending'] } },
+          }).catch(() => 1);
+          if (remaining === 0) {
+            await Campaign.update(
+              { status: 'completed' },
+              { where: { id: message.campaign_id, status: 'running' } }
+            ).catch(() => {});
+          }
         }
       }
       throw err;
