@@ -183,9 +183,9 @@ async function resume(req, res) {
       order: [['created_at', 'ASC']],
     });
 
-    // Discard opt-out contacts (only relevant for previously-failed messages)
+    // Discard messages whose Contact was deleted or opted-out
     const toResend = pendingMessages.filter(
-      (msg) => msg.status === 'queued' || !msg.Contact?.opt_out
+      (msg) => msg.Contact && (msg.status === 'queued' || !msg.Contact.opt_out)
     );
 
     if (!toResend.length) {

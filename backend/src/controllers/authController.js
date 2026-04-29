@@ -5,10 +5,15 @@ const { User, AuditLog } = require('../models');
 const emailSvc = require('../services/emailService');
 
 function signToken(userId, sessionToken, source = 'web') {
+  // Desktop tokens live longer because users don't log in frequently;
+  // session_token_desktop invalidates them on new login anyway.
+  const expiresIn = source === 'desktop'
+    ? (process.env.JWT_EXPIRES_IN_DESKTOP || '30d')
+    : (process.env.JWT_EXPIRES_IN || '7d');
   return jwt.sign(
     { sub: userId, ...(sessionToken && { st: sessionToken, src: source }) },
     process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRES_IN || '7d' }
+    { expiresIn }
   );
 }
 
