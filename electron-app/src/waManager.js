@@ -161,7 +161,7 @@ class WAManager extends EventEmitter {
   }
 
   async _trySend(accountId, fn, timeoutMs = 25_000) {
-    for (let attempt = 1; attempt <= 2; attempt++) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
       try {
         // Race the send against a timeout so a hung Chrome doesn't block forever
         return await Promise.race([
@@ -171,12 +171,15 @@ class WAManager extends EventEmitter {
           ),
         ]);
       } catch (e) {
-        if (this._isContextError(e) && attempt === 1) {
-          console.warn(`[WA] ${accountId}: contexto perdido, aguardando 4s...`);
-          await new Promise((r) => setTimeout(r, 4000));
+        const isContext = this._isContextError(e);
+        const isNoLid = e.message?.includes('No LID for user');
+        if ((isContext || isNoLid) && attempt < 3) {
+          const waitMs = isNoLid ? 2000 : 4000;
+          console.warn(`[WA] ${accountId}: ${isNoLid ? 'No LID for user' : 'contexto perdido'}, aguardando ${waitMs / 1000}s (tentativa ${attempt}/3)...`);
+          await new Promise((r) => setTimeout(r, waitMs));
           continue;
         }
-        if (this._isContextError(e)) {
+        if (isContext) {
           console.error(`[WA] ${accountId}: contexto perdido após retry`);
           this.clients.delete(accountId);
           this.emit('disconnected', { accountId, code: 'CONTEXT_LOST' });

@@ -98,7 +98,7 @@ async function sendCampaign(req, res) {
     const campaignStatus = startOffset > 0 ? 'scheduled' : 'running';
 
     const batchSz = Math.max(1, Number(batch_size));
-    const batchIntervalMs = Number(batch_interval_hours) * 3600000;
+    const batchIntervalMs = (Number(batch_interval_hours) || 8) * 3_600_000;
 
     const campaign = await Campaign.create({
       user_id: req.user.id,

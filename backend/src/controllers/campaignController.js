@@ -193,7 +193,7 @@ async function resume(req, res) {
       return res.json({ resumed: false, message: 'Nenhuma mensagem pendente. Campanha marcada como concluída.' });
     }
 
-    const { enqueueBulk } = require('../services/queueService');
+    const { enqueueBulk, enqueueBatched } = require('../services/queueService');
     const jobs = toResend.map((msg) => ({
       messageId: msg.id,
       userId: req.user.id,
@@ -202,7 +202,13 @@ async function resume(req, res) {
       content: msg.content,
     }));
 
-    const queuedJobs = await enqueueBulk(jobs, campaign.delay_ms || 5000);
+    let queuedJobs;
+    if (campaign.batch_mode && campaign.batch_size > 0) {
+      const batchIntervalMs = (Number(campaign.batch_interval_hours) || 8) * 3_600_000;
+      queuedJobs = await enqueueBatched(jobs, campaign.delay_ms || 5000, campaign.batch_size, batchIntervalMs, 0);
+    } else {
+      queuedJobs = await enqueueBulk(jobs, campaign.delay_ms || 5000);
+    }
     const failedBeingRetried = toResend.filter((m) => m.status === 'failed').length;
 
     await Promise.all(
