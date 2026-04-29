@@ -175,19 +175,26 @@ async function resume(req, res) {
       return res.status(400).json({ error: 'Nenhuma conta WhatsApp conectada' });
     }
 
+    // Include queued (paused jobs) AND definitively failed messages so that
+    // Pause → Resume always continues from where it stopped, including failures.
     const pendingMessages = await Message.findAll({
-      where: { campaign_id: campaign.id, status: 'queued' },
-      include: [{ model: Contact, attributes: ['phone'] }],
+      where: { campaign_id: campaign.id, status: { [Op.in]: ['queued', 'failed'] } },
+      include: [{ model: Contact, attributes: ['phone', 'opt_out'] }],
       order: [['created_at', 'ASC']],
     });
 
-    if (!pendingMessages.length) {
+    // Discard opt-out contacts (only relevant for previously-failed messages)
+    const toResend = pendingMessages.filter(
+      (msg) => msg.status === 'queued' || !msg.Contact?.opt_out
+    );
+
+    if (!toResend.length) {
       await campaign.update({ status: 'completed' });
       return res.json({ resumed: false, message: 'Nenhuma mensagem pendente. Campanha marcada como concluída.' });
     }
 
     const { enqueueBulk } = require('../services/queueService');
-    const jobs = pendingMessages.map((msg) => ({
+    const jobs = toResend.map((msg) => ({
       messageId: msg.id,
       userId: req.user.id,
       accountId: msg.account_id,
@@ -196,14 +203,25 @@ async function resume(req, res) {
     }));
 
     const queuedJobs = await enqueueBulk(jobs, campaign.delay_ms || 5000);
+    const failedBeingRetried = toResend.filter((m) => m.status === 'failed').length;
+
     await Promise.all(
-      pendingMessages.map((msg, i) =>
-        queuedJobs[i]?.id ? msg.update({ queue_job_id: String(queuedJobs[i].id) }) : null
+      toResend.map((msg, i) =>
+        msg.update({
+          status: 'queued',
+          queue_job_id: queuedJobs[i]?.id ? String(queuedJobs[i].id) : msg.queue_job_id,
+          error_message: null,
+        })
       )
     );
 
+    // Adjust failed_count to reflect failures now being retried
+    if (failedBeingRetried > 0) {
+      await Campaign.decrement('failed_count', { by: failedBeingRetried, where: { id: campaign.id } }).catch(() => {});
+    }
+
     await campaign.update({ status: 'running' });
-    res.json({ resumed: true, queued: pendingMessages.length });
+    res.json({ resumed: true, queued: toResend.length, retrying_failed: failedBeingRetried });
   } catch (err) {
     console.error('[resume]', err.message);
     res.status(500).json({ error: 'Erro ao retomar campanha' });
