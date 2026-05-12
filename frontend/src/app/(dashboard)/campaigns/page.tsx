@@ -180,6 +180,19 @@ export default function CampaignsPage() {
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao reenviar falhas'),
   });
 
+  const forceStatusMutation = useMutation({
+    mutationFn: ({ id, status }: { id: string; status: string }) =>
+      api.post(`/campaigns/${id}/force-status`, { status }),
+    onSuccess: (_res, { id, status }) => {
+      qc.invalidateQueries({ queryKey: ['campaigns'] });
+      qc.invalidateQueries({ queryKey: ['running-campaigns-banner'] });
+      const label = status === 'completed' ? 'concluída' : status;
+      setDetailCampaign((prev: any) => prev?.id === id ? { ...prev, status } : prev);
+      toast.success(`Campanha marcada como ${label}.`);
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao alterar status'),
+  });
+
   const clearQueueMutation = useMutation({
     mutationFn: () => api.delete('/messages/queue'),
     onSuccess: (res) => {
@@ -370,14 +383,27 @@ export default function CampaignsPage() {
                         </button>
                       )}
                       {c.status === 'paused' && (
-                        <button
-                          onClick={() => { if (confirm(`Retomar campanha "${c.name}"?`)) resumeMutation.mutate(c.id); }}
-                          title="Retomar campanha"
-                          className="text-gray-400 hover:text-brand-600 transition-colors"
-                          disabled={resumeMutation.isPending}
-                        >
-                          <Play size={16} />
-                        </button>
+                        <>
+                          <button
+                            onClick={() => { if (confirm(`Retomar campanha "${c.name}"?`)) resumeMutation.mutate(c.id); }}
+                            title="Retomar campanha"
+                            className="text-gray-400 hover:text-brand-600 transition-colors"
+                            disabled={resumeMutation.isPending}
+                          >
+                            <Play size={16} />
+                          </button>
+                          <button
+                            onClick={() => {
+                              if (confirm(`Marcar "${c.name}" como concluída?\n\nMensagens ainda na fila serão canceladas.`))
+                                forceStatusMutation.mutate({ id: c.id, status: 'completed' });
+                            }}
+                            title="Marcar como concluída (forçar)"
+                            className="text-gray-400 hover:text-green-600 transition-colors"
+                            disabled={forceStatusMutation.isPending}
+                          >
+                            <Check size={16} />
+                          </button>
+                        </>
                       )}
                       {(c.failed_count ?? 0) > 0 && c.status !== 'running' && (
                         <button
@@ -812,13 +838,26 @@ export default function CampaignsPage() {
                   </button>
                 )}
                 {detailCampaign.status === 'paused' && (
-                  <button
-                    onClick={() => { if (confirm(`Retomar campanha "${detailCampaign.name}"?`)) resumeMutation.mutate(detailCampaign.id); }}
-                    disabled={resumeMutation.isPending}
-                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100 border border-brand-200 transition-colors"
-                  >
-                    <Play size={13} /> Retomar
-                  </button>
+                  <>
+                    <button
+                      onClick={() => { if (confirm(`Retomar campanha "${detailCampaign.name}"?`)) resumeMutation.mutate(detailCampaign.id); }}
+                      disabled={resumeMutation.isPending}
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100 border border-brand-200 transition-colors"
+                    >
+                      <Play size={13} /> {resumeMutation.isPending ? 'Retomando…' : 'Retomar'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (confirm(`Marcar "${detailCampaign.name}" como concluída?\n\nAs mensagens ainda na fila serão canceladas. Use isso quando a campanha estiver travada e não puder ser retomada.`))
+                          forceStatusMutation.mutate({ id: detailCampaign.id, status: 'completed' });
+                      }}
+                      disabled={forceStatusMutation.isPending}
+                      title="Forçar encerramento da campanha"
+                      className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-300 transition-colors"
+                    >
+                      <Check size={13} /> Marcar concluída
+                    </button>
+                  </>
                 )}
                 {(detailCampaign.failed_count ?? 0) > 0 && detailCampaign.status !== 'running' && (
                   <button

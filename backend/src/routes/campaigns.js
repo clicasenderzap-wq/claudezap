@@ -7,6 +7,7 @@ router.post('/:id/resend', ctrl.resend);
 router.post('/:id/pause', ctrl.pause);
 router.post('/:id/resume', ctrl.resume);
 router.post('/:id/resend-failed', ctrl.resendFailed);
+router.post('/:id/force-status', ctrl.forceStatus);
 router.delete('/:id', ctrl.remove);
 
 module.exports = router;

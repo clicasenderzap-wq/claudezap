@@ -211,15 +211,24 @@ async function resume(req, res) {
     }
     const failedBeingRetried = toResend.filter((m) => m.status === 'failed').length;
 
-    await Promise.all(
-      toResend.map((msg, i) =>
-        msg.update({
-          status: 'queued',
-          queue_job_id: queuedJobs[i]?.id ? String(queuedJobs[i].id) : msg.queue_job_id,
-          error_message: null,
-        })
-      )
+    // Bulk-update status + error_message in one SQL statement (avoids pool exhaustion)
+    await Message.update(
+      { status: 'queued', error_message: null },
+      { where: { id: toResend.map((m) => m.id) } }
     );
+
+    // Update queue_job_ids in chunks of 50 to stay within DB connection limits
+    const CHUNK = 50;
+    for (let i = 0; i < toResend.length; i += CHUNK) {
+      await Promise.all(
+        toResend.slice(i, i + CHUNK).map((msg, j) => {
+          const jobId = queuedJobs[i + j]?.id;
+          return jobId
+            ? Message.update({ queue_job_id: String(jobId) }, { where: { id: msg.id } })
+            : null;
+        }).filter(Boolean)
+      );
+    }
 
     // Adjust failed_count to reflect failures now being retried
     if (failedBeingRetried > 0) {
@@ -229,8 +238,8 @@ async function resume(req, res) {
     await campaign.update({ status: 'running' });
     res.json({ resumed: true, queued: toResend.length, retrying_failed: failedBeingRetried });
   } catch (err) {
-    console.error('[resume]', err.message);
-    res.status(500).json({ error: 'Erro ao retomar campanha' });
+    console.error('[resume]', err.message, err.stack);
+    res.status(500).json({ error: err.message || 'Erro ao retomar campanha' });
   }
 }
 
@@ -316,4 +325,40 @@ async function remove(req, res) {
   res.status(204).send();
 }
 
-module.exports = { list, messages, resend, pause, resume, resendFailed, remove };
+// Força o status de uma campanha travada (ex: pausada indefinidamente)
+async function forceStatus(req, res) {
+  try {
+    const { status } = req.body;
+    if (!['completed', 'failed', 'paused'].includes(status)) {
+      return res.status(400).json({ error: 'Status inválido. Use: completed, failed ou paused' });
+    }
+    const campaign = await Campaign.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    if (!campaign) return res.status(404).json({ error: 'Campanha não encontrada' });
+
+    // Se marcando como concluída, cancela jobs que ainda estejam na fila para esta campanha
+    if (status === 'completed' || status === 'failed') {
+      const { cancelJob } = require('../services/queueService');
+      const queued = await Message.findAll({
+        where: { campaign_id: campaign.id, status: 'queued' },
+        attributes: ['id', 'queue_job_id'],
+      });
+      await Promise.all(
+        queued.filter((m) => m.queue_job_id).map((m) => cancelJob(m.queue_job_id).catch(() => {}))
+      );
+      if (queued.length) {
+        await Message.update(
+          { status: 'failed', error_message: 'Cancelado — campanha marcada como concluída manualmente' },
+          { where: { campaign_id: campaign.id, status: 'queued' } }
+        );
+      }
+    }
+
+    await campaign.update({ status });
+    res.json({ success: true, status });
+  } catch (err) {
+    console.error('[forceStatus]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = { list, messages, resend, pause, resume, resendFailed, remove, forceStatus };
