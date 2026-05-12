@@ -79,6 +79,8 @@ export default function ContactsPage() {
   const [importConsentModal, setImportConsentModal] = useState(false);
   const [importConsentSource, setImportConsentSource] = useState('existing_relationship');
   const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [importing, setImporting] = useState(false);
+  const [importTotal, setImportTotal] = useState(0);
   const [contactedFilter, setContactedFilter] = useState<'all' | 'never' | 'yes'>('all');
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -221,27 +223,35 @@ export default function ContactsPage() {
 
   async function submitImport() {
     if (!pendingFile) return;
+
+    // Estima o total de linhas pelo tamanho do arquivo para feedback imediato
+    const estimatedRows = Math.max(1, Math.round(pendingFile.size / 60));
+    setImportTotal(estimatedRows);
+    setImporting(true);
+
     const form = new FormData();
     form.append('file', pendingFile);
     form.append('consent_source', importConsentSource);
     try {
-      const res = await api.post('/contacts/import', form);
+      const res = await api.post('/contacts/import', form, { timeout: 120_000 });
       qc.invalidateQueries({ queryKey: ['contacts'] });
       qc.invalidateQueries({ queryKey: ['contact-tags'] });
       const { imported, skipped, duplicates } = res.data;
       if (imported === 0 && skipped === 0) {
         toast.error('Nenhum contato encontrado. Verifique se as colunas se chamam "nome" e "telefone".');
       } else {
-        const parts = [`${imported} contatos importados`];
-        if (duplicates) parts.push(`${duplicates} atualizados`);
-        if (skipped) parts.push(`${skipped} ignorados`);
+        const parts = [`${imported.toLocaleString('pt-BR')} contatos importados`];
+        if (duplicates) parts.push(`${duplicates.toLocaleString('pt-BR')} atualizados`);
+        if (skipped) parts.push(`${skipped.toLocaleString('pt-BR')} ignorados`);
         toast.success(parts.join(', '));
       }
     } catch (err: any) {
-      toast.error(err.response?.data?.error || 'Erro na importação');
+      toast.error(err.response?.data?.error || 'Erro na importação. Tente novamente.');
+    } finally {
+      setImporting(false);
+      setImportConsentModal(false);
+      setPendingFile(null);
     }
-    setImportConsentModal(false);
-    setPendingFile(null);
   }
 
   const contacts: Contact[] = data?.data ?? [];
@@ -634,47 +644,83 @@ export default function ContactsPage() {
       </Modal>
 
       {/* Modal — Consentimento do Import */}
-      <Modal open={importConsentModal} onClose={() => { setImportConsentModal(false); setPendingFile(null); }} title="Confirmação de Consentimento (LGPD)">
-        <div className="space-y-4">
-          <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-xs text-yellow-800 leading-relaxed">
-            <strong>Obrigação legal:</strong> Pela LGPD (Lei 13.709/2018), você só pode enviar mensagens para contatos
-            que autorizaram receber suas comunicações. Indique abaixo como esses contatos consentiram.
+      <Modal
+        open={importConsentModal}
+        onClose={() => { if (!importing) { setImportConsentModal(false); setPendingFile(null); } }}
+        title={importing ? 'Importando contatos...' : 'Confirmação de Consentimento (LGPD)'}
+      >
+        {importing ? (
+          <div className="space-y-5 py-2">
+            <div className="flex flex-col items-center gap-4 py-4">
+              <div className="relative w-16 h-16">
+                <svg className="animate-spin w-16 h-16 text-brand-600" viewBox="0 0 64 64" fill="none">
+                  <circle cx="32" cy="32" r="28" stroke="currentColor" strokeWidth="6" strokeOpacity="0.15" />
+                  <path d="M32 4a28 28 0 0 1 28 28" stroke="currentColor" strokeWidth="6" strokeLinecap="round" />
+                </svg>
+              </div>
+              <div className="text-center">
+                <p className="text-base font-semibold text-gray-800">Processando arquivo...</p>
+                <p className="text-sm text-gray-500 mt-1">
+                  Importando <strong>~{importTotal.toLocaleString('pt-BR')}</strong> contatos para o banco de dados.
+                </p>
+                <p className="text-xs text-gray-400 mt-2">Não feche esta janela. Pode levar alguns segundos.</p>
+              </div>
+            </div>
+            {/* Barra de progresso animada (indeterminada) */}
+            <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+              <div className="h-2 bg-brand-500 rounded-full animate-[progress_2s_ease-in-out_infinite]"
+                style={{ width: '60%', animation: 'indeterminate 1.5s ease-in-out infinite' }} />
+            </div>
+            <style>{`
+              @keyframes indeterminate {
+                0% { transform: translateX(-100%); width: 60%; }
+                50% { transform: translateX(60%); width: 60%; }
+                100% { transform: translateX(200%); width: 60%; }
+              }
+            `}</style>
           </div>
-          <div className="space-y-2">
-            {CONSENT_OPTIONS.map((o) => (
-              <label
-                key={o.value}
-                className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
-                  importConsentSource === o.value ? 'border-brand-500 bg-brand-50' : 'border-gray-200 hover:border-gray-300'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="import_consent"
-                  value={o.value}
-                  checked={importConsentSource === o.value}
-                  onChange={() => setImportConsentSource(o.value)}
-                  className="mt-0.5 accent-brand-600 shrink-0"
-                />
-                <div>
-                  <p className="text-sm font-semibold text-gray-800">{o.label}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{o.desc}</p>
-                </div>
-              </label>
-            ))}
+        ) : (
+          <div className="space-y-4">
+            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-3 text-xs text-yellow-800 leading-relaxed">
+              <strong>Obrigação legal:</strong> Pela LGPD (Lei 13.709/2018), você só pode enviar mensagens para contatos
+              que autorizaram receber suas comunicações. Indique abaixo como esses contatos consentiram.
+            </div>
+            <div className="space-y-2">
+              {CONSENT_OPTIONS.map((o) => (
+                <label
+                  key={o.value}
+                  className={`flex items-start gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all ${
+                    importConsentSource === o.value ? 'border-brand-500 bg-brand-50' : 'border-gray-200 hover:border-gray-300'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="import_consent"
+                    value={o.value}
+                    checked={importConsentSource === o.value}
+                    onChange={() => setImportConsentSource(o.value)}
+                    className="mt-0.5 accent-brand-600 shrink-0"
+                  />
+                  <div>
+                    <p className="text-sm font-semibold text-gray-800">{o.label}</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{o.desc}</p>
+                  </div>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-gray-400">
+              Arquivo: <strong>{pendingFile?.name}</strong>
+            </p>
+            <div className="flex gap-3 justify-end pt-2">
+              <button type="button" onClick={() => { setImportConsentModal(false); setPendingFile(null); }} className="btn-secondary">
+                Cancelar
+              </button>
+              <button onClick={submitImport} className="btn-primary flex items-center gap-2">
+                <ShieldCheck size={14} /> Confirmar e importar
+              </button>
+            </div>
           </div>
-          <p className="text-xs text-gray-400">
-            Arquivo: <strong>{pendingFile?.name}</strong>
-          </p>
-          <div className="flex gap-3 justify-end pt-2">
-            <button type="button" onClick={() => { setImportConsentModal(false); setPendingFile(null); }} className="btn-secondary">
-              Cancelar
-            </button>
-            <button onClick={submitImport} className="btn-primary flex items-center gap-2">
-              <ShieldCheck size={14} /> Confirmar e importar
-            </button>
-          </div>
-        </div>
+        )}
       </Modal>
 
       <p className="text-xs text-gray-400">

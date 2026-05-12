@@ -211,38 +211,34 @@ async function importCSV(req, res) {
     }
   }
 
-  let imported = 0;
-  let duplicates = 0;
+  // Conta contatos antes para detectar duplicatas
+  const countBefore = await Contact.count({ where: { user_id: req.user.id } });
 
-  for (const row of results) {
+  // Insere/atualiza em lotes de 500 (batch insert via ON CONFLICT DO UPDATE)
+  const CHUNK = 500;
+  for (let i = 0; i < results.length; i += CHUNK) {
+    const chunk = results.slice(i, i + CHUNK);
     try {
-      await Contact.create(row);
-      imported++;
+      await Contact.bulkCreate(chunk, {
+        updateOnDuplicate: ['name', 'notes', 'tags', 'email', 'consent_source', 'consented_at'],
+        conflictAttributes: ['user_id', 'phone'],
+      });
     } catch (err) {
-      if (err.name === 'SequelizeUniqueConstraintError') {
+      // Fallback: tenta linha a linha se o lote falhar por algum motivo inesperado
+      console.error('[Import] falha no lote, tentando linha a linha:', err.message);
+      for (const row of chunk) {
         try {
-          const existing = await Contact.findOne({ where: { user_id: row.user_id, phone: row.phone } });
-          if (existing) {
-            const merged = [...new Set([...(existing.tags || []), ...row.tags].map(normalizeTag))];
-            await existing.update({
-              name: row.name,
-              notes: row.notes || existing.notes,
-              tags: merged,
-              // Só sobrescreve email se vier um novo valor válido
-              ...(row.email && { email: row.email }),
-            });
-          }
-          imported++;
-          duplicates++;
-        } catch {
-          errors.push({ phone: row.phone, reason: 'erro ao atualizar duplicado' });
+          await Contact.upsert(row);
+        } catch (e2) {
+          errors.push({ phone: row.phone, reason: e2.message });
         }
-      } else {
-        console.error('[Import] erro ao salvar contato:', err.message, row);
-        errors.push({ phone: row.phone, reason: err.message });
       }
     }
   }
+
+  const countAfter = await Contact.count({ where: { user_id: req.user.id } });
+  const imported = results.length - errors.length;
+  const duplicates = Math.max(0, imported - (countAfter - countBefore));
 
   res.json({ imported, duplicates, skipped: errors.length, errors });
 }
