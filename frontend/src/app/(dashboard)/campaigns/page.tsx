@@ -180,6 +180,18 @@ export default function CampaignsPage() {
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao reenviar falhas'),
   });
 
+  const clearQueueMutation = useMutation({
+    mutationFn: () => api.delete('/messages/queue'),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['campaigns'] });
+      qc.invalidateQueries({ queryKey: ['running-campaigns-banner'] });
+      toast.success(res.data.cleared > 0
+        ? `Fila limpa! ${res.data.cleared} mensagem${res.data.cleared !== 1 ? 's' : ''} cancelada${res.data.cleared !== 1 ? 's' : ''}.`
+        : 'A fila já estava vazia.');
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao limpar fila'),
+  });
+
   const { data: detail, isLoading: loadingDetail } = useQuery({
     queryKey: ['campaign-detail', detailCampaign?.id],
     queryFn: () => api.get(`/campaigns/${detailCampaign!.id}/messages`).then((r) => r.data),
@@ -271,9 +283,21 @@ export default function CampaignsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Campanhas</h1>
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <button
+            onClick={() => {
+              if (confirm('Limpar toda a fila de mensagens?\n\nIsso cancela TODAS as mensagens aguardando envio (de todas as campanhas) e as marca como falha. Campanhas em execução serão pausadas.\n\nEssa ação não pode ser desfeita.'))
+                clearQueueMutation.mutate();
+            }}
+            disabled={clearQueueMutation.isPending}
+            className="btn btn-secondary text-red-600 hover:text-red-700 hover:border-red-300"
+            title="Cancela todas as mensagens na fila"
+          >
+            <Trash2 size={16} />
+            {clearQueueMutation.isPending ? 'Limpando...' : 'Limpar fila'}
+          </button>
           <button onClick={() => setTab('history')} className={`btn ${tab === 'history' ? 'btn-primary' : 'btn-secondary'}`}>
             <History size={16} /> Histórico
           </button>

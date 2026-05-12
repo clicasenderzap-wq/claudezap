@@ -2,6 +2,7 @@ const router = require('express').Router();
 const { body } = require('express-validator');
 const ctrl = require('../controllers/messageController');
 
+router.delete('/queue', ctrl.clearQueue);
 router.get('/', ctrl.history);
 router.get('/scheduled', ctrl.listScheduled);
 router.delete('/:id/cancel', ctrl.cancelScheduled);

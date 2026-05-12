@@ -251,4 +251,44 @@ async function listScheduled(req, res) {
   res.json({ total: count, page: Number(page), data: rows });
 }
 
-module.exports = { sendSingle, sendCampaign, history, scheduleMessage, cancelScheduled, listScheduled };
+async function clearQueue(req, res) {
+  try {
+    const queuedMessages = await Message.findAll({
+      where: { user_id: req.user.id, status: 'queued' },
+      attributes: ['id', 'queue_job_id', 'campaign_id'],
+    });
+
+    if (!queuedMessages.length) {
+      return res.json({ cleared: 0 });
+    }
+
+    // Cancela os jobs no BullMQ
+    await Promise.all(
+      queuedMessages
+        .filter((m) => m.queue_job_id)
+        .map((m) => cancelJob(m.queue_job_id).catch(() => {}))
+    );
+
+    // Marca todas as mensagens como falha
+    await Message.update(
+      { status: 'failed', error_message: 'Fila limpa pelo usuário' },
+      { where: { user_id: req.user.id, status: 'queued' } }
+    );
+
+    // Pausa campanhas que estavam em execução e agora ficaram sem mensagens na fila
+    const campaignIds = [...new Set(queuedMessages.map((m) => m.campaign_id).filter(Boolean))];
+    if (campaignIds.length) {
+      await Campaign.update(
+        { status: 'paused' },
+        { where: { id: campaignIds, user_id: req.user.id, status: ['running', 'scheduled'] } }
+      );
+    }
+
+    res.json({ cleared: queuedMessages.length });
+  } catch (err) {
+    console.error('[clearQueue]', err.message);
+    res.status(500).json({ error: 'Erro ao limpar fila' });
+  }
+}
+
+module.exports = { sendSingle, sendCampaign, history, scheduleMessage, cancelScheduled, listScheduled, clearQueue };

@@ -249,8 +249,14 @@ async function importCSV(req, res) {
 
 async function bulkDelete(req, res) {
   try {
-    const { ids, tag } = req.body;
+    const { ids, tag, all } = req.body;
     const where = { user_id: req.user.id };
+
+    if (all === true) {
+      const count = await Contact.destroy({ where });
+      return res.json({ deleted: count });
+    }
+
     if (tag) {
       const all = await Contact.findAll({ where, attributes: ['id', 'tags'] });
       const normalized = normalizeTag(tag);

@@ -163,7 +163,7 @@ export default function ContactsPage() {
   });
 
   const bulkDeleteMutation = useMutation({
-    mutationFn: (payload: { ids?: string[]; tag?: string }) =>
+    mutationFn: (payload: { ids?: string[]; tag?: string; all?: boolean }) =>
       api.delete('/contacts/bulk', { data: payload }),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ['contacts'] });
@@ -271,6 +271,19 @@ export default function ContactsPage() {
           </a>
           <button onClick={() => fileRef.current?.click()} className="btn-secondary">
             <Upload size={16} /> Importar CSV / Excel
+          </button>
+          <button
+            onClick={() => {
+              const total = data?.total ?? 0;
+              if (confirm(`Excluir TODOS os ${total > 0 ? total : ''} contatos?\n\nEssa ação é permanente e não pode ser desfeita. As campanhas existentes não serão afetadas.`))
+                bulkDeleteMutation.mutate({ all: true });
+            }}
+            disabled={bulkDeleteMutation.isPending}
+            className="btn-secondary text-red-600 hover:text-red-700 hover:border-red-300"
+            title="Exclui todos os contatos permanentemente"
+          >
+            <Trash2 size={16} />
+            {bulkDeleteMutation.isPending ? 'Excluindo...' : 'Excluir todos'}
           </button>
           <button onClick={() => setOpen(true)} className="btn-primary">
             <Plus size={16} /> Novo contato
