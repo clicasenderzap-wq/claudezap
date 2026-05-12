@@ -33,10 +33,19 @@ class DesktopService extends EventEmitter {
       const current = this._sessions.get(userId);
       if (current && current.deviceId === deviceId) {
         this._sessions.delete(userId);
+        // Collect accounts before clearing so we can emit disconnected events
+        const affectedAccounts = [];
         for (const [accId, uid] of this._accountToUser) {
-          if (uid === userId) this._accountToUser.delete(accId);
+          if (uid === userId) {
+            affectedAccounts.push(accId);
+            this._accountToUser.delete(accId);
+          }
         }
-        console.log(`[Desktop] desconectado userId=${userId}`);
+        // Notify whatsappService so DB status gets updated to 'disconnected'
+        for (const accId of affectedAccounts) {
+          this.emit('disconnected', { accountId: accId, code: 'DESKTOP_DISCONNECTED' });
+        }
+        console.log(`[Desktop] desconectado userId=${userId} contas afetadas: ${affectedAccounts.length}`);
       }
     });
   }
@@ -175,6 +184,17 @@ class DesktopService extends EventEmitter {
         if (session) session.ws.send(JSON.stringify({ type: 'pong' }));
         break;
     }
+  }
+
+  // Returns diagnostic info for the given user
+  getDesktopStatus(userId) {
+    const session = this._sessions.get(userId);
+    const connected = session != null && session.ws.readyState === 1;
+    const accounts = [];
+    for (const [accId, uid] of this._accountToUser) {
+      if (uid === userId) accounts.push(accId);
+    }
+    return { desktop_connected: connected, active_account_ids: accounts };
   }
 
   // Send the user's account list so the app knows what to connect

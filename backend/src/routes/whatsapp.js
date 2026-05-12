@@ -9,5 +9,6 @@ router.get('/accounts/:id/qr', accounts.getQR);
 router.post('/accounts/:id/pairing-code', accounts.requestPairingCode);
 router.delete('/accounts/:id', accounts.remove);
 router.get('/inbox', accounts.inbox);
+router.get('/desktop-status', accounts.desktopStatus);
 
 module.exports = router;

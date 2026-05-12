@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Send, RefreshCw, Search, X, User, Phone } from 'lucide-react';
+import { Send, RefreshCw, Search, X, User, Phone, WifiOff } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { formatDate, statusColor, statusLabel } from '@/lib/utils';
@@ -129,6 +129,12 @@ export default function MessagesPage() {
     queryFn: () => api.get('/contacts', { params: { limit: 500 } }).then((r) => r.data.data),
   });
 
+  const { data: desktopStatus } = useQuery<{ desktop_connected: boolean }>({
+    queryKey: ['desktop-status'],
+    queryFn: () => api.get('/whatsapp/desktop-status').then((r) => r.data),
+    refetchInterval: 8000,
+  });
+
   const { data: history, isLoading } = useQuery({
     queryKey: ['messages', histPage],
     queryFn: () => api.get('/messages', { params: { page: histPage, limit: 20 } }).then((r) => r.data),
@@ -202,6 +208,18 @@ export default function MessagesPage() {
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-gray-900">Mensagens</h1>
+
+      {desktopStatus && !desktopStatus.desktop_connected && (
+        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+          <WifiOff size={18} className="text-red-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-red-800">App "Clica Aí" desconectado</p>
+            <p className="text-xs text-red-700 mt-0.5">
+              Mensagens serão enfileiradas mas <strong>não enviadas</strong> enquanto o app não estiver aberto e conectado.
+            </p>
+          </div>
+        </div>
+      )}
 
       <div className="card p-6">
         <h2 className="text-base font-semibold text-gray-800 mb-4">Enviar mensagem individual</h2>

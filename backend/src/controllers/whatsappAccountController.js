@@ -56,11 +56,48 @@ whatsapp.on('message.received', async ({ accountId, from, text, isSync }) => {
 });
 
 whatsapp.on('disconnected', async ({ accountId }) => {
-  pendingQR.delete(accountId); // stale QR must not be shown after disconnect
+  pendingQR.delete(accountId);
   await WhatsappAccount.update(
     { status: 'disconnected' },
     { where: { id: accountId } }
   ).catch(() => {});
+
+  // Auto-pause running campaigns that use this account if no other account is connected
+  try {
+    const account = await WhatsappAccount.findByPk(accountId, { attributes: ['user_id'] });
+    if (!account) return;
+    const { Campaign, Message } = require('../models');
+    const whatsappSvc = require('../services/whatsappService');
+    // Check if user has any other connected account
+    const otherAccounts = await WhatsappAccount.findAll({
+      where: { user_id: account.user_id, status: 'connected' },
+      attributes: ['id'],
+    });
+    const otherConnected = otherAccounts.filter((a) => a.id !== accountId && whatsappSvc.getStatus(a.id) === 'connected');
+    if (otherConnected.length > 0) return; // Other accounts available, no need to pause
+
+    // No connected accounts left — pause running campaigns
+    const runningCampaigns = await Campaign.findAll({
+      where: { user_id: account.user_id, status: 'running' },
+      attributes: ['id'],
+    });
+    if (!runningCampaigns.length) return;
+
+    const { cancelJob } = require('../services/queueService');
+    for (const campaign of runningCampaigns) {
+      const pending = await Message.findAll({
+        where: { campaign_id: campaign.id, status: 'queued' },
+        attributes: ['id', 'queue_job_id'],
+      });
+      await Promise.all(
+        pending.filter((m) => m.queue_job_id).map((m) => cancelJob(m.queue_job_id).catch(() => {}))
+      );
+      await campaign.update({ status: 'paused' }).catch(() => {});
+      console.log(`[AutoPause] campanha ${campaign.id} pausada — app desktop desconectou`);
+    }
+  } catch (e) {
+    console.error('[AutoPause] erro:', e.message);
+  }
 });
 
 async function list(req, res) {
@@ -164,4 +201,10 @@ async function inbox(req, res) {
   res.json({ total: count, page: Number(page), data: rows });
 }
 
-module.exports = { list, create, updateLabel, getQR, requestPairingCode, remove, inbox };
+async function desktopStatus(req, res) {
+  const desktop = require('../services/desktopService');
+  const status = desktop.getDesktopStatus(req.user.id);
+  res.json(status);
+}
+
+module.exports = { list, create, updateLabel, getQR, requestPairingCode, remove, inbox, desktopStatus };

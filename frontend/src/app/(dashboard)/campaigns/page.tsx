@@ -86,6 +86,12 @@ export default function CampaignsPage() {
   });
   const connectedAccounts = waAccounts.filter((a: any) => a.status === 'connected');
 
+  const { data: desktopStatus } = useQuery<{ desktop_connected: boolean; active_account_ids: string[] }>({
+    queryKey: ['desktop-status'],
+    queryFn: () => api.get('/whatsapp/desktop-status').then((r) => r.data),
+    refetchInterval: 8000,
+  });
+
   const { data: contacts } = useQuery({
     queryKey: ['contacts-all'],
     queryFn: () => api.get('/contacts', { params: { limit: 1000 } }).then((r) => r.data.data),
@@ -296,6 +302,32 @@ export default function CampaignsPage() {
 
   return (
     <div className="space-y-6">
+      {/* Banner de status do app desktop — atualiza a cada 8s */}
+      {desktopStatus && !desktopStatus.desktop_connected && (
+        <div className="flex items-start gap-3 p-4 bg-red-50 border border-red-200 rounded-xl">
+          <WifiOff size={18} className="text-red-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-red-800">App "Clica Aí" desconectado</p>
+            <p className="text-xs text-red-700 mt-0.5">
+              O app desktop não está conectado ao servidor. <strong>Nenhuma mensagem será enviada enquanto isso.</strong>{' '}
+              Abra o app no seu computador e aguarde ele conectar — as campanhas retomam automaticamente.
+            </p>
+          </div>
+        </div>
+      )}
+      {desktopStatus && desktopStatus.desktop_connected && connectedAccounts.length === 0 && (
+        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <AlertTriangle size={18} className="text-amber-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-semibold text-amber-800">App conectado, mas nenhum número WhatsApp ativo</p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              O app está rodando mas nenhuma conta WhatsApp está conectada.{' '}
+              <a href="/whatsapp" className="underline font-medium">Conectar número</a>
+            </p>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-bold text-gray-900">Campanhas</h1>
         <div className="flex gap-2 flex-wrap">
@@ -872,16 +904,26 @@ export default function CampaignsPage() {
               </div>
             </div>
 
-            {/* WhatsApp disconnect warning */}
-            {detailCampaign.status === 'running' && connectedAccounts.length === 0 && (
+            {/* Status warnings */}
+            {detailCampaign.status === 'running' && desktopStatus && !desktopStatus.desktop_connected && (
+              <div className="mx-6 mt-3 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
+                <WifiOff size={16} className="text-red-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm font-semibold text-red-800">App "Clica Aí" desconectado — envio pausado</p>
+                  <p className="text-xs text-red-700 mt-0.5">
+                    O app desktop não está conectado. Abra o app no computador para retomar o envio.
+                  </p>
+                </div>
+              </div>
+            )}
+            {detailCampaign.status === 'running' && (!desktopStatus || desktopStatus.desktop_connected) && connectedAccounts.length === 0 && (
               <div className="mx-6 mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
                 <WifiOff size={16} className="text-amber-600 mt-0.5 shrink-0" />
                 <div>
-                  <p className="text-sm font-semibold text-amber-800">WhatsApp desconectado</p>
+                  <p className="text-sm font-semibold text-amber-800">Nenhum número WhatsApp conectado</p>
                   <p className="text-xs text-amber-700 mt-0.5">
-                    Nenhum número conectado. As mensagens na fila aguardam reconexão automática —
-                    serão enviadas assim que o WhatsApp reconectar (até 8 tentativas ao longo de ~60 min).{' '}
-                    <a href="/whatsapp" className="underline font-medium">Reconectar agora</a>
+                    O app está aberto mas nenhuma conta WhatsApp está ativa.{' '}
+                    <a href="/whatsapp" className="underline font-medium">Conectar agora</a>
                   </p>
                 </div>
               </div>

@@ -133,8 +133,11 @@ async function pause(req, res) {
   try {
     const campaign = await Campaign.findOne({ where: { id: req.params.id, user_id: req.user.id } });
     if (!campaign) return res.status(404).json({ error: 'Campanha não encontrada' });
-    if (!['running', 'scheduled'].includes(campaign.status)) {
-      return res.status(400).json({ error: 'Somente campanhas em execução podem ser pausadas' });
+    if (campaign.status === 'paused') {
+      return res.json({ paused: true, cancelled: 0, remaining: 0, already_paused: true });
+    }
+    if (!['running', 'scheduled', 'completed', 'failed'].includes(campaign.status)) {
+      return res.status(400).json({ error: `Campanha não pode ser pausada no status atual: ${campaign.status}` });
     }
 
     const { cancelJob } = require('../services/queueService');
