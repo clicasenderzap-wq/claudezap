@@ -3,18 +3,21 @@
 import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { Send, RefreshCw, Search, X } from 'lucide-react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { Send, RefreshCw, Search, X, User, Phone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { formatDate, statusColor, statusLabel } from '@/lib/utils';
 
 const schema = z.object({
-  contact_id: z.string().uuid('Selecione um contato'),
+  contact_id: z.string().optional(),
+  phone: z.string().optional(),
   content: z.string().min(1, 'Mensagem obrigatória'),
 });
 type FormData = z.infer<typeof schema>;
+
+type Mode = 'contact' | 'phone';
 
 function ContactPicker({
   contacts,
@@ -119,6 +122,7 @@ export default function MessagesPage() {
   const qc = useQueryClient();
   const [histPage, setHistPage] = useState(1);
   const [resendingId, setResendingId] = useState<string | null>(null);
+  const [mode, setMode] = useState<Mode>('contact');
 
   const { data: contacts = [] } = useQuery({
     queryKey: ['contacts-all'],
@@ -136,6 +140,7 @@ export default function MessagesPage() {
     reset,
     watch,
     setValue,
+    setError,
     formState: { errors, isSubmitting },
   } = useForm<FormData>({ resolver: zodResolver(schema) });
 
@@ -144,8 +149,14 @@ export default function MessagesPage() {
 
   const activeContacts = (contacts as any[]).filter((c: any) => !c.opt_out);
 
+  function switchMode(next: Mode) {
+    setMode(next);
+    setValue('contact_id', '');
+    setValue('phone', '');
+  }
+
   const sendMutation = useMutation({
-    mutationFn: (d: FormData) => api.post('/messages/send', d),
+    mutationFn: (payload: object) => api.post('/messages/send', payload),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['messages'] });
       toast.success('Mensagem adicionada à fila!');
@@ -154,11 +165,31 @@ export default function MessagesPage() {
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao enviar'),
   });
 
+  function onSubmit(data: FormData) {
+    if (mode === 'contact') {
+      if (!data.contact_id) {
+        setError('contact_id', { message: 'Selecione um contato' });
+        return;
+      }
+      sendMutation.mutate({ contact_id: data.contact_id, content: data.content });
+    } else {
+      const digits = (data.phone || '').replace(/\D/g, '');
+      if (digits.length < 10) {
+        setError('phone', { message: 'Informe o número com DDD (ex: 11999990000)' });
+        return;
+      }
+      sendMutation.mutate({ phone: digits, content: data.content });
+    }
+  }
+
   async function resendMessage(msg: any) {
-    if (!msg.contact_id || !msg.content) return;
+    if (!msg.content) return;
     setResendingId(msg.id);
     try {
-      await api.post('/messages/send', { contact_id: msg.contact_id, content: msg.content });
+      const payload = msg.contact_id
+        ? { contact_id: msg.contact_id, content: msg.content }
+        : { phone: msg.to_phone, content: msg.content };
+      await api.post('/messages/send', payload);
       qc.invalidateQueries({ queryKey: ['messages'] });
       toast.success('Mensagem reenviada!');
     } catch (e: any) {
@@ -174,20 +205,65 @@ export default function MessagesPage() {
 
       <div className="card p-6">
         <h2 className="text-base font-semibold text-gray-800 mb-4">Enviar mensagem individual</h2>
-        <form onSubmit={handleSubmit((d) => sendMutation.mutate(d))} className="space-y-4">
-          <div>
-            <label className="label">Contato</label>
-            <input type="hidden" {...register('contact_id')} />
-            <ContactPicker
-              contacts={activeContacts}
-              value={contactId}
-              onChange={(id) => setValue('contact_id', id, { shouldValidate: true })}
-              error={errors.contact_id?.message}
-            />
-            {errors.contact_id && (
-              <p className="text-red-500 text-xs mt-1">{errors.contact_id.message}</p>
-            )}
-          </div>
+
+        {/* Toggle de modo */}
+        <div className="flex rounded-lg border border-gray-200 overflow-hidden w-fit mb-5">
+          <button
+            type="button"
+            onClick={() => switchMode('contact')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors ${
+              mode === 'contact'
+                ? 'bg-primary-600 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <User size={14} /> Selecionar contato
+          </button>
+          <button
+            type="button"
+            onClick={() => switchMode('phone')}
+            className={`flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border-l border-gray-200 ${
+              mode === 'phone'
+                ? 'bg-primary-600 text-white'
+                : 'bg-white text-gray-600 hover:bg-gray-50'
+            }`}
+          >
+            <Phone size={14} /> Digitar número
+          </button>
+        </div>
+
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          {mode === 'contact' ? (
+            <div>
+              <label className="label">Contato</label>
+              <input type="hidden" {...register('contact_id')} />
+              <ContactPicker
+                contacts={activeContacts}
+                value={contactId || ''}
+                onChange={(id) => setValue('contact_id', id, { shouldValidate: true })}
+                error={errors.contact_id?.message}
+              />
+              {errors.contact_id && (
+                <p className="text-red-500 text-xs mt-1">{errors.contact_id.message}</p>
+              )}
+            </div>
+          ) : (
+            <div>
+              <label className="label">Número de telefone</label>
+              <input
+                {...register('phone')}
+                type="tel"
+                className={`input ${errors.phone ? 'border-red-400' : ''}`}
+                placeholder="Ex: 11999990000 (com DDD, sem espaços ou traços)"
+              />
+              {errors.phone && (
+                <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>
+              )}
+              <p className="text-xs text-gray-400 mt-1">
+                Código do país opcional — se não informar, será assumido Brasil (+55).
+              </p>
+            </div>
+          )}
 
           <div>
             <label className="label">Mensagem</label>
@@ -205,15 +281,17 @@ export default function MessagesPage() {
               )}
               <span className="text-xs text-gray-400">{content.length} caracteres</span>
             </div>
-            <p className="text-xs text-gray-400 mt-1">
-              Variáveis disponíveis:{' '}
-              <code className="bg-gray-100 px-1 rounded">{'{{nome}}'}</code>{' '}
-              <code className="bg-gray-100 px-1 rounded">{'{{telefone}}'}</code>
-            </p>
+            {mode === 'contact' && (
+              <p className="text-xs text-gray-400 mt-1">
+                Variáveis disponíveis:{' '}
+                <code className="bg-gray-100 px-1 rounded">{'{{nome}}'}</code>{' '}
+                <code className="bg-gray-100 px-1 rounded">{'{{telefone}}'}</code>
+              </p>
+            )}
           </div>
 
-          <button type="submit" disabled={isSubmitting} className="btn-primary">
-            <Send size={16} /> {isSubmitting ? 'Enviando…' : 'Enviar'}
+          <button type="submit" disabled={isSubmitting || sendMutation.isPending} className="btn-primary">
+            <Send size={16} /> {isSubmitting || sendMutation.isPending ? 'Enviando…' : 'Enviar'}
           </button>
         </form>
       </div>
@@ -225,7 +303,7 @@ export default function MessagesPage() {
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">
             <tr>
-              {['Contato', 'Mensagem', 'Status', 'Data', ''].map((h, i) => (
+              {['Destinatário', 'Mensagem', 'Status', 'Data', ''].map((h, i) => (
                 <th
                   key={i}
                   className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider"
@@ -252,7 +330,13 @@ export default function MessagesPage() {
             )}
             {history?.data?.map((m: any) => (
               <tr key={m.id} className="hover:bg-gray-50">
-                <td className="px-4 py-3 font-medium text-gray-900">{m.Contact?.name ?? '—'}</td>
+                <td className="px-4 py-3 font-medium text-gray-900">
+                  {m.Contact?.name ?? (m.to_phone ? (
+                    <span className="text-gray-500 font-normal flex items-center gap-1">
+                      <Phone size={12} className="inline" /> {m.to_phone}
+                    </span>
+                  ) : '—')}
+                </td>
                 <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{m.content}</td>
                 <td className="px-4 py-3">
                   <span className={`badge ${statusColor(m.status)}`}>{statusLabel(m.status)}</span>
@@ -261,7 +345,7 @@ export default function MessagesPage() {
                   {formatDate(m.created_at)}
                 </td>
                 <td className="px-4 py-3">
-                  {m.status === 'failed' && !m.campaign_id && (
+                  {m.status === 'failed' && !m.campaign_id && (m.contact_id || m.to_phone) && (
                     <button
                       onClick={() => resendMessage(m)}
                       disabled={resendingId === m.id}

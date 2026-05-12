@@ -13,24 +13,38 @@ function applyTemplate(template, contact) {
 }
 
 async function sendSingle(req, res) {
-  const errors = validationResult(req);
-  if (!errors.isEmpty()) return res.status(422).json({ errors: errors.array() });
-
   try {
-    const { contact_id, content, media_url, media_type, media_filename } = req.body;
-    const contact = await Contact.findOne({ where: { id: contact_id, user_id: req.user.id } });
-    if (!contact) return res.status(404).json({ error: 'Contato não encontrado' });
-    if (contact.opt_out) return res.status(400).json({ error: 'Contato optou por não receber mensagens' });
+    const { contact_id, phone: rawPhone, content, media_url, media_type, media_filename } = req.body;
+
+    if (!content?.trim()) return res.status(422).json({ error: 'Mensagem obrigatória' });
+    if (!contact_id && !rawPhone) return res.status(422).json({ error: 'Informe o contato ou número de telefone' });
+
+    let contact = null;
+    let phone = null;
+
+    if (contact_id) {
+      contact = await Contact.findOne({ where: { id: contact_id, user_id: req.user.id } });
+      if (!contact) return res.status(404).json({ error: 'Contato não encontrado' });
+      if (contact.opt_out) return res.status(400).json({ error: 'Contato optou por não receber mensagens' });
+      phone = contact.phone;
+    } else {
+      phone = String(rawPhone).replace(/\D/g, '');
+      if (phone.length < 10) return res.status(422).json({ error: 'Número de telefone inválido — informe com DDD' });
+      if (phone.length === 10 || phone.length === 11) phone = `55${phone}`;
+    }
+
+    const templateContact = contact || { name: phone, phone };
 
     const msg = await Message.create({
       user_id: req.user.id,
-      contact_id: contact.id,
-      content: applyTemplate(content, contact),
+      contact_id: contact?.id || null,
+      to_phone: contact ? null : phone,
+      content: applyTemplate(content, templateContact),
       status: 'queued',
       ...(media_url && { media_url, media_type, media_filename }),
     });
 
-    await enqueueMessage(msg.id, req.user.id, contact.phone, msg.content);
+    await enqueueMessage(msg.id, req.user.id, phone, msg.content);
     res.status(201).json(msg);
   } catch (err) {
     console.error('[sendSingle]', err.message);

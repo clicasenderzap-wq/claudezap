@@ -13,7 +13,11 @@ const Message = sequelize.define('Message', {
   },
   contact_id: {
     type: DataTypes.UUID,
-    allowNull: false,
+    allowNull: true,
+  },
+  to_phone: {
+    type: DataTypes.STRING,
+    allowNull: true,
   },
   campaign_id: {
     type: DataTypes.UUID,
