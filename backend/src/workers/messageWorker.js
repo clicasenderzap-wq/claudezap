@@ -68,6 +68,12 @@ const worker = new Worker(
     const message = await Message.findByPk(messageId);
     if (!message) throw new Error(`Message ${messageId} not found`);
 
+    // Idempotency guard: if already sent/delivered by a duplicate job, skip silently
+    if (message.status === 'sent' || message.status === 'delivered') {
+      console.log(`[Worker] msg ${messageId} já enviada (status=${message.status}) — job duplicado ignorado`);
+      return;
+    }
+
     const maxAttempts = job.opts?.attempts ?? 3;
     const isLastAttempt = job.attemptsMade >= maxAttempts - 1;
 

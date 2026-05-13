@@ -115,13 +115,22 @@ async function messages(req, res) {
     return acc;
   }, {});
 
+  const sentTotal = (stats.sent || 0) + (stats.delivered || 0);
+  const failedTotal = stats.failed || 0;
+
+  // Sincroniza contadores do Campaign com a realidade (evita divergência entre modal e lista)
+  Campaign.update(
+    { sent_count: sentTotal, failed_count: failedTotal },
+    { where: { id: campaign.id } }
+  ).catch(() => {});
+
   res.json({
     campaign,
     stats: {
       total: msgs.length,
       sent: stats.sent || 0,
       delivered: stats.delivered || 0,
-      failed: stats.failed || 0,
+      failed: failedTotal,
       queued: stats.queued || 0,
       pending: stats.pending || 0,
     },
@@ -178,8 +187,16 @@ async function resume(req, res) {
       return res.status(400).json({ error: 'Nenhuma conta WhatsApp conectada' });
     }
 
-    // Include queued (paused jobs) AND definitively failed messages so that
-    // Pause → Resume always continues from where it stopped, including failures.
+    // Cancel ANY existing BullMQ jobs for this campaign before re-enqueueing.
+    // This prevents duplicates when resume is called multiple times or after partial failures.
+    const { enqueueBulk, enqueueBatched, cancelJob } = require('../services/queueService');
+    const existingQueued = await Message.findAll({
+      where: { campaign_id: campaign.id, status: 'queued', queue_job_id: { [Op.ne]: null } },
+      attributes: ['id', 'queue_job_id'],
+    });
+    await Promise.all(existingQueued.map((m) => cancelJob(m.queue_job_id).catch(() => {})));
+
+    // Re-query after cancellation to get accurate pending list
     const pendingMessages = await Message.findAll({
       where: { campaign_id: campaign.id, status: { [Op.in]: ['queued', 'failed'] } },
       include: [{ model: Contact, attributes: ['phone', 'opt_out'] }],
@@ -196,7 +213,6 @@ async function resume(req, res) {
       return res.json({ resumed: false, message: 'Nenhuma mensagem pendente. Campanha marcada como concluída.' });
     }
 
-    const { enqueueBulk, enqueueBatched } = require('../services/queueService');
     const jobs = toResend.map((msg) => ({
       messageId: msg.id,
       userId: req.user.id,
