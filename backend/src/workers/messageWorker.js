@@ -137,7 +137,9 @@ const worker = new Worker(
   {
     connection,
     concurrency: 5,
-    lockDuration: 120_000,
+    // 5 min lock — prevents stalled jobs when the per-account queue serializes
+    // many messages and BullMQ's 120s default expires before the job gets the lock
+    lockDuration: 300_000,
   }
 );
 

@@ -29,11 +29,26 @@ class DesktopService extends EventEmitter {
     this._sessions.set(userId, { ws, deviceId });
     console.log(`[Desktop] conectado userId=${userId} device=${deviceId}`);
 
+    // After reconnection, ask Electron to reconnect all accounts so we get fresh 'ready' events.
+    // This ensures _accountToUser and _connected are repopulated after a backend restart.
+    setImmediate(async () => {
+      try {
+        await this.pushAccountList(userId);
+        const { WhatsappAccount } = require('../models');
+        const accounts = await WhatsappAccount.findAll({
+          where: { user_id: userId, status: 'connected' },
+          attributes: ['id'],
+        });
+        for (const acc of accounts) {
+          await this._sendToUser(userId, { type: 'connect', accountId: acc.id }).catch(() => {});
+        }
+      } catch {}
+    });
+
     ws.on('close', () => {
       const current = this._sessions.get(userId);
       if (current && current.deviceId === deviceId) {
         this._sessions.delete(userId);
-        // Collect accounts before clearing so we can emit disconnected events
         const affectedAccounts = [];
         for (const [accId, uid] of this._accountToUser) {
           if (uid === userId) {
@@ -41,11 +56,12 @@ class DesktopService extends EventEmitter {
             this._accountToUser.delete(accId);
           }
         }
-        // Notify whatsappService so DB status gets updated to 'disconnected'
-        for (const accId of affectedAccounts) {
-          this.emit('disconnected', { accountId: accId, code: 'DESKTOP_DISCONNECTED' });
-        }
-        console.log(`[Desktop] desconectado userId=${userId} contas afetadas: ${affectedAccounts.length}`);
+        // NOTE: we intentionally do NOT emit 'disconnected' here because the Electron app
+        // may reconnect within seconds (network hiccup, deploy restart). Emitting here
+        // would set DB status to 'disconnected', and if Electron doesn't resend 'ready'
+        // events the DB stays wrong and all sends fail.
+        // DB status is only updated when WhatsApp itself disconnects (type:'disconnected' from Electron).
+        console.log(`[Desktop] WebSocket fechado userId=${userId} contas limpas da memória: ${affectedAccounts.length}`);
       }
     });
   }
