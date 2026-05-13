@@ -82,14 +82,14 @@ export default function CampaignsPage() {
   const { data: waAccounts = [] } = useQuery<any[]>({
     queryKey: ['wa-accounts'],
     queryFn: () => api.get('/whatsapp/accounts').then((r) => r.data),
-    refetchInterval: 10000,
+    refetchInterval: 30000,
   });
   const connectedAccounts = waAccounts.filter((a: any) => a.status === 'connected');
 
   const { data: desktopStatus } = useQuery<{ desktop_connected: boolean; active_account_ids: string[] }>({
     queryKey: ['desktop-status'],
     queryFn: () => api.get('/whatsapp/desktop-status').then((r) => r.data),
-    refetchInterval: 8000,
+    refetchInterval: 30000,
   });
 
   const { data: contacts } = useQuery({
@@ -228,7 +228,7 @@ export default function CampaignsPage() {
         return r.data;
       }),
     enabled: !!detailCampaign,
-    refetchInterval: detailCampaign ? 5000 : false,
+    refetchInterval: detailCampaign ? 15000 : false,
   });
 
   function toggleContact(id: string) {

@@ -31,7 +31,7 @@ function BotAccountCard({ account }: { account: any }) {
     queryKey: ['bot-conversations', account.id, convTab],
     queryFn: () => api.get(`/bot/accounts/${account.id}/conversations`, { params: { status: convTab } }).then((r) => r.data),
     enabled: open,
-    refetchInterval: 15000,
+    refetchInterval: 60000,
   });
 
   const [form, setForm] = useState<Record<string, any> | null>(null);
@@ -230,7 +230,7 @@ export default function BotsPage() {
   const { data: accounts, isLoading } = useQuery({
     queryKey: ['whatsapp-accounts'],
     queryFn: () => api.get('/whatsapp/accounts').then((r) => r.data),
-    refetchInterval: 20000,
+    refetchInterval: 60000,
     enabled: isPro,
   });
 

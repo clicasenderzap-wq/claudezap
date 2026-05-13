@@ -29,7 +29,7 @@ export default function WhatsAppPage() {
   const { data: accounts = [], isLoading } = useQuery<Account[]>({
     queryKey: ['wa-accounts'],
     queryFn: () => api.get('/whatsapp/accounts').then((r) => r.data),
-    refetchInterval: 5000,
+    refetchInterval: 30000,
   });
 
   const createMutation = useMutation({

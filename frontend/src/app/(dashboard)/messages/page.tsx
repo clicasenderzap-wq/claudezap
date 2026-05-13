@@ -132,7 +132,7 @@ export default function MessagesPage() {
   const { data: desktopStatus } = useQuery<{ desktop_connected: boolean }>({
     queryKey: ['desktop-status'],
     queryFn: () => api.get('/whatsapp/desktop-status').then((r) => r.data),
-    refetchInterval: 8000,
+    refetchInterval: 30000,
   });
 
   const { data: history, isLoading } = useQuery({

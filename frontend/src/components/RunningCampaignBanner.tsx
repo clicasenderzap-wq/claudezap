@@ -12,7 +12,7 @@ export default function RunningCampaignBanner() {
   const { data: waAccounts = [] } = useQuery<any[]>({
     queryKey: ['wa-accounts-global'],
     queryFn: () => api.get('/whatsapp/accounts').then((r) => r.data),
-    refetchInterval: 15_000,
+    refetchInterval: 60_000,
     staleTime: 10_000,
   });
 
@@ -20,7 +20,7 @@ export default function RunningCampaignBanner() {
     queryKey: ['running-campaigns-banner'],
     queryFn: () =>
       api.get('/campaigns', { params: { status: 'running', limit: 5 } }).then((r) => r.data),
-    refetchInterval: 15_000,
+    refetchInterval: 60_000,
     staleTime: 10_000,
   });
 

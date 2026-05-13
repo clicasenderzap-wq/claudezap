@@ -16,13 +16,13 @@ export default function WarmupPage() {
   const { data, isLoading } = useQuery({
     queryKey: ['warmup'],
     queryFn: () => api.get('/warmup').then((r) => r.data),
-    refetchInterval: 10000,
+    refetchInterval: 30000,
   });
 
   const { data: stats, isLoading: loadingStats } = useQuery({
     queryKey: ['warmup-stats'],
     queryFn: () => api.get('/warmup/stats').then((r) => r.data),
-    refetchInterval: 15000,
+    refetchInterval: 30000,
   });
 
   const [form, setForm] = useState<{

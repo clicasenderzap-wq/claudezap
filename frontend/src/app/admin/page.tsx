@@ -319,7 +319,7 @@ function UsersTab() {
   const { data: waAccounts = [], refetch: refetchWA } = useQuery<any[]>({
     queryKey: ['admin-wa-accounts'],
     queryFn: () => api.get('/admin/whatsapp-accounts').then((r) => r.data),
-    refetchInterval: 8000,
+    refetchInterval: 30000,
   });
 
   const updateMutation = useMutation({
