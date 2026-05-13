@@ -746,7 +746,7 @@ function InfraTab({ stats }: { stats: any }) {
               </span>
             </div>
             <p className="font-bold text-gray-800 text-sm">Banco de Dados</p>
-            <p className="text-xs text-gray-400 mt-0.5">PostgreSQL · Render</p>
+            <p className="text-xs text-gray-400 mt-0.5">PostgreSQL · Neon.tech</p>
             {stats && (
               <p className="text-xs text-gray-400 mt-2">{stats.total} usuários registrados</p>
             )}
@@ -816,8 +816,8 @@ function InfraTab({ stats }: { stats: any }) {
         <div className="grid grid-cols-3 gap-3 mb-6">
           <div className="bg-blue-50 rounded-xl p-4 border border-blue-100">
             <p className="text-xs text-blue-500 font-medium mb-1">Custos fixos</p>
-            <p className="text-xl font-black text-blue-700">$14 <span className="text-sm font-semibold">USD</span></p>
-            <p className="text-xs text-blue-400 mt-0.5">≈ R$ 84/mês</p>
+            <p className="text-xl font-black text-blue-700">$26 <span className="text-sm font-semibold">USD</span></p>
+            <p className="text-xs text-blue-400 mt-0.5">≈ R$ 156/mês</p>
           </div>
           <div className="bg-orange-50 rounded-xl p-4 border border-orange-100">
             <p className="text-xs text-orange-500 font-medium mb-1">Custos variáveis</p>
@@ -826,8 +826,8 @@ function InfraTab({ stats }: { stats: any }) {
           </div>
           <div className="bg-emerald-50 rounded-xl p-4 border border-emerald-100">
             <p className="text-xs text-emerald-600 font-medium mb-1">Total estimado</p>
-            <p className="text-xl font-black text-emerald-700">$14–42 <span className="text-sm font-semibold">USD</span></p>
-            <p className="text-xs text-emerald-500 mt-0.5">≈ R$ 84–252/mês</p>
+            <p className="text-xl font-black text-emerald-700">$26–54 <span className="text-sm font-semibold">USD</span></p>
+            <p className="text-xs text-emerald-500 mt-0.5">≈ R$ 156–324/mês</p>
           </div>
         </div>
 
@@ -850,12 +850,13 @@ function InfraTab({ stats }: { stats: any }) {
             {
               icon: <Database size={14} className="text-indigo-600" />,
               bg: 'bg-indigo-50',
-              service: 'Render — PostgreSQL',
-              detail: 'Banco de dados · Starter',
-              usd: '$7',
-              brl: 'R$ 42',
+              service: 'Neon.tech — PostgreSQL',
+              detail: 'Banco de dados · Launch Plan',
+              usd: '$19',
+              brl: 'R$ 114',
               type: 'fixed' as const,
-              link: 'https://dashboard.render.com',
+              note: '10 GB storage · 100 GB transferência/mês',
+              link: 'https://console.neon.tech',
             },
           ].map((item) => <CostRow key={item.service} {...item} />)}
 
@@ -932,12 +933,12 @@ function InfraTab({ stats }: { stats: any }) {
         <div className="mt-5 pt-4 border-t border-gray-100">
           <p className="text-xs text-gray-500 mb-2">Distribuição dos custos fixos</p>
           <div className="flex rounded-full overflow-hidden h-3 gap-0.5">
-            <div className="bg-blue-500 flex-1" title="Render Backend $7" />
-            <div className="bg-indigo-500 flex-1" title="Render PostgreSQL $7" />
+            <div className="bg-blue-500" style={{ width: '27%' }} title="Render Backend $7" />
+            <div className="bg-indigo-500" style={{ width: '73%' }} title="Neon.tech $19" />
           </div>
           <div className="flex gap-4 mt-2">
             <span className="flex items-center gap-1 text-xs text-gray-500"><span className="w-2 h-2 rounded-full bg-blue-500 inline-block" /> Render Backend ($7)</span>
-            <span className="flex items-center gap-1 text-xs text-gray-500"><span className="w-2 h-2 rounded-full bg-indigo-500 inline-block" /> PostgreSQL ($7)</span>
+            <span className="flex items-center gap-1 text-xs text-gray-500"><span className="w-2 h-2 rounded-full bg-indigo-500 inline-block" /> Neon.tech ($19)</span>
           </div>
         </div>
 
