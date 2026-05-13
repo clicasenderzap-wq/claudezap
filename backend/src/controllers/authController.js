@@ -93,8 +93,8 @@ async function register(req, res) {
       message: 'Cadastro recebido! Verifique seu email para confirmar a conta.',
     });
   } catch (err) {
-    console.error('[Register]', err.message);
-    res.status(500).json({ error: 'Erro interno' });
+    console.error('[Register]', err.message, err.stack);
+    res.status(500).json({ error: 'Erro interno: ' + err.message });
   }
 }
 
@@ -164,13 +164,21 @@ async function login(req, res) {
     // Login bem-sucedido — gera novo session_token para o tipo de origem (web ou desktop)
     const source = req.body.source === 'desktop' ? 'desktop' : 'web';
     const sessionToken = crypto.randomBytes(32).toString('hex');
-    const updateFields = { login_failed_count: 0, login_locked_until: null };
-    if (source === 'desktop') {
-      updateFields.session_token_desktop = sessionToken;
-    } else {
-      updateFields.session_token = sessionToken;
+    const baseFields = { login_failed_count: 0, login_locked_until: null };
+    // Try to update session_token; if column doesn't exist yet (pending migration), skip gracefully
+    try {
+      const updateFields = { ...baseFields };
+      if (source === 'desktop') {
+        updateFields.session_token_desktop = sessionToken;
+      } else {
+        updateFields.session_token = sessionToken;
+      }
+      await user.update(updateFields);
+    } catch (colErr) {
+      console.error('[Login] session_token update falhou (coluna pode não existir):', colErr.message);
+      // Fallback: update only safe fields
+      await user.update(baseFields);
     }
-    await user.update(updateFields);
 
     // null = legado (pré-verificação), passa; false = aguardando verificação
     if (user.email_verified === false) {
@@ -190,8 +198,9 @@ async function login(req, res) {
     await audit(user.id, 'login', req);
     const token = signToken(user.id, sessionToken, source);
     res.json({ token, user: safeUser(user) });
-  } catch {
-    res.status(500).json({ error: 'Erro interno' });
+  } catch (err) {
+    console.error('[Login] erro inesperado:', err.message, err.stack);
+    res.status(500).json({ error: 'Erro interno: ' + err.message });
   }
 }
 

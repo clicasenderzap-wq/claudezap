@@ -78,6 +78,16 @@ setupDesktopWS(server);
     await sequelize.authenticate();
     console.log('[DB] Conexão estabelecida');
 
+    // Run critical column migrations BEFORE sync so login never fails due to missing columns
+    // These are idempotent — safe to run every startup
+    try {
+      await sequelize.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token VARCHAR(64)`);
+      await sequelize.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token_desktop VARCHAR(64)`);
+      console.log('[DB] Colunas session_token verificadas');
+    } catch (e) {
+      console.error('[DB] Migração session_token (pre-sync):', e.message);
+    }
+
     await sequelize.sync({ alter: true });
     console.log('[DB] Modelos sincronizados');
 
