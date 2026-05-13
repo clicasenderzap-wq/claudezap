@@ -47,8 +47,8 @@ async function sendSingle(req, res) {
     await enqueueMessage(msg.id, req.user.id, phone, msg.content);
     res.status(201).json(msg);
   } catch (err) {
-    console.error('[sendSingle]', err.message);
-    res.status(500).json({ error: 'Erro ao enfileirar mensagem. Tente novamente.' });
+    console.error('[sendSingle]', err.message, err.stack);
+    res.status(500).json({ error: err.message || 'Erro ao enfileirar mensagem. Tente novamente.' });
   }
 }
 

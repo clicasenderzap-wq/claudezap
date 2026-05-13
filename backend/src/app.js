@@ -78,15 +78,22 @@ setupDesktopWS(server);
     await sequelize.authenticate();
     console.log('[DB] Conexão estabelecida');
 
-    // Run critical column migrations BEFORE sync so login never fails due to missing columns
-    // These are idempotent — safe to run every startup
-    try {
-      await sequelize.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token VARCHAR(64)`);
-      await sequelize.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token_desktop VARCHAR(64)`);
-      console.log('[DB] Colunas session_token verificadas');
-    } catch (e) {
-      console.error('[DB] Migração session_token (pre-sync):', e.message);
+    // Run critical column migrations BEFORE sync — idempotent, safe every startup
+    const preSyncMigrations = [
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token VARCHAR(64)`,
+      `ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token_desktop VARCHAR(64)`,
+      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS to_phone VARCHAR(255)`,
+      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS media_url TEXT`,
+      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS media_type VARCHAR(255)`,
+      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS media_filename VARCHAR(255)`,
+      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS scheduled_for TIMESTAMPTZ`,
+      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS queue_job_id VARCHAR(255)`,
+      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS account_id UUID`,
+    ];
+    for (const sql of preSyncMigrations) {
+      try { await sequelize.query(sql); } catch (e) { console.error('[DB] Migration:', sql.slice(0, 60), '|', e.message); }
     }
+    console.log('[DB] Migrações críticas verificadas');
 
     await sequelize.sync({ alter: true });
     console.log('[DB] Modelos sincronizados');
