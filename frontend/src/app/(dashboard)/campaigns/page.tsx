@@ -213,7 +213,20 @@ export default function CampaignsPage() {
 
   const { data: detail, isLoading: loadingDetail } = useQuery({
     queryKey: ['campaign-detail', detailCampaign?.id],
-    queryFn: () => api.get(`/campaigns/${detailCampaign!.id}/messages`).then((r) => r.data),
+    queryFn: () =>
+      api.get(`/campaigns/${detailCampaign!.id}/messages`).then((r) => {
+        // Sync the list status whenever detail loads (fixes stale status in list)
+        qc.setQueryData(['campaigns', histPage], (old: any) => {
+          if (!old?.data) return old;
+          return {
+            ...old,
+            data: old.data.map((c: any) =>
+              c.id === r.data.campaign?.id ? { ...c, ...r.data.campaign } : c
+            ),
+          };
+        });
+        return r.data;
+      }),
     enabled: !!detailCampaign,
     refetchInterval: detailCampaign ? 5000 : false,
   });
@@ -968,37 +981,88 @@ export default function CampaignsPage() {
                 {/* Batch progress */}
                 {detailCampaign.batch_mode && detailCampaign.batch_size > 0 && (
                   <div className="px-6 py-3 border-b border-gray-100 shrink-0">
-                    <p className="text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1.5">
-                      <Layers size={12} /> Lotes (envio fracionado)
-                    </p>
                     {(() => {
                       const bs = detailCampaign.batch_size;
                       const total = detailCampaign.total_contacts;
                       const batchCount = Math.ceil(total / bs);
-                      const done = (detail?.stats?.sent ?? 0) + (detail?.stats?.delivered ?? 0) + (detail?.stats?.failed ?? 0);
+                      const processed = (detail?.stats?.sent ?? 0) + (detail?.stats?.delivered ?? 0) + (detail?.stats?.failed ?? 0);
+                      const completedBatches = Math.floor(processed / bs);
                       const createdMs = new Date(detailCampaign.createdAt ?? detailCampaign.created_at).getTime();
-                      const intervalMs = detailCampaign.batch_interval_hours * 3600000;
+                      const intervalMs = (detailCampaign.batch_interval_hours || 1) * 3600000;
+                      const now = Date.now();
+
+                      // Find the next batch that hasn't fully sent yet
+                      let nextBatchIdx = -1;
+                      let nextBatchTime: Date | null = null;
+                      for (let i = completedBatches; i < batchCount; i++) {
+                        const t = new Date(createdMs + i * intervalMs);
+                        if (t > new Date()) { nextBatchIdx = i; nextBatchTime = t; break; }
+                      }
+
+                      // Countdown string
+                      let countdownStr = '';
+                      if (nextBatchTime) {
+                        const diffMs = nextBatchTime.getTime() - now;
+                        const h = Math.floor(diffMs / 3600000);
+                        const m = Math.floor((diffMs % 3600000) / 60000);
+                        countdownStr = h > 0 ? `${h}h ${m}min` : `${m}min`;
+                      }
+
+                      // Show: completed batches summary + next few
+                      const visibleBatches: number[] = [];
+                      // Last 2 completed
+                      for (let i = Math.max(0, completedBatches - 2); i < completedBatches; i++) visibleBatches.push(i);
+                      // Current + next 3
+                      for (let i = completedBatches; i < Math.min(batchCount, completedBatches + 4); i++) visibleBatches.push(i);
+
                       return (
-                        <div className="space-y-1.5">
-                          {Array.from({ length: Math.min(batchCount, 5) }).map((_, i) => {
-                            const batchStart = i * bs;
-                            const batchDone = Math.max(0, Math.min(bs, done - batchStart));
-                            const batchTotal = Math.min(bs, total - batchStart);
-                            const scheduledAt = new Date(createdMs + i * intervalMs);
-                            const isPast = scheduledAt <= new Date();
-                            return (
-                              <div key={i} className="flex items-center gap-2 text-xs">
-                                <span className={`w-2 h-2 rounded-full shrink-0 ${batchDone >= batchTotal ? 'bg-green-500' : isPast ? 'bg-blue-500' : 'bg-gray-300'}`} />
-                                <span className="text-gray-700 font-medium w-14">Lote {i + 1}</span>
-                                <span className="text-gray-500">{batchDone}/{batchTotal} msgs</span>
-                                <span className="ml-auto text-gray-400 tabular-nums">
-                                  {i === 0 ? 'início' : scheduledAt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                              </div>
-                            );
-                          })}
-                          {batchCount > 5 && <p className="text-xs text-gray-400 pl-4">...e mais {batchCount - 5} lote{batchCount - 5 !== 1 ? 's' : ''}</p>}
-                        </div>
+                        <>
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs font-semibold text-gray-600 flex items-center gap-1.5">
+                              <Layers size={12} /> Lotes — {completedBatches}/{batchCount} concluídos
+                            </p>
+                            {nextBatchTime && detailCampaign.status === 'running' && (
+                              <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5 font-medium flex items-center gap-1">
+                                <Clock size={10} /> próximo em {countdownStr}
+                              </span>
+                            )}
+                            {!nextBatchTime && completedBatches < batchCount && detailCampaign.status === 'running' && (
+                              <span className="text-xs bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5 font-medium flex items-center gap-1">
+                                <Send size={10} /> enviando agora
+                              </span>
+                            )}
+                          </div>
+                          <div className="space-y-1.5">
+                            {completedBatches > 2 && (
+                              <p className="text-xs text-gray-400 pl-4">{completedBatches - 2} lotes anteriores concluídos ✓</p>
+                            )}
+                            {visibleBatches.map((i) => {
+                              const batchStart = i * bs;
+                              const batchTotal = Math.min(bs, total - batchStart);
+                              const batchDone = Math.max(0, Math.min(batchTotal, processed - batchStart));
+                              const scheduledAt = new Date(createdMs + i * intervalMs);
+                              const isComplete = batchDone >= batchTotal;
+                              const isCurrent = !isComplete && scheduledAt <= new Date();
+                              const isFuture = scheduledAt > new Date();
+                              return (
+                                <div key={i} className={`flex items-center gap-2 text-xs rounded-lg px-2 py-1 ${isCurrent ? 'bg-blue-50' : ''}`}>
+                                  <span className={`w-2 h-2 rounded-full shrink-0 ${isComplete ? 'bg-green-500' : isCurrent ? 'bg-blue-500 animate-pulse' : 'bg-gray-200'}`} />
+                                  <span className={`font-medium w-14 ${isCurrent ? 'text-blue-700' : 'text-gray-700'}`}>Lote {i + 1}</span>
+                                  <span className={isCurrent ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
+                                    {batchDone}/{batchTotal} msgs
+                                    {isCurrent && ' — enviando'}
+                                  </span>
+                                  <span className="ml-auto text-gray-400 tabular-nums text-xs">
+                                    {i === 0 ? 'início' : scheduledAt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                            {completedBatches + 4 < batchCount && (
+                              <p className="text-xs text-gray-400 pl-4">...e mais {batchCount - completedBatches - 4} lotes agendados</p>
+                            )}
+                          </div>
+                        </>
                       );
                     })()}
                   </div>
