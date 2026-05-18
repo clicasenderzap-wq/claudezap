@@ -5,6 +5,8 @@ import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, Users, MessageSquare, Megaphone, Smartphone, Flame, Bot, ShieldCheck, LogOut, AlertTriangle, BookOpen, MailWarning, Clock, Inbox, Mail } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
+import { useQuery } from '@tanstack/react-query';
+import api from '@/lib/api';
 
 const NAV = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -40,6 +42,14 @@ export default function Sidebar() {
     logout();
     router.push('/login');
   }
+
+  const { data: optoutData } = useQuery<{ count: number }>({
+    queryKey: ['optout-count'],
+    queryFn: () => api.get('/whatsapp/inbox/optout-count').then((r) => r.data),
+    refetchInterval: 60_000,
+    enabled: !!user,
+  });
+  const optoutCount = optoutData?.count ?? 0;
 
   const plan = (user as any)?.plan ?? 'starter';
   const status = (user as any)?.status ?? 'trial';
@@ -110,7 +120,12 @@ export default function Sidebar() {
             )}
           >
             <Icon size={18} />
-            {label}
+            <span className="flex-1">{label}</span>
+            {href === '/inbox' && optoutCount > 0 && (
+              <span className="bg-red-500 text-white text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center px-1">
+                {optoutCount > 99 ? '99+' : optoutCount}
+              </span>
+            )}
           </Link>
         ))}
 

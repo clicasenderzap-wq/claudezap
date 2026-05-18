@@ -207,4 +207,12 @@ async function desktopStatus(req, res) {
   res.json(status);
 }
 
-module.exports = { list, create, updateLabel, getQR, requestPairingCode, remove, inbox, desktopStatus };
+async function optoutCount(req, res) {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000); // últimas 24h
+  const count = await IncomingMessage.count({
+    where: { user_id: req.user.id, is_optout: true, created_at: { [Op.gte]: since } },
+  }).catch(() => 0);
+  res.json({ count });
+}
+
+module.exports = { list, create, updateLabel, getQR, requestPairingCode, remove, inbox, desktopStatus, optoutCount };
