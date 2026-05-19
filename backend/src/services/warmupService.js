@@ -1,5 +1,6 @@
 const { WarmupConfig, WarmupLog, WhatsappAccount } = require('../models');
 const { Op } = require('sequelize');
+const sequelize = require('../config/database');
 const whatsapp = require('./whatsappService');
 
 // ── Biblioteca de conversas humanizadas ─────────────────────────────────────
@@ -230,6 +231,72 @@ class WarmupService {
     ]);
 
     return { today, week, recent };
+  }
+
+  // Retorna estatísticas de aquecimento por conta (chip)
+  async getAccountStats(userId) {
+    const accounts = await WhatsappAccount.findAll({
+      where: { user_id: userId },
+      attributes: ['id', 'label', 'phone', 'status'],
+    });
+    if (!accounts.length) return [];
+
+    const since30 = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    const since7 = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
+    const results = await Promise.all(accounts.map(async (acc) => {
+      const accountId = acc.id;
+
+      const [firstLog, total, msgs7d, activeDaysRows] = await Promise.all([
+        // Primeira atividade de aquecimento desta conta
+        WarmupLog.findOne({
+          where: { from_account_id: accountId },
+          order: [['sent_at', 'ASC']],
+          attributes: ['sent_at'],
+        }),
+        // Total histórico de mensagens enviadas por esta conta
+        WarmupLog.count({ where: { from_account_id: accountId } }),
+        // Mensagens nos últimos 7 dias
+        WarmupLog.count({ where: { from_account_id: accountId, sent_at: { [Op.gte]: since7 } } }),
+        // Dias distintos ativos nos últimos 30 dias
+        sequelize.query(
+          `SELECT COUNT(DISTINCT DATE(sent_at AT TIME ZONE 'UTC')) AS active_days
+           FROM warmup_logs
+           WHERE from_account_id = :accountId AND sent_at >= :since30`,
+          { replacements: { accountId, since30 }, type: sequelize.QueryTypes.SELECT }
+        ),
+      ]);
+
+      const activeDays30 = Number(activeDaysRows[0]?.active_days ?? 0);
+      const firstActivity = firstLog?.sent_at ?? null;
+      const daysSinceFirst = firstActivity
+        ? Math.floor((Date.now() - new Date(firstActivity).getTime()) / (1000 * 60 * 60 * 24))
+        : 0;
+
+      // Score 0–100 composto por 3 fatores:
+      // Maturidade  (50 pts): dias desde o primeiro uso, saturado em 60 dias
+      // Consistência(30 pts): dias ativos nos últimos 30
+      // Atividade   (20 pts): mensagens nos últimos 7 dias, saturado em 40
+      const scoreMaturidade  = Math.min(daysSinceFirst / 60, 1) * 50;
+      const scoreConsistencia = Math.min(activeDays30 / 30, 1) * 30;
+      const scoreAtividade    = Math.min(msgs7d / 40, 1) * 20;
+      const score = Math.round(scoreMaturidade + scoreConsistencia + scoreAtividade);
+
+      return {
+        id: accountId,
+        label: acc.label,
+        phone: acc.phone,
+        connected: acc.status === 'connected',
+        first_activity: firstActivity,
+        days_since_first: daysSinceFirst,
+        total_messages: total,
+        messages_7d: msgs7d,
+        active_days_30: activeDays30,
+        score,
+      };
+    }));
+
+    return results;
   }
 }
 

@@ -51,4 +51,9 @@ async function getStats(req, res) {
   res.json(stats);
 }
 
-module.exports = { getConfig, updateConfig, getStats };
+async function getAccountStats(req, res) {
+  const stats = await warmupService.getAccountStats(req.user.id);
+  res.json(stats);
+}
+
+module.exports = { getConfig, updateConfig, getStats, getAccountStats };

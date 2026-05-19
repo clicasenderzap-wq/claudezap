@@ -2,10 +2,58 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Flame, Power, Calendar, Clock, Zap, ArrowRight, Info, CheckSquare, Square, Moon } from 'lucide-react';
+import { Flame, Power, Calendar, Clock, Zap, ArrowRight, Info, CheckSquare, Square, Moon, Smartphone, TrendingUp, AlertTriangle, CheckCircle2, ShieldAlert } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { formatDate } from '@/lib/utils';
+
+interface AccountStat {
+  id: string;
+  label: string;
+  phone: string;
+  connected: boolean;
+  first_activity: string | null;
+  days_since_first: number;
+  total_messages: number;
+  messages_7d: number;
+  active_days_30: number;
+  score: number;
+}
+
+function readinessInfo(score: number) {
+  if (score < 20) return {
+    label: 'Recente demais',
+    sub: 'Continue aquecendo por pelo menos 2 semanas antes de disparar',
+    color: 'text-red-600',
+    bg: 'bg-red-50 border-red-200',
+    bar: 'bg-red-400',
+    icon: <ShieldAlert size={15} className="text-red-500" />,
+  };
+  if (score < 45) return {
+    label: 'Em aquecimento',
+    sub: 'Ainda em processo — evite campanhas grandes',
+    color: 'text-orange-600',
+    bg: 'bg-orange-50 border-orange-200',
+    bar: 'bg-orange-400',
+    icon: <Flame size={15} className="text-orange-500" />,
+  };
+  if (score < 70) return {
+    label: 'Pronto para campanhas pequenas',
+    sub: 'Pode disparar em lotes menores com delays longos (10s+)',
+    color: 'text-yellow-700',
+    bg: 'bg-yellow-50 border-yellow-200',
+    bar: 'bg-yellow-400',
+    icon: <TrendingUp size={15} className="text-yellow-600" />,
+  };
+  return {
+    label: 'Aquecido',
+    sub: 'Boa maturidade — use com responsabilidade',
+    color: 'text-green-700',
+    bg: 'bg-green-50 border-green-200',
+    bar: 'bg-green-500',
+    icon: <CheckCircle2 size={15} className="text-green-600" />,
+  };
+}
 
 const HOURS = Array.from({ length: 24 }, (_, i) => i);
 const fmt = (h: number) => `${String(h).padStart(2, '0')}:00`;
@@ -23,6 +71,12 @@ export default function WarmupPage() {
     queryKey: ['warmup-stats'],
     queryFn: () => api.get('/warmup/stats').then((r) => r.data),
     refetchInterval: 30000,
+  });
+
+  const { data: accountStats, isLoading: loadingAccountStats } = useQuery<AccountStat[]>({
+    queryKey: ['warmup-account-stats'],
+    queryFn: () => api.get('/warmup/account-stats').then((r) => r.data),
+    refetchInterval: 60000,
   });
 
   const [form, setForm] = useState<{
@@ -97,11 +151,12 @@ export default function WarmupPage() {
   const connectedCount = accounts.length;
   const isEnabled = config?.enabled ?? false;
 
-  // Nível de aquecimento baseado em mensagens da semana
   const weekTotal = stats?.week ?? 0;
-  const warmthLevel = Math.min(100, Math.round((weekTotal / 200) * 100));
-  const warmthLabel = warmthLevel < 20 ? 'Frio' : warmthLevel < 50 ? 'Morno' : warmthLevel < 80 ? 'Quente' : 'Aquecido';
-  const warmthColor = warmthLevel < 20 ? 'bg-blue-400' : warmthLevel < 50 ? 'bg-yellow-400' : warmthLevel < 80 ? 'bg-orange-400' : 'bg-red-500';
+  // Score médio dos chips (se disponível), senão placeholder
+  const avgScore = accountStats?.length
+    ? Math.round(accountStats.reduce((s, a) => s + a.score, 0) / accountStats.length)
+    : null;
+  const warmthColor = avgScore === null ? 'bg-gray-300' : avgScore < 20 ? 'bg-red-400' : avgScore < 45 ? 'bg-orange-400' : avgScore < 70 ? 'bg-yellow-400' : 'bg-green-500';
 
   return (
     <div className="space-y-6">
@@ -133,16 +188,18 @@ export default function WarmupPage() {
             </div>
           </div>
 
-          {/* Nível de aquecimento */}
+          {/* Score médio dos chips */}
           <div>
             <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
-              <span>Nível de aquecimento (7 dias)</span>
-              <span className="font-semibold text-gray-700">{warmthLabel} — {warmthLevel}%</span>
+              <span>Score médio dos números</span>
+              <span className="font-semibold text-gray-700">
+                {avgScore === null ? '—' : `${avgScore}/100`}
+              </span>
             </div>
             <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-              <div className={`h-3 rounded-full transition-all duration-700 ${warmthColor}`} style={{ width: `${warmthLevel}%` }} />
+              <div className={`h-3 rounded-full transition-all duration-700 ${warmthColor}`} style={{ width: `${avgScore ?? 0}%` }} />
             </div>
-            <p className="text-xs text-gray-400 mt-1">{weekTotal} mensagens nos últimos 7 dias</p>
+            <p className="text-xs text-gray-400 mt-1">{weekTotal} mensagens nos últimos 7 dias · veja detalhes por chip abaixo</p>
           </div>
 
           <button
@@ -316,7 +373,7 @@ export default function WarmupPage() {
         {[
           { label: 'Hoje', value: stats?.today ?? 0, icon: <Zap size={16} />, color: 'text-orange-500 bg-orange-100' },
           { label: 'Esta semana', value: stats?.week ?? 0, icon: <Calendar size={16} />, color: 'text-brand-600 bg-brand-100' },
-          { label: 'Nível de aquecimento', value: `${warmthLevel}%`, icon: <Flame size={16} />, color: `${warmthLevel > 50 ? 'text-orange-600 bg-orange-100' : 'text-blue-600 bg-blue-100'}` },
+          { label: 'Score médio (chips)', value: avgScore !== null ? `${avgScore}/100` : '—', icon: <Flame size={16} />, color: avgScore !== null && avgScore >= 70 ? 'text-green-600 bg-green-100' : avgScore !== null && avgScore >= 45 ? 'text-yellow-600 bg-yellow-100' : 'text-orange-600 bg-orange-100' },
         ].map((s) => (
           <div key={s.label} className="card p-4 text-center">
             <div className={`inline-flex items-center justify-center w-9 h-9 rounded-xl ${s.color} mb-2`}>{s.icon}</div>
@@ -348,6 +405,95 @@ export default function WarmupPage() {
               <span className="text-xs text-gray-400 shrink-0">{formatDate(log.sent_at)}</span>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* ── Nível de aquecimento por chip ─────────────────────────────── */}
+      <div className="card overflow-hidden">
+        <div className="px-5 py-4 border-b border-gray-200 flex items-center gap-2">
+          <Smartphone size={16} className="text-gray-500" />
+          <h3 className="font-semibold text-gray-800">Nível de aquecimento por número</h3>
+          <span className="ml-auto text-xs text-gray-400">Estimativa baseada em histórico do sistema</span>
+        </div>
+
+        {loadingAccountStats && (
+          <p className="px-5 py-8 text-center text-gray-400 text-sm">Calculando...</p>
+        )}
+
+        {!loadingAccountStats && !accountStats?.length && (
+          <p className="px-5 py-8 text-center text-gray-400 text-sm">Nenhum número encontrado.</p>
+        )}
+
+        <div className="divide-y divide-gray-100">
+          {accountStats?.map((acc) => {
+            const info = readinessInfo(acc.score);
+            return (
+              <div key={acc.id} className={`px-5 py-4 space-y-3 ${!acc.connected ? 'opacity-50' : ''}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <Smartphone size={15} className="text-gray-400 shrink-0" />
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-800 text-sm truncate">{acc.label}</p>
+                      <p className="text-xs text-gray-400">{acc.phone}{!acc.connected && ' · desconectado'}</p>
+                    </div>
+                  </div>
+                  <div className={`flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1 rounded-full border ${info.bg} ${info.color} shrink-0`}>
+                    {info.icon}
+                    {info.label}
+                  </div>
+                </div>
+
+                {/* Barra de progresso */}
+                <div>
+                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                    <span>Score de aquecimento</span>
+                    <span className="font-bold text-gray-700">{acc.score}/100</span>
+                  </div>
+                  <div className="w-full bg-gray-100 rounded-full h-2.5 overflow-hidden">
+                    <div
+                      className={`h-2.5 rounded-full transition-all duration-700 ${info.bar}`}
+                      style={{ width: `${acc.score}%` }}
+                    />
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1">{info.sub}</p>
+                </div>
+
+                {/* Métricas detalhadas */}
+                <div className="grid grid-cols-3 gap-2 text-center">
+                  {[
+                    {
+                      label: 'Maturidade',
+                      value: acc.first_activity ? `${acc.days_since_first}d` : '—',
+                      sub: acc.first_activity ? 'desde 1º aquecimento' : 'sem histórico',
+                    },
+                    {
+                      label: 'Consistência',
+                      value: `${acc.active_days_30}/30`,
+                      sub: 'dias ativos (30d)',
+                    },
+                    {
+                      label: 'Atividade recente',
+                      value: acc.messages_7d,
+                      sub: 'msgs nos últimos 7d',
+                    },
+                  ].map((m) => (
+                    <div key={m.label} className="bg-gray-50 rounded-lg px-2 py-2">
+                      <p className="text-xs text-gray-500 mb-0.5">{m.label}</p>
+                      <p className="text-base font-bold text-gray-800">{m.value}</p>
+                      <p className="text-[10px] text-gray-400 leading-tight">{m.sub}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="px-5 py-3 bg-gray-50 border-t border-gray-100">
+          <p className="text-xs text-gray-400 flex items-start gap-1.5">
+            <AlertTriangle size={11} className="mt-0.5 shrink-0 text-gray-400" />
+            O score é uma estimativa baseada nos dados do sistema (maturidade 50%, consistência 30%, atividade recente 20%). O WhatsApp não expõe o nível real internamente.
+          </p>
         </div>
       </div>
 
