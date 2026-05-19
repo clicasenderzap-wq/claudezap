@@ -4,6 +4,7 @@ const ctrl = require('../controllers/optoutController');
 router.get('/', ctrl.list);
 router.get('/stats', ctrl.stats);
 router.post('/', ctrl.add);
+router.post('/import-historical', ctrl.importHistorical);
 router.delete('/:id', ctrl.remove);
 
 module.exports = router;

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Ban, Plus, Trash2, Search, ShieldOff, MessageCircleX, UserMinus } from 'lucide-react';
+import { Ban, Plus, Trash2, Search, ShieldOff, MessageCircleX, UserMinus, History } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -38,6 +38,20 @@ export default function OptoutsPage() {
     queryKey: ['optouts', page, search],
     queryFn: () =>
       api.get('/optouts', { params: { page, limit: 50, search: search || undefined } }).then((r) => r.data),
+  });
+
+  const importHistoricalMutation = useMutation({
+    mutationFn: () => api.post('/optouts/import-historical').then((r) => r.data),
+    onSuccess: (data: { scanned: number; added: number }) => {
+      qc.invalidateQueries({ queryKey: ['optouts'] });
+      qc.invalidateQueries({ queryKey: ['optout-stats'] });
+      if (data.added > 0) {
+        toast.success(`${data.added} novo${data.added !== 1 ? 's' : ''} número${data.added !== 1 ? 's' : ''} adicionado${data.added !== 1 ? 's' : ''} à lista negra (${data.scanned} mensagens varridas)`);
+      } else {
+        toast.success(`Nenhum número novo encontrado (${data.scanned} mensagens varridas)`);
+      }
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao importar histórico'),
   });
 
   const addMutation = useMutation({
@@ -79,9 +93,20 @@ export default function OptoutsPage() {
             Números que solicitaram descadastro. Nunca receberão mensagens, mesmo após reimportação de contatos.
           </p>
         </div>
-        <button onClick={() => setShowAdd(true)} className="btn-primary">
-          <Plus size={16} /> Adicionar número
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => importHistoricalMutation.mutate()}
+            disabled={importHistoricalMutation.isPending}
+            className="btn-secondary"
+            title="Varre todas as mensagens recebidas e adiciona à lista negra quem enviou SAIR"
+          >
+            <History size={16} />
+            {importHistoricalMutation.isPending ? 'Varrendo...' : 'Importar SAIRs históricos'}
+          </button>
+          <button onClick={() => setShowAdd(true)} className="btn-primary">
+            <Plus size={16} /> Adicionar número
+          </button>
+        </div>
       </div>
 
       {/* Stats */}

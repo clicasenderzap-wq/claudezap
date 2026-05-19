@@ -1,5 +1,5 @@
-const { GlobalOptout } = require('../models');
-const { canonicalPhone } = require('../services/optoutService');
+const { GlobalOptout, IncomingMessage } = require('../models');
+const { canonicalPhone, isOptOutMessage } = require('../services/optoutService');
 const { Op } = require('sequelize');
 
 async function list(req, res) {
@@ -42,4 +42,39 @@ async function stats(req, res) {
   res.json({ total, from_reply: fromReply, manual: total - fromReply });
 }
 
-module.exports = { list, add, remove, stats };
+async function importHistorical(req, res) {
+  // Lê todas as mensagens recebidas do usuário em lotes para não estourar memória
+  const BATCH = 500;
+  let offset = 0;
+  let added = 0;
+  let scanned = 0;
+
+  while (true) {
+    const rows = await IncomingMessage.findAll({
+      where: { user_id: req.user.id },
+      attributes: ['from_phone', 'text'],
+      limit: BATCH,
+      offset,
+      order: [['created_at', 'ASC']],
+    });
+
+    if (!rows.length) break;
+    scanned += rows.length;
+    offset += BATCH;
+
+    for (const msg of rows) {
+      if (!isOptOutMessage(msg.text)) continue;
+      const phone = canonicalPhone(msg.from_phone);
+      const [, created] = await GlobalOptout.findOrCreate({
+        where: { user_id: req.user.id, phone },
+        defaults: { source: 'reply' },
+      }).catch(() => [null, false]);
+      if (created) added++;
+    }
+  }
+
+  console.log(`[Optout] import histórico: ${scanned} mensagens varridas, ${added} novos bloqueios`);
+  res.json({ scanned, added });
+}
+
+module.exports = { list, add, remove, stats, importHistorical };
