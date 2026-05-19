@@ -160,10 +160,11 @@ class WAManager extends EventEmitter {
     );
   }
 
-  async _trySend(accountId, fn, timeoutMs = 25_000) {
+  async _trySend(accountId, fn, timeoutMs = 15_000) {
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
-        // Race the send against a timeout so a hung Chrome doesn't block forever
+        // Race the send against a timeout so a hung Chrome doesn't block forever.
+        // 15s < backend's 30s timeout — ensures Electron always responds before backend gives up.
         return await Promise.race([
           fn(),
           new Promise((_, reject) =>
@@ -173,6 +174,16 @@ class WAManager extends EventEmitter {
       } catch (e) {
         const isContext = this._isContextError(e);
         const isNoLid = e.message?.includes('No LID for user');
+        const isTimeout = e.message?.includes('Timeout ao enviar');
+
+        if (isTimeout) {
+          // Chrome is hung — destroy client so it reconnects automatically
+          console.error(`[WA] ${accountId}: timeout de envio — destruindo cliente para reconexão`);
+          this.clients.delete(accountId);
+          this.emit('disconnected', { accountId, code: 'SEND_TIMEOUT' });
+          throw e;
+        }
+
         if ((isContext || isNoLid) && attempt < 3) {
           const waitMs = isNoLid ? 2000 : 4000;
           console.warn(`[WA] ${accountId}: ${isNoLid ? 'No LID for user' : 'contexto perdido'}, aguardando ${waitMs / 1000}s (tentativa ${attempt}/3)...`);

@@ -298,6 +298,15 @@ function initConnection() {
   waManager.on('disconnected', ({ accountId, code }) => {
     wsClient.send({ type: 'disconnected', accountId, code });
     updateAccountStatus(accountId, 'disconnected');
+    // Auto-reconnect when Chrome hangs during a send — the client was destroyed, recreate it
+    if (code === 'SEND_TIMEOUT' || code === 'CONTEXT_LOST') {
+      setTimeout(() => {
+        console.log(`[App] auto-reconectando ${accountId} após ${code}`);
+        waManager.connect(accountId).catch((e) =>
+          console.error(`[App] falha ao reconectar ${accountId}:`, e.message)
+        );
+      }, 3000);
+    }
   });
 
   waManager.on('message', ({ accountId, from, text, isSync }) => {

@@ -88,7 +88,7 @@ class DesktopService extends EventEmitter {
 
   // ── Sending commands ────────────────────────────────────────────────────────
 
-  async _sendToUser(userId, command, timeoutMs = 20_000) {
+  async _sendToUser(userId, command, timeoutMs = 30_000) {
     const session = this._sessions.get(userId);
     if (!session || session.ws.readyState !== 1) throw new Error('App desktop não conectado');
 
