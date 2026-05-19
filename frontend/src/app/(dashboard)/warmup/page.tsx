@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Flame, Power, MessageSquare, Calendar, Clock, Zap, ArrowRight, Info, CheckSquare, Square, Moon } from 'lucide-react';
+import { Flame, Power, Calendar, Clock, Zap, ArrowRight, Info, CheckSquare, Square, Moon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -26,13 +26,11 @@ export default function WarmupPage() {
   });
 
   const [form, setForm] = useState<{
-    messages_per_day: number;
     start_hour: number;
     end_hour: number;
     night_enabled?: boolean;
     night_start_hour?: number;
     night_end_hour?: number;
-    night_messages_per_day?: number;
   } | null>(null);
 
   const [selectedIds, setSelectedIds] = useState<string[] | null>(null);
@@ -40,16 +38,13 @@ export default function WarmupPage() {
   const config = data?.config;
   const accounts: { id: string; label: string; phone: string }[] = data?.accounts ?? [];
   const liveForm = form ?? {
-    messages_per_day: config?.messages_per_day ?? 20,
     start_hour: config?.start_hour ?? 8,
     end_hour: config?.end_hour ?? 22,
     night_enabled: config?.night_enabled ?? false,
     night_start_hour: config?.night_start_hour ?? 23,
     night_end_hour: config?.night_end_hour ?? 7,
-    night_messages_per_day: config?.night_messages_per_day ?? 30,
   };
 
-  // Initialize selectedIds from config once loaded
   const liveSelectedIds = selectedIds ?? (config?.account_ids ?? []);
 
   function toggleAccount(id: string) {
@@ -100,21 +95,11 @@ export default function WarmupPage() {
   }
 
   const connectedCount = accounts.length;
-  const participatingCount = (liveSelectedIds as string[]).length || connectedCount;
   const isEnabled = config?.enabled ?? false;
-  const activeHours = Math.max(1, liveForm.end_hour - liveForm.start_hour);
-  const msgPerHour = (liveForm.messages_per_day / activeHours).toFixed(1);
-  const nightActiveHours = (() => {
-    const ns = liveForm.night_start_hour ?? 23;
-    const ne = liveForm.night_end_hour ?? 7;
-    return ns > ne ? (24 - ns + ne) : Math.max(1, ne - ns);
-  })();
-  const nightMsgPerHour = ((liveForm.night_messages_per_day ?? 30) / nightActiveHours).toFixed(1);
-  const totalDailyQuota = liveForm.messages_per_day + (liveForm.night_enabled ? (liveForm.night_messages_per_day ?? 30) : 0);
 
   // Nível de aquecimento baseado em mensagens da semana
   const weekTotal = stats?.week ?? 0;
-  const warmthLevel = Math.min(100, Math.round((weekTotal / 140) * 100)); // 140 = 20/dia × 7 dias
+  const warmthLevel = Math.min(100, Math.round((weekTotal / 200) * 100));
   const warmthLabel = warmthLevel < 20 ? 'Frio' : warmthLevel < 50 ? 'Morno' : warmthLevel < 80 ? 'Quente' : 'Aquecido';
   const warmthColor = warmthLevel < 20 ? 'bg-blue-400' : warmthLevel < 50 ? 'bg-yellow-400' : warmthLevel < 80 ? 'bg-orange-400' : 'bg-red-500';
 
@@ -122,10 +107,9 @@ export default function WarmupPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Aquecimento de Números</h1>
-        <p className="text-sm text-gray-500 mt-0.5">Troca mensagens automáticas entre seus números para maturar as contas e reduzir risco de banimento</p>
+        <p className="text-sm text-gray-500 mt-0.5">Troca mensagens automáticas entre seus números para maturar as contas e reduzir risco de banimento — sem limite diário, funciona continuamente dentro do horário configurado</p>
       </div>
 
-      {/* Aviso se menos de 2 contas */}
       {connectedCount < 2 && (
         <div className="flex items-start gap-3 bg-yellow-50 border border-yellow-200 rounded-xl px-4 py-3 text-sm text-yellow-800">
           <Info size={16} className="mt-0.5 shrink-0" />
@@ -173,7 +157,7 @@ export default function WarmupPage() {
           {isEnabled && (
             <div className="bg-orange-50 border border-orange-200 rounded-lg px-3 py-2 text-xs text-orange-700">
               <Zap size={12} className="inline mr-1" />
-              Enviando ~{msgPerHour} mensagens/hora entre {fmt(liveForm.start_hour)} e {fmt(liveForm.end_hour)}
+              Enviando conversas a cada 4–9 minutos entre {fmt(liveForm.start_hour)} e {fmt(liveForm.end_hour)}
             </div>
           )}
         </div>
@@ -181,24 +165,6 @@ export default function WarmupPage() {
         {/* Configurações */}
         <div className="lg:col-span-2 card p-6 space-y-5">
           <h2 className="text-base font-semibold text-gray-800">Configurações</h2>
-
-          <div>
-            <label className="label flex items-center gap-1.5">
-              <MessageSquare size={13} /> Mensagens por dia
-            </label>
-            <div className="flex items-center gap-4">
-              <input
-                type="range" min={5} max={100} step={5}
-                value={liveForm.messages_per_day}
-                onChange={(e) => setForm({ ...liveForm, messages_per_day: Number(e.target.value) })}
-                className="flex-1 accent-brand-600"
-              />
-              <span className="w-12 text-center font-semibold text-gray-800">{liveForm.messages_per_day}</span>
-            </div>
-            <p className="text-xs text-gray-400 mt-1">
-              Recomendado: 15–30/dia no início, aumente gradualmente. Máximo: 100/dia.
-            </p>
-          </div>
 
           <div className="grid grid-cols-2 gap-4">
             <div>
@@ -247,7 +213,6 @@ export default function WarmupPage() {
                       key={acc.id}
                       onClick={() => {
                         if (!explicitly) {
-                          // First click: select only this one
                           const next = [acc.id];
                           setSelectedIds(next);
                           updateMutation.mutate({ account_ids: next });
@@ -271,23 +236,6 @@ export default function WarmupPage() {
             </div>
           )}
 
-          {/* Preview do plano */}
-          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 text-sm space-y-2">
-            <p className="font-medium text-gray-700">Resumo do plano</p>
-            <div className="grid grid-cols-3 gap-3 text-center">
-              {[
-                { label: 'Por hora', value: msgPerHour },
-                { label: 'Por dia', value: liveForm.messages_per_day },
-                { label: 'Por semana', value: liveForm.messages_per_day * 7 },
-              ].map((s) => (
-                <div key={s.label} className="bg-white rounded-lg p-2 border border-gray-100">
-                  <p className="text-xl font-bold text-brand-600">{s.value}</p>
-                  <p className="text-xs text-gray-500">{s.label}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
           {form && (
             <button onClick={saveSettings} disabled={saveMutation.isPending} className="btn-primary w-full">
               {saveMutation.isPending ? 'Salvando...' : 'Salvar configurações'}
@@ -305,7 +253,7 @@ export default function WarmupPage() {
             </div>
             <div>
               <p className="font-semibold text-gray-900">Aquecimento Noturno</p>
-              <p className="text-xs text-gray-500">Funciona em paralelo ao aquecimento diurno, com cota própria</p>
+              <p className="text-xs text-gray-500">Continua enviando durante a madrugada com o mesmo intervalo natural</p>
             </div>
           </div>
           <button
@@ -323,24 +271,6 @@ export default function WarmupPage() {
 
         {liveForm.night_enabled && (
           <div className="space-y-5 pt-1">
-            <div>
-              <label className="label flex items-center gap-1.5">
-                <MessageSquare size={13} /> Mensagens por noite
-              </label>
-              <div className="flex items-center gap-4">
-                <input
-                  type="range" min={5} max={100} step={5}
-                  value={liveForm.night_messages_per_day ?? 30}
-                  onChange={(e) => setForm({ ...liveForm, night_messages_per_day: Number(e.target.value) })}
-                  className="flex-1 accent-indigo-500"
-                />
-                <span className="w-12 text-center font-semibold text-gray-800">{liveForm.night_messages_per_day ?? 30}</span>
-              </div>
-              <p className="text-xs text-gray-400 mt-1">
-                ~{nightMsgPerHour} mensagens/hora durante o período noturno. Total diário combinado: <strong>{totalDailyQuota}</strong>/dia.
-              </p>
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label flex items-center gap-1.5"><Clock size={13} /> Início (noite)</label>
@@ -382,11 +312,10 @@ export default function WarmupPage() {
       </div>
 
       {/* Stats do dia */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
         {[
           { label: 'Hoje', value: stats?.today ?? 0, icon: <Zap size={16} />, color: 'text-orange-500 bg-orange-100' },
           { label: 'Esta semana', value: stats?.week ?? 0, icon: <Calendar size={16} />, color: 'text-brand-600 bg-brand-100' },
-          { label: `Cota diária${liveForm.night_enabled ? ' (dia+noite)' : ''}`, value: totalDailyQuota, icon: <MessageSquare size={16} />, color: 'text-indigo-600 bg-indigo-100' },
           { label: 'Nível de aquecimento', value: `${warmthLevel}%`, icon: <Flame size={16} />, color: `${warmthLevel > 50 ? 'text-orange-600 bg-orange-100' : 'text-blue-600 bg-blue-100'}` },
         ].map((s) => (
           <div key={s.label} className="card p-4 text-center">
@@ -428,10 +357,10 @@ export default function WarmupPage() {
         <div className="grid sm:grid-cols-2 gap-3 text-sm text-gray-600">
           {[
             'Os números conectados enviam mensagens naturais entre si, simulando conversas reais.',
-            'Cada mensagem tem uma resposta automática após 15–90 segundos, criando histórico de conversa bidirecional.',
-            'Os envios acontecem em horários aleatórios dentro da janela configurada para não parecer automatizado.',
-            'Comece com 10–20 mensagens/dia e aumente gradualmente a cada semana.',
-            'Números com histórico de conversas têm menor risco de serem marcados como spam pelo WhatsApp.',
+            'Cada mensagem tem uma resposta automática após 15–90 segundos, criando histórico bidirecional.',
+            'Os envios acontecem a cada 4–9 minutos em intervalos aleatórios dentro da janela configurada.',
+            'Não há limite diário — o sistema funciona continuamente como um WhatsApp normal.',
+            'Números com histórico de conversas têm menor risco de serem marcados como spam.',
             'Use junto com delays longos nas campanhas (5s+) para máxima proteção contra banimentos.',
           ].map((tip, i) => (
             <div key={i} className="flex gap-2">

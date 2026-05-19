@@ -74,6 +74,15 @@ const worker = new Worker(
       return;
     }
 
+    // Global blocklist check — never send to permanently opted-out numbers
+    const { isGloballyBlocked } = require('../services/optoutService');
+    if (await isGloballyBlocked(userId, phone)) {
+      await message.update({ status: 'failed', error_message: 'Número na lista negra permanente (enviou SAIR)' });
+      await handleCampaignFailure(message);
+      console.log(`[Worker] msg ${messageId} bloqueada — ${phone} está na lista negra`);
+      return;
+    }
+
     const maxAttempts = job.opts?.attempts ?? 3;
     const isLastAttempt = job.attemptsMade >= maxAttempts - 1;
 

@@ -2,7 +2,7 @@ const { validationResult } = require('express-validator');
 const csv = require('csv-parser');
 const XLSX = require('xlsx');
 const { Readable } = require('stream');
-const { Contact, sequelize } = require('../models');
+const { Contact, GlobalOptout, sequelize } = require('../models');
 const { Op } = require('sequelize');
 
 // Normaliza uma tag: maiúscula, sem espaços extras
@@ -235,6 +235,12 @@ async function importCSV(req, res) {
       }
     }
   }
+
+  // Marca como opt_out quaisquer contatos importados que estejam na lista negra permanente
+  await sequelize.query(
+    `UPDATE contacts SET opt_out = true WHERE user_id = :userId AND phone IN (SELECT phone FROM global_optouts WHERE user_id = :userId)`,
+    { replacements: { userId: req.user.id } }
+  ).catch((e) => console.error('[Import] erro ao marcar opt_outs da lista negra:', e.message));
 
   const countAfter = await Contact.count({ where: { user_id: req.user.id } });
   const imported = results.length - errors.length;

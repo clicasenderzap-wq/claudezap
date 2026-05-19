@@ -13,6 +13,7 @@ const IncomingMessage = require('./IncomingMessage');
 const SystemSetting = require('./SystemSetting');
 const EmailCampaign = require('./EmailCampaign');
 const EmailMessage = require('./EmailMessage');
+const GlobalOptout = require('./GlobalOptout');
 
 // Associations
 User.hasMany(Contact, { foreignKey: 'user_id', onDelete: 'CASCADE' });
@@ -59,4 +60,4 @@ EmailMessage.belongsTo(EmailCampaign, { foreignKey: 'campaign_id' });
 Contact.hasMany(EmailMessage, { foreignKey: 'contact_id', onDelete: 'SET NULL' });
 EmailMessage.belongsTo(Contact, { foreignKey: 'contact_id' });
 
-module.exports = { sequelize, User, AuditLog, Contact, Campaign, Message, WhatsappAccount, WarmupConfig, WarmupLog, BotConfig, BotConversation, IncomingMessage, SystemSetting, EmailCampaign, EmailMessage };
+module.exports = { sequelize, User, AuditLog, Contact, Campaign, Message, WhatsappAccount, WarmupConfig, WarmupLog, BotConfig, BotConversation, IncomingMessage, SystemSetting, EmailCampaign, EmailMessage, GlobalOptout };

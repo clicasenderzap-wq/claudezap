@@ -154,20 +154,8 @@ class WarmupService {
     return ns > ne ? (hour >= ns || hour < ne) : (hour >= ns && hour < ne);
   }
 
-  _getDailyQuota(config) {
-    return config.messages_per_day + (config.night_enabled ? (config.night_messages_per_day ?? 30) : 0);
-  }
-
   async _processUser(config) {
     if (!this._isInWindow(config)) return;
-
-    // Verifica cota diária combinada (dia + noite)
-    const startOfDay = new Date();
-    startOfDay.setHours(0, 0, 0, 0);
-    const sentToday = await WarmupLog.count({
-      where: { user_id: config.user_id, sent_at: { [Op.gte]: startOfDay } },
-    });
-    if (sentToday >= this._getDailyQuota(config)) return;
 
     // Contas conectadas com número identificado (filtra pelas selecionadas se houver)
     const selectedIds = config.account_ids || [];
@@ -200,27 +188,25 @@ class WarmupService {
 
     console.log(`[Warmup] ${sender.label} → ${receiver.label}: "${initMsg}"`);
 
-    // Resposta após 15–90 segundos
-    if (sentToday + 1 < this._getDailyQuota(config)) {
-      const replyDelay = (15 + Math.random() * 75) * 1000;
-      setTimeout(async () => {
-        try {
-          const replyMsg = conv.reply;
-          await whatsapp.sendText(receiver.id, sender.phone, replyMsg);
-          await WarmupLog.create({
-            user_id: config.user_id,
-            from_account_id: receiver.id,
-            to_account_id: sender.id,
-            from_label: receiver.label,
-            to_label: sender.label,
-            message: replyMsg,
-          });
-          console.log(`[Warmup] ${receiver.label} → ${sender.label}: "${replyMsg}"`);
-        } catch (e) {
-          console.error('[Warmup] erro na resposta:', e.message);
-        }
-      }, replyDelay);
-    }
+    // Resposta após 15–90 segundos (sem limite diário)
+    const replyDelay = (15 + Math.random() * 75) * 1000;
+    setTimeout(async () => {
+      try {
+        const replyMsg = conv.reply;
+        await whatsapp.sendText(receiver.id, sender.phone, replyMsg);
+        await WarmupLog.create({
+          user_id: config.user_id,
+          from_account_id: receiver.id,
+          to_account_id: sender.id,
+          from_label: receiver.label,
+          to_label: sender.label,
+          message: replyMsg,
+        });
+        console.log(`[Warmup] ${receiver.label} → ${sender.label}: "${replyMsg}"`);
+      } catch (e) {
+        console.error('[Warmup] erro na resposta:', e.message);
+      }
+    }, replyDelay);
   }
 
   // Chamado externamente para forçar um ciclo imediato (ex: ao ativar)

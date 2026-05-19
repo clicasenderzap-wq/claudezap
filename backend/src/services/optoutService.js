@@ -1,4 +1,4 @@
-const { Contact } = require('../models');
+const { Contact, GlobalOptout } = require('../models');
 const { Op } = require('sequelize');
 const sequelize = require('../config/database');
 
@@ -12,19 +12,39 @@ const PHRASE_KEYWORDS = [
   'para de mandar', 'pare de mandar',
 ];
 
-function normalize(text) {
+function normalizeText(text) {
   return text.trim().toLowerCase()
-    .normalize('NFD').replace(/[̀-ͯ]/g, '')  // remove acentos
-    .replace(/[^\w\s]/g, ' ')                           // remove pontuação (Sair. → sair )
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/[^\w\s]/g, ' ')
     .replace(/\s+/g, ' ').trim();
+}
+
+// Returns canonical phone (digits only, with 55 prefix)
+function canonicalPhone(rawPhone) {
+  const digits = String(rawPhone).replace(/\D/g, '');
+  if (digits.startsWith('55')) return digits;
+  return `55${digits}`;
 }
 
 function isOptOutMessage(text) {
   if (!text) return false;
-  const n = normalize(text);
+  const n = normalizeText(text);
   if (SHORT_KEYWORDS.some((kw) => n === kw || n.startsWith(kw + ' '))) return true;
   if (PHRASE_KEYWORDS.some((kw) => n === kw || n.includes(kw))) return true;
   return false;
+}
+
+// Checks if a phone is in the permanent blocklist
+async function isGloballyBlocked(userId, rawPhone) {
+  const phone = canonicalPhone(rawPhone);
+  const found = await GlobalOptout.findOne({ where: { user_id: userId, phone } }).catch(() => null);
+  return found != null;
+}
+
+// Adds a phone to the permanent blocklist
+async function addToGlobalOptout(userId, rawPhone, source = 'reply') {
+  const phone = canonicalPhone(rawPhone);
+  await GlobalOptout.findOrCreate({ where: { user_id: userId, phone }, defaults: { source } }).catch(() => {});
 }
 
 async function handleIncoming(userId, fromPhone, text) {
@@ -35,13 +55,16 @@ async function handleIncoming(userId, fromPhone, text) {
   const variants = new Set([digits]);
   if (digits.startsWith('55')) variants.add(digits.slice(2));
   else variants.add(`55${digits}`);
-  // Cobre o caso de DDD + 8 dígitos (sem o 9 adicional brasileiro)
   if (digits.length === 13) variants.add('55' + digits.slice(2, 4) + digits.slice(5));
   if (digits.length === 11) variants.add('55' + digits.slice(0, 2) + '9' + digits.slice(2));
 
   const phones = [...variants];
 
-  // Usa regexp_replace para comparar apenas dígitos — tolera formatações diferentes no banco
+  // 1. Adiciona à lista negra permanente (independente de existir na tabela contacts)
+  await addToGlobalOptout(userId, fromPhone, 'reply');
+  console.log(`[Optout] ${fromPhone} adicionado à lista negra permanente`);
+
+  // 2. Marca o contato como opt_out se existir
   const contact = await Contact.findOne({
     where: {
       user_id: userId,
@@ -56,15 +79,15 @@ async function handleIncoming(userId, fromPhone, text) {
 
   if (contact && !contact.opt_out) {
     await contact.update({ opt_out: true });
-    console.log(`[Optout] ${contact.name} (${contact.phone}) removido via SAIR`);
+    console.log(`[Optout] ${contact.name} (${contact.phone}) marcado como opt_out`);
     return true;
   }
 
   if (!contact) {
-    console.warn(`[Optout] SAIR de número não encontrado na base: ${fromPhone} (user ${userId})`);
+    console.warn(`[Optout] SAIR de ${fromPhone} — número não encontrado nos contatos, mas já na lista negra`);
   }
 
-  return false;
+  return true; // always return true when SAIR detected
 }
 
-module.exports = { handleIncoming, isOptOutMessage };
+module.exports = { handleIncoming, isOptOutMessage, isGloballyBlocked, addToGlobalOptout, canonicalPhone };
