@@ -9,9 +9,10 @@ router.delete('/:id/cancel', ctrl.cancelScheduled);
 
 router.post('/send', [
   body('contact_id').optional().isUUID(),
-  body('phone').optional().isMobilePhone('any', { strictMode: false }),
   body('content').notEmpty().trim(),
 ], ctrl.sendSingle);
+
+router.post('/:id/retry', ctrl.retryMessage);
 
 router.post('/schedule', [
   body('contact_id').isUUID(),

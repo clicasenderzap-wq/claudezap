@@ -294,6 +294,38 @@ async function listScheduled(req, res) {
   res.json({ total: count, page: Number(page), data: rows });
 }
 
+async function retryMessage(req, res) {
+  try {
+    const msg = await Message.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    if (!msg) return res.status(404).json({ error: 'Mensagem não encontrada' });
+    if (msg.campaign_id) return res.status(400).json({ error: 'Reenvio individual não disponível para mensagens de campanha' });
+    if (msg.status === 'sent' || msg.status === 'delivered') {
+      return res.status(400).json({ error: 'Mensagem já foi enviada com sucesso' });
+    }
+
+    // Cancela job antigo se houver
+    if (msg.queue_job_id) await cancelJob(msg.queue_job_id).catch(() => {});
+
+    // Determina o telefone de destino
+    let phone = msg.to_phone;
+    if (!phone && msg.contact_id) {
+      const contact = await Contact.findByPk(msg.contact_id);
+      phone = contact?.phone ?? null;
+    }
+    if (!phone) return res.status(400).json({ error: 'Número de destino não encontrado' });
+
+    // Reseta e reenfileira o mesmo registro de mensagem
+    await msg.update({ status: 'queued', error_message: null, queue_job_id: null, sent_at: null });
+    const jobId = await enqueueMessage(msg.id, req.user.id, phone, msg.content);
+    await msg.update({ queue_job_id: String(jobId) });
+
+    res.json(msg);
+  } catch (err) {
+    console.error('[retryMessage]', err.message);
+    res.status(500).json({ error: 'Erro ao reenviar mensagem' });
+  }
+}
+
 async function clearQueue(req, res) {
   try {
     const queuedMessages = await Message.findAll({
@@ -334,4 +366,4 @@ async function clearQueue(req, res) {
   }
 }
 
-module.exports = { sendSingle, sendCampaign, history, scheduleMessage, cancelScheduled, listScheduled, clearQueue };
+module.exports = { sendSingle, sendCampaign, history, scheduleMessage, cancelScheduled, listScheduled, clearQueue, retryMessage };

@@ -121,7 +121,7 @@ function ContactPicker({
 export default function MessagesPage() {
   const qc = useQueryClient();
   const [histPage, setHistPage] = useState(1);
-  const [resendingId, setResendingId] = useState<string | null>(null);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>('contact');
 
   const { data: contacts = [] } = useQuery({
@@ -191,20 +191,16 @@ export default function MessagesPage() {
     }
   }
 
-  async function resendMessage(msg: any) {
-    if (!msg.content) return;
-    setResendingId(msg.id);
+  async function retryMessage(msg: any) {
+    setRetryingId(msg.id);
     try {
-      const payload = msg.contact_id
-        ? { contact_id: msg.contact_id, content: msg.content }
-        : { phone: msg.to_phone, content: msg.content };
-      await api.post('/messages/send', payload);
+      await api.post(`/messages/${msg.id}/retry`);
       qc.invalidateQueries({ queryKey: ['messages'] });
-      toast.success('Mensagem reenviada!');
+      toast.success('Mensagem reenfileirada para reenvio!');
     } catch (e: any) {
       toast.error(e.response?.data?.error || 'Erro ao reenviar');
     } finally {
-      setResendingId(null);
+      setRetryingId(null);
     }
   }
 
@@ -361,20 +357,28 @@ export default function MessagesPage() {
                 <td className="px-4 py-3 text-gray-600 max-w-xs truncate">{m.content}</td>
                 <td className="px-4 py-3">
                   <span className={`badge ${statusColor(m.status)}`}>{statusLabel(m.status)}</span>
+                  {m.status === 'failed' && m.error_message && (
+                    <p className="text-xs text-red-500 mt-1 max-w-[160px] truncate" title={m.error_message}>
+                      {m.error_message}
+                    </p>
+                  )}
+                  {m.status === 'queued' && !m.campaign_id && (
+                    <p className="text-xs text-gray-400 mt-1">Aguardando envio</p>
+                  )}
                 </td>
                 <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
                   {formatDate(m.created_at)}
                 </td>
                 <td className="px-4 py-3">
-                  {m.status === 'failed' && !m.campaign_id && (m.contact_id || m.to_phone) && (
+                  {(m.status === 'failed' || m.status === 'queued') && !m.campaign_id && (m.contact_id || m.to_phone) && (
                     <button
-                      onClick={() => resendMessage(m)}
-                      disabled={resendingId === m.id}
-                      title="Reenviar mensagem"
-                      className="btn-secondary py-1 px-2 text-xs flex items-center gap-1"
+                      onClick={() => retryMessage(m)}
+                      disabled={retryingId === m.id}
+                      title={m.status === 'queued' ? 'Forçar reenvio agora' : 'Tentar novamente'}
+                      className="btn-secondary py-1 px-2 text-xs flex items-center gap-1 whitespace-nowrap"
                     >
-                      <RefreshCw size={12} className={resendingId === m.id ? 'animate-spin' : ''} />
-                      {resendingId === m.id ? 'Reenviando…' : 'Reenviar'}
+                      <RefreshCw size={12} className={retryingId === m.id ? 'animate-spin' : ''} />
+                      {retryingId === m.id ? 'Reenviando…' : 'Reenviar'}
                     </button>
                   )}
                 </td>
