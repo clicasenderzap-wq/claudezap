@@ -72,13 +72,14 @@ const server = app.listen(PORT, () => {
 const { setupDesktopWS } = require('./routes/desktop');
 setupDesktopWS(server);
 
-// Conecta ao banco e inicia o worker em background
+// Conecta ao banco, sincroniza modelos e inicia serviços em background
 (async () => {
+  // ── Fase 1: banco de dados ─────────────────────────────────────────────────
   try {
     await sequelize.authenticate();
     console.log('[DB] Conexão estabelecida');
 
-    // Run critical column migrations BEFORE sync — idempotent, safe every startup
+    // Migrações idempotentes ANTES do sync — garante colunas e tipos críticos
     const preSyncMigrations = [
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token VARCHAR(64)`,
       `ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token_desktop VARCHAR(64)`,
@@ -90,52 +91,59 @@ setupDesktopWS(server);
       `ALTER TABLE messages ADD COLUMN IF NOT EXISTS queue_job_id VARCHAR(255)`,
       `ALTER TABLE messages ADD COLUMN IF NOT EXISTS account_id UUID`,
       `ALTER TABLE messages ALTER COLUMN contact_id DROP NOT NULL`,
+      `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS email VARCHAR(255)`,
+      `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS email_opt_out BOOLEAN NOT NULL DEFAULT FALSE`,
+      // Cria o tipo ENUM do GlobalOptout apenas se não existir — evita falha no sync
+      `DO $$ BEGIN CREATE TYPE "enum_global_optouts_source" AS ENUM ('reply','manual'); EXCEPTION WHEN duplicate_object THEN null; END $$`,
     ];
     for (const sql of preSyncMigrations) {
-      try { await sequelize.query(sql); } catch (e) { console.error('[DB] Migration:', sql.slice(0, 60), '|', e.message); }
+      try { await sequelize.query(sql); } catch (e) { console.error('[DB] Migration falhou:', sql.slice(0, 80), '|', e.message); }
     }
     console.log('[DB] Migrações críticas verificadas');
 
-    await sequelize.sync({ alter: true });
-    console.log('[DB] Modelos sincronizados');
-
-    // Ensure email columns exist on contacts (idempotent raw migration)
+    // sync com alter — falha NÃO é fatal: tabelas já existem de deploys anteriores
     try {
-      await sequelize.query(`ALTER TABLE contacts ADD COLUMN IF NOT EXISTS email VARCHAR(255)`);
-      await sequelize.query(`ALTER TABLE contacts ADD COLUMN IF NOT EXISTS email_opt_out BOOLEAN NOT NULL DEFAULT FALSE`);
-      console.log('[DB] Colunas de email em contacts verificadas');
-    } catch (e) {
-      console.error('[DB] Migração de colunas email:', e.message);
+      await sequelize.sync({ alter: true });
+      console.log('[DB] Modelos sincronizados');
+    } catch (syncErr) {
+      console.error('[DB] sync({ alter: true }) falhou (não bloqueia o worker):', syncErr.message);
     }
 
-    // Ensure session_token columns exist on users (idempotent)
+    // Admin nunca conta como plano pago
     try {
-      await sequelize.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token VARCHAR(64)`);
-      await sequelize.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS session_token_desktop VARCHAR(64)`);
-      console.log('[DB] Colunas session_token em users verificadas');
+      const { User } = require('./models');
+      const adminEmail = 'clicasenderzap@gmail.com';
+      const [updated] = await User.update(
+        { plan: 'admin', status: 'active' },
+        { where: { email: adminEmail, plan: { [require('sequelize').Op.ne]: 'admin' } } }
+      );
+      if (updated) console.log(`[Startup] plano admin aplicado em ${adminEmail}`);
     } catch (e) {
-      console.error('[DB] Migração session_token:', e.message);
+      console.error('[Startup] admin update:', e.message);
     }
+  } catch (err) {
+    console.error('[Startup] falha ao conectar ao banco:', err.message);
+    // Continua mesmo assim — worker pode processar jobs quando o banco voltar
+  }
 
-    // Garante que a conta admin nunca conta como plano pago
-    const { User } = require('./models');
-    const adminEmail = 'clicasenderzap@gmail.com';
-    const [updated] = await User.update(
-      { plan: 'admin', status: 'active' },
-      { where: { email: adminEmail, plan: { [require('sequelize').Op.ne]: 'admin' } } }
-    );
-    if (updated) console.log(`[Startup] plano admin aplicado em ${adminEmail}`);
-
+  // ── Fase 2: serviços — SEMPRE iniciam, independente de falha no banco ──────
+  try {
     require('./workers/messageWorker');
     console.log('[Worker] iniciado');
+  } catch (e) { console.error('[Worker] falha ao iniciar:', e.message); }
 
+  try {
     require('./workers/emailWorker');
     console.log('[EmailWorker] iniciado');
+  } catch (e) { console.error('[EmailWorker] falha ao iniciar:', e.message); }
 
+  try {
     require('./services/warmupService').start();
     console.log('[Warmup] iniciado');
+  } catch (e) { console.error('[Warmup] falha ao iniciar:', e.message); }
 
-    // Reconecta contas que estavam conectadas antes do restart
+  // Reconecta contas WhatsApp que estavam conectadas antes do restart
+  try {
     const whatsapp = require('./services/whatsappService');
     const { WhatsappAccount } = require('./models');
     const accounts = await WhatsappAccount.findAll({ where: { status: 'connected' } });
@@ -147,10 +155,7 @@ setupDesktopWS(server);
       }, delay);
       delay += 3000;
     }
-  } catch (err) {
-    console.error('[Startup] falha ao conectar:', err.message);
-    // Não encerra o processo — deixa o /health responder para diagnóstico
-  }
+  } catch (e) { console.error('[WA] falha ao reconectar contas:', e.message); }
 })();
 
 module.exports = app;
