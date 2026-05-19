@@ -12,11 +12,12 @@ const messageQueue = new Queue('messages', {
 });
 
 async function enqueueMessage(messageId, userId, phone, content, delayMs = 0) {
-  return messageQueue.add(
+  const job = await messageQueue.add(
     'send',
     { messageId, userId, phone, content },
     { delay: delayMs }
   );
+  return job.id;
 }
 
 async function enqueueBulk(messages, baseDelayMs = 3000, startOffset = 0) {

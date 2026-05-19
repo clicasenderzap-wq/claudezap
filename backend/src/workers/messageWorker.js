@@ -99,11 +99,14 @@ const worker = new Worker(
     }
 
     if (!primaryId) {
+      const statusSummary = allAccounts.map((a) => `${a.id.slice(0,8)}:${a.status}:ws=${isConnected(a.id)}`).join(', ');
+      console.warn(`[Worker] msg ${messageId} — sem conta conectada. Contas: [${statusSummary}]`);
       if (isLastAttempt) {
         await message.update({ status: 'failed', error_message: 'Nenhuma conta WhatsApp conectada' });
       }
       throw new Error('Nenhuma conta WhatsApp conectada');
     }
+    console.log(`[Worker] msg ${messageId} → usando conta ${primaryId.slice(0,8)} (tentativa ${job.attemptsMade + 1}/${maxAttempts})`);
 
     // Try primary account; on connection error immediately try others (no waiting for BullMQ retry)
     let waId;

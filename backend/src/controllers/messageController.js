@@ -33,7 +33,8 @@ async function sendSingle(req, res) {
         status: 'queued',
         ...(media_url && { media_url, media_type, media_filename }),
       });
-      await enqueueMessage(msg.id, req.user.id, contact.phone, msg.content);
+      const jobId = await enqueueMessage(msg.id, req.user.id, contact.phone, msg.content);
+      await msg.update({ queue_job_id: String(jobId) });
       return res.status(201).json(msg);
     }
 
@@ -61,7 +62,8 @@ async function sendSingle(req, res) {
         status: 'queued',
         ...(media_url && { media_url, media_type, media_filename }),
       });
-      await enqueueMessage(msg.id, req.user.id, phone, msg.content);
+      const jobId = await enqueueMessage(msg.id, req.user.id, phone, msg.content);
+      await msg.update({ queue_job_id: String(jobId) });
       queued.push(msg);
     }
 
@@ -294,6 +296,47 @@ async function listScheduled(req, res) {
   res.json({ total: count, page: Number(page), data: rows });
 }
 
+async function retryAllStuck(req, res) {
+  try {
+    // Busca todas as mensagens individuais (sem campanha) travadas em queued ou failed
+    const stuck = await Message.findAll({
+      where: {
+        user_id: req.user.id,
+        campaign_id: null,
+        status: { [Op.in]: ['queued', 'failed'] },
+      },
+      attributes: ['id', 'contact_id', 'to_phone', 'content', 'queue_job_id'],
+    });
+
+    if (!stuck.length) return res.json({ retried: 0 });
+
+    let retried = 0;
+    for (const msg of stuck) {
+      try {
+        // Cancela job antigo
+        if (msg.queue_job_id) await cancelJob(msg.queue_job_id).catch(() => {});
+
+        const phone = msg.to_phone || (msg.contact_id
+          ? (await Contact.findByPk(msg.contact_id, { attributes: ['phone'] }))?.phone
+          : null);
+        if (!phone) continue;
+
+        await msg.update({ status: 'queued', error_message: null, queue_job_id: null, sent_at: null });
+        const jobId = await enqueueMessage(msg.id, req.user.id, phone, msg.content);
+        await msg.update({ queue_job_id: String(jobId) });
+        retried++;
+      } catch (e) {
+        console.error(`[retryAllStuck] msg ${msg.id}:`, e.message);
+      }
+    }
+
+    res.json({ retried });
+  } catch (err) {
+    console.error('[retryAllStuck]', err.message);
+    res.status(500).json({ error: 'Erro ao reenviar mensagens' });
+  }
+}
+
 async function retryMessage(req, res) {
   try {
     const msg = await Message.findOne({ where: { id: req.params.id, user_id: req.user.id } });
@@ -317,7 +360,7 @@ async function retryMessage(req, res) {
     // Reseta e reenfileira o mesmo registro de mensagem
     await msg.update({ status: 'queued', error_message: null, queue_job_id: null, sent_at: null });
     const jobId = await enqueueMessage(msg.id, req.user.id, phone, msg.content);
-    await msg.update({ queue_job_id: String(jobId) });
+    await msg.update({ queue_job_id: String(jobId) }); // jobId já é string/number agora
 
     res.json(msg);
   } catch (err) {
@@ -366,4 +409,4 @@ async function clearQueue(req, res) {
   }
 }
 
-module.exports = { sendSingle, sendCampaign, history, scheduleMessage, cancelScheduled, listScheduled, clearQueue, retryMessage };
+module.exports = { sendSingle, sendCampaign, history, scheduleMessage, cancelScheduled, listScheduled, clearQueue, retryMessage, retryAllStuck };

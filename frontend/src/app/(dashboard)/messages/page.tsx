@@ -204,6 +204,21 @@ export default function MessagesPage() {
     }
   }
 
+  const [retryingAll, setRetryingAll] = useState(false);
+  async function retryAllStuck() {
+    setRetryingAll(true);
+    try {
+      const resp = await api.post('/messages/retry-stuck');
+      qc.invalidateQueries({ queryKey: ['messages'] });
+      const n = resp.data.retried;
+      toast.success(n > 0 ? `${n} mensagem${n !== 1 ? 's' : ''} reenfileirada${n !== 1 ? 's' : ''} para reenvio!` : 'Nenhuma mensagem travada encontrada.');
+    } catch (e: any) {
+      toast.error(e.response?.data?.error || 'Erro ao reenviar mensagens');
+    } finally {
+      setRetryingAll(false);
+    }
+  }
+
   return (
     <div className="space-y-8">
       <h1 className="text-2xl font-bold text-gray-900">Mensagens</h1>
@@ -314,8 +329,17 @@ export default function MessagesPage() {
       </div>
 
       <div className="card overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-base font-semibold text-gray-800">Histórico</h2>
+          <button
+            onClick={retryAllStuck}
+            disabled={retryingAll}
+            className="btn-secondary py-1.5 px-3 text-xs flex items-center gap-1.5"
+            title="Reenfileira todas as mensagens individuais travadas em queued ou failed"
+          >
+            <RefreshCw size={13} className={retryingAll ? 'animate-spin' : ''} />
+            {retryingAll ? 'Reenviando...' : 'Reenviar todas travadas'}
+          </button>
         </div>
         <table className="w-full text-sm">
           <thead className="bg-gray-50 border-b border-gray-200">

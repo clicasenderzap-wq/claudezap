@@ -12,6 +12,7 @@ router.post('/send', [
   body('content').notEmpty().trim(),
 ], ctrl.sendSingle);
 
+router.post('/retry-stuck', ctrl.retryAllStuck);
 router.post('/:id/retry', ctrl.retryMessage);
 
 router.post('/schedule', [
