@@ -19,33 +19,62 @@ async function sendSingle(req, res) {
     if (!content?.trim()) return res.status(422).json({ error: 'Mensagem obrigatória' });
     if (!contact_id && !rawPhone) return res.status(422).json({ error: 'Informe o contato ou número de telefone' });
 
-    let contact = null;
-    let phone = null;
-
+    // Modo contato (envio único)
     if (contact_id) {
-      contact = await Contact.findOne({ where: { id: contact_id, user_id: req.user.id } });
+      const contact = await Contact.findOne({ where: { id: contact_id, user_id: req.user.id } });
       if (!contact) return res.status(404).json({ error: 'Contato não encontrado' });
       if (contact.opt_out) return res.status(400).json({ error: 'Contato optou por não receber mensagens' });
-      phone = contact.phone;
-    } else {
-      phone = String(rawPhone).replace(/\D/g, '');
-      if (phone.length < 10) return res.status(422).json({ error: 'Número de telefone inválido — informe com DDD' });
-      if (phone.length === 10 || phone.length === 11) phone = `55${phone}`;
+
+      const msg = await Message.create({
+        user_id: req.user.id,
+        contact_id: contact.id,
+        to_phone: null,
+        content: applyTemplate(content, contact),
+        status: 'queued',
+        ...(media_url && { media_url, media_type, media_filename }),
+      });
+      await enqueueMessage(msg.id, req.user.id, contact.phone, msg.content);
+      return res.status(201).json(msg);
     }
 
-    const templateContact = contact || { name: phone, phone };
+    // Modo número — suporta múltiplos separados por ponto e vírgula
+    const rawParts = String(rawPhone).split(';').map((p) => p.trim()).filter(Boolean);
+    if (!rawParts.length) return res.status(422).json({ error: 'Informe pelo menos um número de telefone' });
 
-    const msg = await Message.create({
-      user_id: req.user.id,
-      contact_id: contact?.id || null,
-      to_phone: contact ? null : phone,
-      content: applyTemplate(content, templateContact),
-      status: 'queued',
-      ...(media_url && { media_url, media_type, media_filename }),
-    });
+    const queued = [];
+    const failed = [];
 
-    await enqueueMessage(msg.id, req.user.id, phone, msg.content);
-    res.status(201).json(msg);
+    for (const raw of rawParts) {
+      const digits = raw.replace(/\D/g, '');
+      if (digits.length < 10) {
+        failed.push({ phone: raw, reason: 'Número inválido — informe com DDD' });
+        continue;
+      }
+      const phone = (digits.length === 10 || digits.length === 11) ? `55${digits}` : digits;
+      const templateContact = { name: phone, phone };
+
+      const msg = await Message.create({
+        user_id: req.user.id,
+        contact_id: null,
+        to_phone: phone,
+        content: applyTemplate(content, templateContact),
+        status: 'queued',
+        ...(media_url && { media_url, media_type, media_filename }),
+      });
+      await enqueueMessage(msg.id, req.user.id, phone, msg.content);
+      queued.push(msg);
+    }
+
+    if (!queued.length) {
+      return res.status(422).json({ error: 'Nenhum número válido. Informe com DDD (ex: 11999990000).', failed });
+    }
+
+    // Compatibilidade: retorna o objeto da mensagem quando há só um número
+    if (queued.length === 1 && !failed.length) {
+      return res.status(201).json(queued[0]);
+    }
+
+    return res.status(201).json({ queued: queued.length, failed });
   } catch (err) {
     console.error('[sendSingle]', err.message, err.stack);
     res.status(500).json({ error: err.message || 'Erro ao enfileirar mensagem. Tente novamente.' });

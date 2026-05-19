@@ -163,9 +163,10 @@ export default function MessagesPage() {
 
   const sendMutation = useMutation({
     mutationFn: (payload: object) => api.post('/messages/send', payload),
-    onSuccess: () => {
+    onSuccess: (resp: any) => {
       qc.invalidateQueries({ queryKey: ['messages'] });
-      toast.success('Mensagem adicionada à fila!');
+      const count = resp?.data?.queued;
+      toast.success(count > 1 ? `${count} mensagens adicionadas à fila!` : 'Mensagem adicionada à fila!');
       reset();
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao enviar'),
@@ -179,12 +180,14 @@ export default function MessagesPage() {
       }
       sendMutation.mutate({ contact_id: data.contact_id, content: data.content });
     } else {
-      const digits = (data.phone || '').replace(/\D/g, '');
-      if (digits.length < 10) {
+      const raw = data.phone || '';
+      const parts = raw.split(';').map((p) => p.trim()).filter(Boolean);
+      const hasValid = parts.some((p) => p.replace(/\D/g, '').length >= 10);
+      if (!parts.length || !hasValid) {
         setError('phone', { message: 'Informe o número com DDD (ex: 11999990000)' });
         return;
       }
-      sendMutation.mutate({ phone: digits, content: data.content });
+      sendMutation.mutate({ phone: raw, content: data.content });
     }
   }
 
@@ -270,15 +273,15 @@ export default function MessagesPage() {
               <label className="label">Número de telefone</label>
               <input
                 {...register('phone')}
-                type="tel"
+                type="text"
                 className={`input ${errors.phone ? 'border-red-400' : ''}`}
-                placeholder="Ex: 11999990000 (com DDD, sem espaços ou traços)"
+                placeholder="Ex: 11999990000 ou vários separados por ; (11999990000; 21888880000)"
               />
               {errors.phone && (
                 <p className="text-red-500 text-xs mt-1">{errors.phone.message}</p>
               )}
               <p className="text-xs text-gray-400 mt-1">
-                Código do país opcional — se não informar, será assumido Brasil (+55).
+                Separe múltiplos números com <strong>;</strong> (ponto e vírgula). Código do país opcional — Brasil (+55) é assumido automaticamente.
               </p>
             </div>
           )}

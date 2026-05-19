@@ -89,6 +89,7 @@ setupDesktopWS(server);
       `ALTER TABLE messages ADD COLUMN IF NOT EXISTS scheduled_for TIMESTAMPTZ`,
       `ALTER TABLE messages ADD COLUMN IF NOT EXISTS queue_job_id VARCHAR(255)`,
       `ALTER TABLE messages ADD COLUMN IF NOT EXISTS account_id UUID`,
+      `ALTER TABLE messages ALTER COLUMN contact_id DROP NOT NULL`,
     ];
     for (const sql of preSyncMigrations) {
       try { await sequelize.query(sql); } catch (e) { console.error('[DB] Migration:', sql.slice(0, 60), '|', e.message); }
