@@ -186,6 +186,16 @@ api.onUpdateReady(() => {
   // Mandatory dialog is shown by main.js — nothing to do here
 });
 
+api.onUpdateRequired(({ minVersion, currentVersion }) => {
+  document.getElementById('update-required-text').textContent =
+    `Sua versão atual (v${currentVersion}) é muito antiga.\nÉ necessário pelo menos a versão v${minVersion} para continuar usando o Clica Aí.`;
+  show('screen-update');
+});
+
+document.getElementById('btn-download-update').addEventListener('click', () => {
+  window.open('https://github.com/clicasenderzap-wq/claudezap/releases/latest');
+});
+
 // Platform buttons
 document.getElementById('btn-open-platform').addEventListener('click', async () => {
   const token = await api.getToken().catch(() => null);

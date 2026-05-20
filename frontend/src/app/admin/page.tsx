@@ -666,6 +666,105 @@ function PricesTab() {
   );
 }
 
+// ─── Desktop App Panel ────────────────────────────────────────────────────────
+
+function DesktopAppPanel() {
+  const qc = useQueryClient();
+  const [minInput, setMinInput] = useState('');
+  const [saved, setSaved] = useState(false);
+
+  const { data: settings, isLoading } = useQuery({
+    queryKey: ['admin-desktop-settings'],
+    queryFn: () => api.get('/admin/desktop-settings').then((r) => r.data),
+  });
+
+  const { data: ghRelease } = useQuery({
+    queryKey: ['github-latest-release'],
+    queryFn: () =>
+      fetch('https://api.github.com/repos/clicasenderzap-wq/claudezap/releases/latest')
+        .then((r) => r.json()),
+    staleTime: 5 * 60 * 1000,
+  });
+
+  useEffect(() => {
+    if (settings?.min_version) setMinInput(settings.min_version);
+  }, [settings]);
+
+  const saveMutation = useMutation({
+    mutationFn: () => api.put('/admin/desktop-settings', { min_version: minInput }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-desktop-settings'] });
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+      toast.success('Versão mínima salva! Clientes mais antigos serão bloqueados.');
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao salvar'),
+  });
+
+  const latestVersion = ghRelease?.tag_name?.replace(/^v/, '') || null;
+  const ghPublished = ghRelease?.published_at ? new Date(ghRelease.published_at).toLocaleDateString('pt-BR') : null;
+  const buildStatus = ghRelease?.name ? 'Publicado' : 'Verificando...';
+
+  return (
+    <div className="bg-white rounded-xl border border-gray-200 p-5">
+      <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
+        <Zap size={16} className="text-brand-600" /> App Desktop
+      </h2>
+      <div className="grid sm:grid-cols-3 gap-4 mb-5">
+        <div className="bg-gray-50 rounded-xl p-4">
+          <p className="text-xs text-gray-400 mb-1">Versão no GitHub</p>
+          <p className="font-black text-xl text-gray-800">
+            {latestVersion ? `v${latestVersion}` : '—'}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">{ghPublished ? `Publicado em ${ghPublished}` : 'Verificando...'}</p>
+        </div>
+        <div className="bg-gray-50 rounded-xl p-4">
+          <p className="text-xs text-gray-400 mb-1">Status do build</p>
+          <p className="font-bold text-sm text-green-700">{buildStatus}</p>
+          <p className="text-xs text-gray-400 mt-1">GitHub Releases · Auto-update</p>
+        </div>
+        <div className="bg-gray-50 rounded-xl p-4">
+          <p className="text-xs text-gray-400 mb-1">Versão mínima atual</p>
+          <p className="font-black text-xl text-gray-800">
+            {isLoading ? '...' : `v${settings?.min_version || '0.0.0'}`}
+          </p>
+          <p className="text-xs text-gray-400 mt-1">Clientes abaixo são bloqueados</p>
+        </div>
+      </div>
+
+      <div className="border-t border-gray-100 pt-4">
+        <p className="text-sm font-semibold text-gray-700 mb-3">Definir versão mínima obrigatória</p>
+        <div className="flex items-center gap-3">
+          <input
+            className="input w-40 font-mono"
+            placeholder="ex: 1.0.7"
+            value={minInput}
+            onChange={(e) => setMinInput(e.target.value)}
+          />
+          <button
+            onClick={() => saveMutation.mutate()}
+            disabled={saveMutation.isPending || !minInput}
+            className="btn bg-brand-600 hover:bg-brand-700 text-white font-semibold gap-2 disabled:opacity-50"
+          >
+            <Save size={14} /> {saved ? 'Salvo!' : 'Salvar'}
+          </button>
+          {latestVersion && (
+            <button
+              onClick={() => { setMinInput(latestVersion); }}
+              className="btn btn-secondary text-xs"
+            >
+              Usar versão atual ({latestVersion})
+            </button>
+          )}
+        </div>
+        <p className="text-xs text-gray-400 mt-2">
+          Usuários com versão inferior verão uma tela de bloqueio e serão obrigados a atualizar antes de continuar.
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Infrastructure Tab ───────────────────────────────────────────────────────
 
 function CostRow({ icon, bg, service, detail, usd, brl, type, note, link }: {
@@ -783,28 +882,8 @@ function InfraTab({ stats }: { stats: any }) {
       </div>
 
       {/* Desktop App */}
-      <div className="bg-white rounded-xl border border-gray-200 p-5">
-        <h2 className="font-bold text-gray-800 mb-4 flex items-center gap-2">
-          <Zap size={16} className="text-brand-600" /> App Desktop
-        </h2>
-        <div className="grid sm:grid-cols-3 gap-4">
-          <div className="bg-gray-50 rounded-xl p-4">
-            <p className="text-xs text-gray-400 mb-1">Versão atual</p>
-            <p className="font-black text-xl text-gray-800">v1.0.6</p>
-            <p className="text-xs text-gray-400 mt-1">Windows x64</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-4">
-            <p className="text-xs text-gray-400 mb-1">Atualização</p>
-            <p className="font-bold text-sm text-green-700">Auto-update ativo</p>
-            <p className="text-xs text-gray-400 mt-1">GitHub Releases</p>
-          </div>
-          <div className="bg-gray-50 rounded-xl p-4">
-            <p className="text-xs text-gray-400 mb-1">Distribuição</p>
-            <p className="font-bold text-sm text-gray-700">NSIS Installer</p>
-            <p className="text-xs text-gray-400 mt-1">Clica.Ai.Setup.exe</p>
-          </div>
-        </div>
-      </div>
+      <DesktopAppPanel />
+
 
       {/* Cost Dashboard */}
       <div className="bg-white rounded-xl border border-gray-200 p-5">

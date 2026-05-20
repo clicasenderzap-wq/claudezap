@@ -190,7 +190,7 @@ function initConnection() {
   const deviceId = store.getDeviceId();
 
   waManager = new WAManager(app.getPath('userData'));
-  wsClient = new WSClient(API_URL, token, deviceId);
+  wsClient = new WSClient(API_URL, token, deviceId, app.getVersion());
 
   // ── WS events → WAManager commands ─────────────────────────────────────────
   wsClient.on('message', async (msg) => {
@@ -277,6 +277,12 @@ function initConnection() {
     mainWindow?.webContents.send('session:kicked', { reason });
     mainWindow?.show();
     store.clearToken();
+    teardownConnection();
+  });
+
+  wsClient.on('update_required', (minVersion) => {
+    mainWindow?.webContents.send('update:required', { minVersion, currentVersion: app.getVersion() });
+    mainWindow?.show();
     teardownConnection();
   });
 

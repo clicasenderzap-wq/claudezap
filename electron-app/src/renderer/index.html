@@ -79,6 +79,19 @@
     <button id="btn-relogin">Fazer login novamente</button>
   </div>
 
+  <!-- UPDATE REQUIRED SCREEN -->
+  <div id="screen-update" class="screen" style="display:none">
+    <div class="logo">
+      <img src="../assets/logo.png" alt="Clica Aí" onerror="this.style.display='none'" />
+      <h1 style="color:#f0a500">Atualização Obrigatória</h1>
+      <p id="update-required-text" class="tagline" style="margin-top:10px;line-height:1.6"></p>
+    </div>
+    <button id="btn-download-update" style="background:#f0a500;color:#000;font-weight:700;font-size:15px;border:none;border-radius:8px;padding:14px;cursor:pointer;margin-top:8px">
+      Baixar atualização
+    </button>
+    <p style="font-size:11px;color:#555;margin-top:12px;text-align:center">O aplicativo será bloqueado até a atualização ser instalada.</p>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>

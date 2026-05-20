@@ -9,11 +9,12 @@ const RECONNECT_DELAYS = [3000, 5000, 10000, 15000, 30000];
  * Dispatches incoming commands to WAManager and sends events back.
  */
 class WSClient extends EventEmitter {
-  constructor(apiUrl, token, deviceId) {
+  constructor(apiUrl, token, deviceId, appVersion) {
     super();
     this._apiUrl = apiUrl.replace(/^http/, 'ws').replace(/\/$/, '');
     this._token = token;
     this._deviceId = deviceId;
+    this._appVersion = appVersion || '0.0.0';
     this._ws = null;
     this._reconnectAttempt = 0;
     this._destroyed = false;
@@ -22,7 +23,7 @@ class WSClient extends EventEmitter {
 
   connect() {
     if (this._destroyed) return;
-    const url = `${this._apiUrl}/api/desktop/ws?token=${encodeURIComponent(this._token)}&deviceId=${encodeURIComponent(this._deviceId)}`;
+    const url = `${this._apiUrl}/api/desktop/ws?token=${encodeURIComponent(this._token)}&deviceId=${encodeURIComponent(this._deviceId)}&version=${encodeURIComponent(this._appVersion)}`;
     console.log('[WS] conectando ao backend...');
 
     try {
@@ -56,6 +57,11 @@ class WSClient extends EventEmitter {
       const reasonStr = reason?.toString() || '';
       console.log(`[WS] desconectado (${code}) ${reasonStr}`);
 
+      if (reasonStr.startsWith('update_required:') || reasonStr.includes('update_required')) {
+        const minVer = reasonStr.split(':')[1] || '';
+        this.emit('update_required', minVer);
+        return; // don't reconnect
+      }
       if (reasonStr.includes('session_kicked') || code === 1008) {
         this.emit('kicked', reasonStr);
         return; // don't reconnect

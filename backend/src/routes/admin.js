@@ -21,4 +21,7 @@ router.get('/revenue', ctrl.getRevenue);
 
 router.get('/queue-status', ctrl.getQueueStatus);
 
+router.get('/desktop-settings', ctrl.getDesktopSettings);
+router.put('/desktop-settings', ctrl.updateDesktopSettings);
+
 module.exports = router;

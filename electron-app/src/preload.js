@@ -41,6 +41,10 @@ contextBridge.exposeInMainWorld('claudezap', {
     ipcRenderer.on('update:ready', () => cb());
     return () => ipcRenderer.removeAllListeners('update:ready');
   },
+  onUpdateRequired: (cb) => {
+    ipcRenderer.on('update:required', (_, data) => cb(data));
+    return () => ipcRenderer.removeAllListeners('update:required');
+  },
   installUpdate: () => ipcRenderer.invoke('update:install'),
   getVersion: () => ipcRenderer.invoke('app:version'),
 });

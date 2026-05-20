@@ -2,6 +2,28 @@ const { WebSocketServer } = require('ws');
 const jwt = require('jsonwebtoken');
 const desktopService = require('../services/desktopService');
 
+// Cache min version for 5 min to avoid DB hit on every WS connect
+let _minVersionCache = { value: '0.0.0', at: 0 };
+async function getMinVersion() {
+  if (Date.now() - _minVersionCache.at < 300_000) return _minVersionCache.value;
+  try {
+    const { SystemSetting } = require('../models');
+    const row = await SystemSetting.findOne({ where: { key: 'desktop_min_version' } });
+    _minVersionCache = { value: row?.value || '0.0.0', at: Date.now() };
+  } catch { _minVersionCache.at = Date.now(); }
+  return _minVersionCache.value;
+}
+
+function semverLt(a, b) {
+  const pa = String(a).split('.').map(Number);
+  const pb = String(b).split('.').map(Number);
+  for (let i = 0; i < 3; i++) {
+    if ((pa[i] || 0) < (pb[i] || 0)) return true;
+    if ((pa[i] || 0) > (pb[i] || 0)) return false;
+  }
+  return false;
+}
+
 /**
  * Attaches the desktop WebSocket server to the HTTP server.
  * Called once from app.js after app.listen().
@@ -29,6 +51,14 @@ function setupDesktopWS(httpServer) {
     const url = new URL(req.url, `http://${req.headers.host}`);
     const token = url.searchParams.get('token');
     const deviceId = url.searchParams.get('deviceId') || 'unknown';
+    const appVersion = url.searchParams.get('version') || '0.0.0';
+
+    // Version check — block outdated clients before auth
+    const minVersion = await getMinVersion();
+    if (semverLt(appVersion, minVersion)) {
+      ws.close(1008, `update_required:${minVersion}`);
+      return;
+    }
 
     // Authenticate
     let userId;
