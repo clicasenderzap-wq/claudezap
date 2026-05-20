@@ -173,7 +173,6 @@ class WAManager extends EventEmitter {
         ]);
       } catch (e) {
         const isContext = this._isContextError(e);
-        const isNoLid = e.message?.includes('No LID for user');
         const isTimeout = e.message?.includes('Timeout ao enviar');
 
         if (isTimeout) {
@@ -184,10 +183,9 @@ class WAManager extends EventEmitter {
           throw e;
         }
 
-        if ((isContext || isNoLid) && attempt < 3) {
-          const waitMs = isNoLid ? 2000 : 4000;
-          console.warn(`[WA] ${accountId}: ${isNoLid ? 'No LID for user' : 'contexto perdido'}, aguardando ${waitMs / 1000}s (tentativa ${attempt}/3)...`);
-          await new Promise((r) => setTimeout(r, waitMs));
+        if (isContext && attempt < 3) {
+          console.warn(`[WA] ${accountId}: contexto perdido, aguardando 4s (tentativa ${attempt}/3)...`);
+          await new Promise((r) => setTimeout(r, 4000));
           continue;
         }
         if (isContext) {
@@ -200,20 +198,29 @@ class WAManager extends EventEmitter {
     }
   }
 
+  async _resolveChatId(client, phone) {
+    const clean = String(phone).replace(/\D/g, '');
+    // getNumberId resolves the correct ID including LID format for newer accounts
+    const numberId = await client.getNumberId(clean).catch(() => null);
+    if (numberId) return numberId._serialized;
+    // Fallback to legacy format if getNumberId fails (offline / older WA versions)
+    return `${clean}@c.us`;
+  }
+
   async sendText(accountId, phone, text) {
     const client = this.clients.get(accountId);
     if (!client?.info) throw new Error('Conta não conectada');
-    const chatId = `${String(phone).replace(/\D/g, '')}@c.us`;
-    return this._trySend(accountId, () =>
-      client.sendMessage(chatId, text).then((m) => m.id._serialized)
-    );
+    return this._trySend(accountId, async () => {
+      const chatId = await this._resolveChatId(client, phone);
+      return client.sendMessage(chatId, text).then((m) => m.id._serialized);
+    });
   }
 
   async sendMedia(accountId, phone, mediaUrl, mediaType, fileName, caption = '') {
     const client = this.clients.get(accountId);
     if (!client?.info) throw new Error('Conta não conectada');
-    const chatId = `${String(phone).replace(/\D/g, '')}@c.us`;
     return this._trySend(accountId, async () => {
+      const chatId = await this._resolveChatId(client, phone);
       const media = await MessageMedia.fromUrl(mediaUrl, { unsafeMime: true });
       if (fileName) media.filename = fileName;
       const msg = await client.sendMessage(chatId, media, { caption });

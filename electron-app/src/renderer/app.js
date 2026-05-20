@@ -209,6 +209,7 @@ document.getElementById('btn-open-register').addEventListener('click', () => {
 
   if (version) {
     document.getElementById('app-version').textContent = `v${version}`;
+    document.getElementById('app-version-login').textContent = `v${version}`;
   }
 
   if (session.loggedIn) {
