@@ -17,6 +17,7 @@ extraResources:
     to: chrome
     filter:
       - "**/*"
+    # Se chrome-dist/ estiver vazio (CI sem Chrome bundled), electron-builder ignora silenciosamente
 
 win:
   target:

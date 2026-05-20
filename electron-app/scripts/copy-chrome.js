@@ -1,21 +1,28 @@
 /**
- * Copies the Puppeteer-managed Chrome to a local chrome-dist/ folder
- * so electron-builder can bundle it as an extraResource.
+ * Copies the Puppeteer-managed Chrome to chrome-dist/ for bundling.
+ * Non-fatal: if Chrome is not found the build continues and the app
+ * falls back to system Chrome (see waManager.js findChrome).
  */
-const { executablePath } = require('puppeteer');
 const fs = require('fs');
 const path = require('path');
 
-const chromeSrc = executablePath();
-if (!fs.existsSync(chromeSrc)) {
-  console.error('[copy-chrome] Chrome não encontrado em:', chromeSrc);
-  process.exit(1);
-}
-
-// e.g. C:\Users\..\.cache\puppeteer\chrome\win64-xxx\chrome-win64\chrome.exe
-const chromeDir = path.dirname(chromeSrc); // chrome-win64/
 const dest = path.join(__dirname, '..', 'chrome-dist');
 
+let chromeSrc;
+try {
+  const { executablePath } = require('puppeteer');
+  chromeSrc = executablePath();
+} catch (e) {
+  console.warn('[copy-chrome] puppeteer.executablePath() falhou:', e.message);
+}
+
+if (!chromeSrc || !fs.existsSync(chromeSrc)) {
+  console.warn('[copy-chrome] Chrome não encontrado — build sem Chrome bundled. App usará Chrome do sistema.');
+  fs.mkdirSync(dest, { recursive: true });
+  process.exit(0);
+}
+
+const chromeDir = path.dirname(chromeSrc);
 console.log('[copy-chrome] Copiando Chrome para chrome-dist/...');
 console.log('  Origem:', chromeDir);
 console.log('  Destino:', dest);
@@ -35,9 +42,6 @@ function copyDir(src, dst) {
 
 copyDir(chromeDir, dest);
 
-const sizeMB = (getFolderSize(dest) / 1024 / 1024).toFixed(0);
-console.log(`[copy-chrome] ✓ Copiado: ${sizeMB} MB`);
-
 function getFolderSize(dir) {
   let total = 0;
   for (const f of fs.readdirSync(dir)) {
@@ -48,3 +52,6 @@ function getFolderSize(dir) {
   }
   return total;
 }
+
+const sizeMB = (getFolderSize(dest) / 1024 / 1024).toFixed(0);
+console.log(`[copy-chrome] ✓ Copiado: ${sizeMB} MB`);

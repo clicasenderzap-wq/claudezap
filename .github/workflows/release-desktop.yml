@@ -45,11 +45,11 @@ jobs:
           "version=$newVer" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           Write-Host "Versão: $newVer"
 
-      - name: Install dependencies (com download do Chrome correto)
+      - name: Install dependencies
         working-directory: electron-app
         run: npm ci
         env:
-          PUPPETEER_CACHE_DIR: ${{ github.workspace }}/puppeteer-cache
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
 
       - name: Build Windows installer
         working-directory: electron-app
@@ -57,7 +57,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-          PUPPETEER_CACHE_DIR: ${{ github.workspace }}/puppeteer-cache
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
 
       - name: Commit version bump
         shell: bash
