@@ -12,13 +12,6 @@ directories:
   output: dist
   buildResources: assets
 
-extraResources:
-  - from: chrome-dist/
-    to: chrome
-    filter:
-      - "**/*"
-    # Se chrome-dist/ estiver vazio (CI sem Chrome bundled), electron-builder ignora silenciosamente
-
 win:
   target:
     - target: nsis
@@ -33,7 +26,6 @@ nsis:
   createStartMenuShortcut: true
   runAfterFinish: true
   installerHeaderIcon: assets/icon.ico
-  include: assets/installer.nsh
 
 files:
   - src/**/*
