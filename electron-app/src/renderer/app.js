@@ -188,8 +188,32 @@ api.onUpdateReady(() => {
 
 api.onUpdateRequired(({ minVersion, currentVersion }) => {
   document.getElementById('update-required-text').textContent =
-    `Sua versão atual (v${currentVersion}) é muito antiga.\nÉ necessário pelo menos a versão v${minVersion} para continuar usando o Clica Aí.`;
+    `Sua versão atual (v${currentVersion}) é muito antiga.\nÉ necessário pelo menos a versão v${minVersion} para continuar usando o Clica Aí.\n\nBaixando atualização automaticamente...`;
   show('screen-update');
+});
+
+api.onUpdateRequiredProgress(({ status, percent, version, message }) => {
+  const wrap = document.getElementById('update-progress-wrap');
+  const label = document.getElementById('update-progress-label');
+  const bar = document.getElementById('update-progress-bar');
+  const pct = document.getElementById('update-progress-pct');
+  const btnManual = document.getElementById('btn-download-update');
+
+  if (status === 'downloading') {
+    wrap.style.display = 'block';
+    btnManual.style.display = 'none';
+    label.textContent = `Baixando atualização${version ? ' v' + version : ''}...`;
+    bar.style.width = `${percent || 0}%`;
+    pct.textContent = `${percent || 0}%`;
+  } else if (status === 'installing') {
+    wrap.style.display = 'block';
+    label.textContent = 'Instalando... O aplicativo será reiniciado em instantes.';
+    bar.style.width = '100%';
+    pct.textContent = '100%';
+  } else if (status === 'error' || status === 'not-found') {
+    wrap.style.display = 'none';
+    btnManual.style.display = 'block';
+  }
 });
 
 document.getElementById('btn-download-update').addEventListener('click', () => {

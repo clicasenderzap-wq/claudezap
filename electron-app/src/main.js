@@ -136,38 +136,64 @@ function updateTrayMenu() {
 
 // ── Auto-updater ──────────────────────────────────────────────────────────────
 
+let _forceUpdateMode = false;
+
 function setupUpdater() {
   autoUpdater.autoDownload = true;
   autoUpdater.autoInstallOnAppQuit = true;
 
   autoUpdater.on('update-available', (info) => {
     console.log('[Updater] nova versão disponível:', info.version);
-    mainWindow?.webContents.send('update:downloading', { version: info.version });
+    if (_forceUpdateMode) {
+      mainWindow?.webContents.send('update:required-progress', { status: 'downloading', percent: 0, version: info.version });
+    } else {
+      mainWindow?.webContents.send('update:downloading', { version: info.version });
+    }
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    if (_forceUpdateMode) {
+      // Already on latest but backend blocked — show manual download fallback
+      mainWindow?.webContents.send('update:required-progress', { status: 'not-found' });
+    }
   });
 
   autoUpdater.on('download-progress', (p) => {
-    mainWindow?.webContents.send('update:progress', { percent: Math.round(p.percent) });
+    const percent = Math.round(p.percent);
+    if (_forceUpdateMode) {
+      mainWindow?.webContents.send('update:required-progress', { status: 'downloading', percent });
+    } else {
+      mainWindow?.webContents.send('update:progress', { percent });
+    }
   });
 
   autoUpdater.on('update-downloaded', (info) => {
-    console.log('[Updater] atualização baixada — instalação obrigatória');
-    mainWindow?.show();
-    // Mandatory: only one button, no way to skip
-    dialog.showMessageBox({
-      type: 'info',
-      title: 'Atualização obrigatória — Clica Aí',
-      message: `Nova versão ${info.version} disponível!`,
-      detail: 'Clique em "Instalar Agora" para atualizar o Clica Aí. O aplicativo será reiniciado automaticamente.',
-      buttons: ['Instalar Agora'],
-      defaultId: 0,
-      noLink: true,
-    }).then(() => {
-      autoUpdater.quitAndInstall(false, true);
-    });
+    console.log('[Updater] atualização baixada — v' + info.version);
+    if (_forceUpdateMode) {
+      // Forced update: install silently without asking
+      mainWindow?.webContents.send('update:required-progress', { status: 'installing' });
+      setTimeout(() => autoUpdater.quitAndInstall(false, true), 1500);
+    } else {
+      mainWindow?.show();
+      dialog.showMessageBox({
+        type: 'info',
+        title: 'Atualização obrigatória — Clica Aí',
+        message: `Nova versão ${info.version} disponível!`,
+        detail: 'Clique em "Instalar Agora" para atualizar o Clica Aí. O aplicativo será reiniciado automaticamente.',
+        buttons: ['Instalar Agora'],
+        defaultId: 0,
+        noLink: true,
+      }).then(() => {
+        autoUpdater.quitAndInstall(false, true);
+      });
+    }
   });
 
   autoUpdater.on('error', (e) => {
     console.error('[Updater] erro:', e.message);
+    if (_forceUpdateMode) {
+      mainWindow?.webContents.send('update:required-progress', { status: 'error', message: e.message });
+    }
   });
 
   // Check on startup (delay 5s to not slow down first render)
@@ -281,9 +307,15 @@ function initConnection() {
   });
 
   wsClient.on('update_required', (minVersion) => {
+    _forceUpdateMode = true;
     mainWindow?.webContents.send('update:required', { minVersion, currentVersion: app.getVersion() });
     mainWindow?.show();
     teardownConnection();
+    // Trigger download immediately
+    autoUpdater.checkForUpdates().catch((e) => {
+      console.error('[Updater] erro ao verificar após bloqueio:', e.message);
+      mainWindow?.webContents.send('update:required-progress', { status: 'error', message: e.message });
+    });
   });
 
   // ── WAManager events → backend ───────────────────────────────────────────────
