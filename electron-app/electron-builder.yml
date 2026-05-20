@@ -18,7 +18,7 @@ win:
       arch:
         - x64
   icon: assets/icon.ico
-  artifactName: "ClicaAi-Setup-${version}.exe"
+  artifactName: "ClicaAi-Setup.exe"
 
 nsis:
   oneClick: false

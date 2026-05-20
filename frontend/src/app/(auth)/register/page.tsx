@@ -47,21 +47,76 @@ export default function RegisterPage() {
 
   if (done) {
     return (
-      <div className="card w-full max-w-sm p-8 text-center space-y-4">
-        <div className="flex justify-center">
-          <div className="p-4 bg-green-100 rounded-full">
-            <CheckCircle2 size={36} className="text-green-600" />
+      <div className="w-full max-w-lg space-y-4">
+
+        {/* Step 1 — Verificar email */}
+        <div className="card p-6">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-green-100 rounded-full shrink-0">
+              <CheckCircle2 size={28} className="text-green-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Passo 1 — Confirme seu email</h2>
+              <p className="text-gray-600 text-sm mt-1 leading-relaxed">
+                Enviamos um link de confirmação para <strong>{submittedEmail}</strong>.
+                Clique no link para ativar sua conta e ganhar <strong>7 dias grátis</strong>.
+              </p>
+            </div>
           </div>
+          <p className="text-xs text-gray-400 mt-4 pl-1">Não encontrou? Verifique a pasta de spam.</p>
         </div>
-        <h2 className="text-xl font-bold text-gray-900">Verifique seu email!</h2>
-        <p className="text-gray-600 text-sm leading-relaxed">
-          Enviamos um link de confirmação para <strong>{submittedEmail}</strong>.
-          Clique no link para ativar sua conta.
-        </p>
-        <div className="bg-green-50 border border-green-200 rounded-xl p-4 text-left text-xs text-green-800 leading-relaxed">
-          Após confirmar o email, você já poderá fazer login e usar a plataforma com <strong>7 dias grátis</strong>.
+
+        {/* Step 2 — Instalar o app */}
+        <div className="card p-6 space-y-5">
+          <div className="flex items-center gap-4">
+            <div className="p-3 bg-brand-100 rounded-full shrink-0">
+              <Smartphone size={28} className="text-brand-600" />
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">Passo 2 — Instale o Clica Aí</h2>
+              <p className="text-gray-600 text-sm mt-1 leading-relaxed">
+                O Clica Aí é um aplicativo instalado no seu computador que mantém seus números WhatsApp
+                conectados e prontos para enviar mensagens a qualquer momento — funcionando em segundo
+                plano de forma silenciosa, sem precisar deixar o navegador aberto.
+              </p>
+            </div>
+          </div>
+
+          {/* Steps */}
+          <div className="space-y-3 pt-1">
+            {[
+              { n: 1, title: 'Baixe o instalador', desc: 'Clique no botão abaixo para baixar o arquivo de instalação (.exe para Windows).' },
+              { n: 2, title: 'Execute e instale', desc: 'Abra o arquivo baixado e siga as instruções da instalação. Leva menos de 1 minuto.' },
+              { n: 3, title: 'Faça login no app', desc: 'Abra o Clica Aí no computador e entre com seu email e senha.' },
+              { n: 4, title: 'Conecte seu WhatsApp', desc: 'Acesse a plataforma web → WhatsApp → Adicionar número → escaneie o QR Code pelo celular.' },
+            ].map((s) => (
+              <div key={s.n} className="flex gap-3">
+                <div className="w-7 h-7 rounded-full bg-brand-600 text-white font-black text-xs flex items-center justify-center shrink-0 mt-0.5">
+                  {s.n}
+                </div>
+                <div>
+                  <p className="font-semibold text-sm text-gray-800">{s.title}</p>
+                  <p className="text-xs text-gray-500 mt-0.5 leading-relaxed">{s.desc}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <a
+            href="https://github.com/clicasenderzap-wq/claudezap/releases/latest/download/ClicaAi-Setup.exe"
+            className="btn-primary w-full flex items-center justify-center gap-2 no-underline"
+            download
+          >
+            <Smartphone size={16} />
+            Baixar Clica Aí para Windows
+          </a>
+
+          <p className="text-xs text-gray-400 text-center">
+            Windows 10 ou superior · gratuito · atualização automática
+          </p>
         </div>
-        <p className="text-sm text-gray-500">
+
+        <p className="text-center text-sm text-gray-500">
           Já tem conta?{' '}
           <Link href="/login" className="text-brand-600 font-medium hover:underline">Entrar</Link>
         </p>

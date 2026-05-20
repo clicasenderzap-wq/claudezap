@@ -198,21 +198,26 @@ api.onUpdateRequiredProgress(({ status, percent, version, message }) => {
   const bar = document.getElementById('update-progress-bar');
   const pct = document.getElementById('update-progress-pct');
   const btnManual = document.getElementById('btn-download-update');
+  const hint = document.getElementById('update-auto-hint');
 
   if (status === 'downloading') {
     wrap.style.display = 'block';
     btnManual.style.display = 'none';
+    if (hint) hint.style.display = 'none';
     label.textContent = `Baixando atualização${version ? ' v' + version : ''}...`;
     bar.style.width = `${percent || 0}%`;
     pct.textContent = `${percent || 0}%`;
   } else if (status === 'installing') {
     wrap.style.display = 'block';
+    btnManual.style.display = 'none';
+    if (hint) hint.style.display = 'none';
     label.textContent = 'Instalando... O aplicativo será reiniciado em instantes.';
     bar.style.width = '100%';
     pct.textContent = '100%';
   } else if (status === 'error' || status === 'not-found') {
     wrap.style.display = 'none';
     btnManual.style.display = 'block';
+    if (hint) hint.textContent = 'O download automático falhou. Use o botão acima para baixar manualmente.';
   }
 });
 
