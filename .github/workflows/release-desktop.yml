@@ -45,15 +45,9 @@ jobs:
           "version=$newVer" | Out-File -FilePath $env:GITHUB_OUTPUT -Append
           Write-Host "Versão: $newVer"
 
-      - name: Install dependencies
+      - name: Install dependencies (com download do Chrome correto)
         working-directory: electron-app
         run: npm ci
-        env:
-          PUPPETEER_SKIP_DOWNLOAD: 'true'
-
-      - name: Download Chrome for bundling
-        working-directory: electron-app
-        run: npx puppeteer browsers install chrome
         env:
           PUPPETEER_CACHE_DIR: ${{ github.workspace }}/puppeteer-cache
 
