@@ -8,6 +8,7 @@ on:
       - 'electron-app/assets/**'
       - 'electron-app/electron-builder.yml'
       - 'electron-app/scripts/**'
+      - '.github/workflows/release-desktop.yml'
   workflow_dispatch:
 
 permissions:
@@ -48,7 +49,13 @@ jobs:
         working-directory: electron-app
         run: npm ci
         env:
-          PUPPETEER_SKIP_CHROMIUM_DOWNLOAD: 'false'
+          PUPPETEER_SKIP_DOWNLOAD: 'true'
+
+      - name: Download Chrome for bundling
+        working-directory: electron-app
+        run: npx puppeteer browsers install chrome
+        env:
+          PUPPETEER_CACHE_DIR: ${{ github.workspace }}/puppeteer-cache
 
       - name: Build Windows installer
         working-directory: electron-app
@@ -56,6 +63,7 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
+          PUPPETEER_CACHE_DIR: ${{ github.workspace }}/puppeteer-cache
 
       - name: Commit version bump
         shell: bash
