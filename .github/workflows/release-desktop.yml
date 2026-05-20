@@ -55,7 +55,6 @@ jobs:
         working-directory: electron-app
         run: npm run build
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
           PUPPETEER_SKIP_DOWNLOAD: 'true'
 
