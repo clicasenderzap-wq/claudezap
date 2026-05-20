@@ -1,6 +1,6 @@
 {
   "name": "claudezap-desktop",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "Clica Aí — Agente WhatsApp Desktop",
   "main": "src/main.js",
   "scripts": {
