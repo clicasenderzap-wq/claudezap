@@ -2,16 +2,25 @@ const { WebSocketServer } = require('ws');
 const jwt = require('jsonwebtoken');
 const desktopService = require('../services/desktopService');
 
-// Cache min version for 5 min to avoid DB hit on every WS connect
-let _minVersionCache = { value: '0.0.0', at: 0 };
-async function getMinVersion() {
-  if (Date.now() - _minVersionCache.at < 300_000) return _minVersionCache.value;
+// Cache latest GitHub release version for 5 min
+let _latestVersionCache = { value: '0.0.0', at: 0 };
+async function getLatestVersion() {
+  if (Date.now() - _latestVersionCache.at < 300_000) return _latestVersionCache.value;
   try {
-    const { SystemSetting } = require('../models');
-    const row = await SystemSetting.findOne({ where: { key: 'desktop_min_version' } });
-    _minVersionCache = { value: row?.value || '0.0.0', at: Date.now() };
-  } catch { _minVersionCache.at = Date.now(); }
-  return _minVersionCache.value;
+    const res = await fetch('https://api.github.com/repos/clicasenderzap-wq/claudezap/releases/latest', {
+      headers: { Accept: 'application/vnd.github+json', 'User-Agent': 'claudezap-backend' },
+    });
+    if (res.ok) {
+      const data = await res.json();
+      const version = data.tag_name?.replace(/^v/, '') || '0.0.0';
+      _latestVersionCache = { value: version, at: Date.now() };
+    } else {
+      _latestVersionCache.at = Date.now();
+    }
+  } catch {
+    _latestVersionCache.at = Date.now();
+  }
+  return _latestVersionCache.value;
 }
 
 function semverLt(a, b) {
@@ -53,10 +62,10 @@ function setupDesktopWS(httpServer) {
     const deviceId = url.searchParams.get('deviceId') || 'unknown';
     const appVersion = url.searchParams.get('version') || '0.0.0';
 
-    // Version check — block outdated clients before auth
-    const minVersion = await getMinVersion();
-    if (semverLt(appVersion, minVersion)) {
-      ws.close(1008, `update_required:${minVersion}`);
+    // Version check — block if not on latest release
+    const latestVersion = await getLatestVersion();
+    if (semverLt(appVersion, latestVersion)) {
+      ws.close(1008, `update_required:${latestVersion}`);
       return;
     }
 

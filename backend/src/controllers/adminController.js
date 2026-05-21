@@ -304,34 +304,4 @@ async function getQueueStatus(req, res) {
   }
 }
 
-async function getDesktopSettings(req, res) {
-  try {
-    const [minRow, latestRow] = await Promise.all([
-      SystemSetting.findOne({ where: { key: 'desktop_min_version' } }),
-      SystemSetting.findOne({ where: { key: 'desktop_latest_version' } }),
-    ]);
-    res.json({
-      min_version: minRow?.value || '0.0.0',
-      latest_version: latestRow?.value || null,
-    });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-}
-
-async function updateDesktopSettings(req, res) {
-  try {
-    const { min_version, latest_version } = req.body;
-    if (min_version !== undefined) {
-      await SystemSetting.upsert({ key: 'desktop_min_version', value: min_version });
-    }
-    if (latest_version !== undefined) {
-      await SystemSetting.upsert({ key: 'desktop_latest_version', value: latest_version });
-    }
-    res.json({ ok: true });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-}
-
-module.exports = { listUsers, getUser, updateUser, approveUser, rejectUser, getStats, listWhatsappAccounts, disconnectWhatsappAccount, removeWhatsappAccount, getPlanPrices, updatePlanPrices, getRevenue, getQueueStatus, getDesktopSettings, updateDesktopSettings };
+module.exports = { listUsers, getUser, updateUser, approveUser, rejectUser, getStats, listWhatsappAccounts, disconnectWhatsappAccount, removeWhatsappAccount, getPlanPrices, updatePlanPrices, getRevenue, getQueueStatus };
