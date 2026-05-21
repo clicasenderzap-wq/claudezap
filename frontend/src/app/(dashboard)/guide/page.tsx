@@ -158,6 +158,67 @@ function GettingStartedSection() {
       <Tip>
         <strong>Dica de segurança:</strong> Use uma senha forte (mínimo 8 caracteres, misture letras, números e símbolos). Nunca compartilhe suas credenciais de acesso.
       </Tip>
+
+      {/* ── Instalação do App Desktop ── */}
+      <h3 className="font-bold text-gray-800 mb-4 text-lg mt-10 flex items-center gap-2">
+        <Smartphone size={18} className="text-brand-600" /> Instalação do App Desktop
+      </h3>
+      <p className="text-gray-600 text-sm leading-relaxed mb-5">
+        O Clica Aí funciona por meio de um aplicativo instalado no seu computador. Ele mantém seus números WhatsApp conectados e prontos para enviar mensagens a qualquer momento, funcionando em segundo plano sem precisar deixar o navegador aberto.
+      </p>
+
+      <Step num={1} title="Baixe o instalador">
+        Após o cadastro, você verá o botão de download diretamente na tela de confirmação. Também é possível baixar a qualquer momento em <strong>Guia → Instalação do App</strong>. O arquivo é um <Code>.exe</Code> para Windows.
+      </Step>
+      <Step num={2} title="Execute e instale">
+        Abra o arquivo baixado e siga as instruções. A instalação leva menos de 1 minuto. O app cria um atalho na área de trabalho e no menu Iniciar.
+      </Step>
+      <Step num={3} title="Abra e faça login">
+        Abra o Clica Aí e entre com o mesmo email e senha da plataforma web.
+      </Step>
+      <Step num={4} title="Conecte seus números WhatsApp">
+        Na plataforma web, acesse <strong>WhatsApp → Adicionar número</strong> e escaneie o QR Code com o celular.
+      </Step>
+
+      {/* Atualização */}
+      <h3 className="font-bold text-gray-800 mb-4 text-lg mt-8 flex items-center gap-2">
+        <RefreshCw size={18} className="text-blue-500" /> Atualização do App
+      </h3>
+      <p className="text-gray-600 text-sm leading-relaxed mb-4">
+        O Clica Aí verifica automaticamente se há uma versão mais recente toda vez que conecta ao servidor. Quando uma atualização é necessária, o download e a instalação acontecem de forma automática — o app reinicia sozinho após concluir.
+      </p>
+
+      <Success>
+        <strong>Atualização automática:</strong> Na maioria dos casos, basta aguardar. O app baixa a nova versão, instala e reinicia sem precisar de nenhuma ação sua.
+      </Success>
+
+      <div className="bg-yellow-50 border border-yellow-200 rounded-2xl p-5 mt-4 mb-2">
+        <p className="font-bold text-yellow-800 mb-3 flex items-center gap-2">
+          <AlertTriangle size={16} className="text-yellow-600" /> A instalação travou? O app não fechou sozinho?
+        </p>
+        <p className="text-sm text-yellow-800 leading-relaxed mb-4">
+          O instalador precisa que o app esteja completamente fechado antes de substituir os arquivos. Em alguns casos, o Clica Aí continua rodando em segundo plano mesmo após o início da atualização — você pode notar isso pelo ícone na bandeja do sistema (próximo ao relógio, no canto inferior direito da barra de tarefas do Windows).
+        </p>
+        <p className="text-sm font-semibold text-yellow-800 mb-3">Como resolver:</p>
+        <div className="space-y-2.5">
+          {[
+            'Olhe no canto inferior direito da barra de tarefas (perto do relógio). Se houver um ícone do Clica Aí, o app ainda está rodando.',
+            'Clique com o botão direito do mouse sobre esse ícone.',
+            'No menu que aparecer, clique em "Sair" para encerrar o app completamente.',
+            'Aguarde alguns segundos e então execute o instalador novamente (.exe que foi baixado).',
+            'A instalação vai completar normalmente. Após terminar, abra o Clica Aí e faça login.',
+          ].map((s, i) => (
+            <div key={i} className="flex gap-2.5 text-sm text-yellow-900">
+              <span className="w-5 h-5 bg-yellow-200 rounded-full text-yellow-800 text-xs font-black flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
+              <span>{s}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-400 mt-3">
+        Caso o ícone não apareça na bandeja, verifique na seta "▲" ao lado do relógio — ícones ocultos ficam ali.
+      </p>
     </div>
   );
 }
