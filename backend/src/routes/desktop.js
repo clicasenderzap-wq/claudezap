@@ -62,6 +62,15 @@ function setupDesktopWS(httpServer) {
     const deviceId = url.searchParams.get('deviceId') || 'unknown';
     const appVersion = url.searchParams.get('version') || '0.0.0';
 
+    // Buffer messages immediately — before any async ops — so events like 'ready'
+    // fired by a fast WhatsApp reconnection are never dropped during the auth window.
+    let userId = null;
+    const msgQueue = [];
+    ws.on('message', (data) => {
+      if (userId) desktopService.handleMessage(userId, data);
+      else msgQueue.push(data);
+    });
+
     // Version check — block if not on latest release
     const latestVersion = await getLatestVersion();
     if (semverLt(appVersion, latestVersion)) {
@@ -70,7 +79,6 @@ function setupDesktopWS(httpServer) {
     }
 
     // Authenticate
-    let userId;
     try {
       const payload = jwt.verify(token, process.env.JWT_SECRET);
       userId = payload.sub;
@@ -107,8 +115,9 @@ function setupDesktopWS(httpServer) {
     // Register (kicks previous session for same user)
     desktopService.register(userId, deviceId, ws);
 
-    // Forward events from this user's app to whatsappService / controllers
-    ws.on('message', (data) => desktopService.handleMessage(userId, data));
+    // Flush any messages that arrived during the auth window
+    for (const data of msgQueue) desktopService.handleMessage(userId, data);
+    msgQueue.length = 0;
 
     // Heartbeat ping every 30s to keep connection alive through proxies
     const ping = setInterval(() => {
