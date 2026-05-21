@@ -53,8 +53,9 @@ jobs:
 
       - name: Build Windows installer
         working-directory: electron-app
-        run: npm run build
+        run: npx electron-builder --win --x64 --publish never
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
           PUPPETEER_SKIP_DOWNLOAD: 'true'
 

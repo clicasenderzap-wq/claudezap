@@ -1,6 +1,7 @@
 appId: br.com.clicaai.claudezap
 productName: Clica Aí
 copyright: Copyright © 2026 ClicaAI
+artifactName: "ClicaAi-Setup.exe"
 
 publish:
   provider: github
@@ -18,7 +19,6 @@ win:
       arch:
         - x64
   icon: assets/icon.ico
-  artifactName: "ClicaAi-Setup.exe"
 
 nsis:
   oneClick: false
