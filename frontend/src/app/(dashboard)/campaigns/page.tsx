@@ -8,7 +8,7 @@ import { z } from 'zod';
 import {
   Megaphone, Check, RefreshCw, Trash2, Plus, History,
   X, Smartphone, BarChart2, Send, CheckCircle2, XCircle, Clock,
-  ChevronRight, Timer, Repeat2, Tag, Users, CalendarClock, ShieldCheck,
+  ChevronRight, ChevronUp, ChevronDown, Timer, Repeat2, Tag, Users, CalendarClock, ShieldCheck,
   Layers, AlertTriangle, UserX, Paperclip, FileText, Image, Film, Music, Loader2, WifiOff,
   Pause, Play, RotateCcw,
 } from 'lucide-react';
@@ -74,6 +74,7 @@ export default function CampaignsPage() {
   const [detailCampaign, setDetailCampaign] = useState<any>(null);
   const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
   const [msgFilter, setMsgFilter] = useState<string>('all');
+  const [msgSort, setMsgSort] = useState<{ by: 'name' | 'sent_at'; dir: 'asc' | 'desc' }>({ by: 'sent_at', dir: 'desc' });
   const [consentConfirmed, setConsentConfirmed] = useState(false);
   const [mediaFile, setMediaFile] = useState<{ url: string; name: string; type: string; size: number; category: string } | null>(null);
   const [uploadingMedia, setUploadingMedia] = useState(false);
@@ -309,9 +310,22 @@ export default function CampaignsPage() {
     .replace(/\{\{name\}\}/gi, previewName)
     + (includeOptout ? '\n\nPara sair desta lista, responda: SAIR' : '');
 
-  const filteredMessages = (detail?.messages ?? []).filter((m: any) =>
-    msgFilter === 'all' ? true : m.status === msgFilter
-  );
+  const filteredMessages = (detail?.messages ?? []).filter((m: any) => {
+    if (msgFilter === 'all') return true;
+    if (msgFilter === 'sent') return m.status === 'sent' || m.status === 'delivered';
+    return m.status === msgFilter;
+  });
+
+  const sortedMessages = [...filteredMessages].sort((a: any, b: any) => {
+    if (msgSort.by === 'name') {
+      const na = (a.Contact?.name ?? '').toLowerCase();
+      const nb = (b.Contact?.name ?? '').toLowerCase();
+      return msgSort.dir === 'asc' ? na.localeCompare(nb) : nb.localeCompare(na);
+    }
+    const da = a.sent_at ? new Date(a.sent_at).getTime() : 0;
+    const db = b.sent_at ? new Date(b.sent_at).getTime() : 0;
+    return msgSort.dir === 'asc' ? da - db : db - da;
+  });
 
   return (
     <div className="space-y-6">
@@ -368,12 +382,16 @@ export default function CampaignsPage() {
       {/* ── ABA HISTÓRICO ── */}
       {tab === 'history' && (
         <div className="card overflow-hidden">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-fixed">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                {['Nome', 'Data', 'Contatos', 'Enviados', 'Falhas', 'Status', 'Ações'].map((h) => (
-                  <th key={h} className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">{h}</th>
-                ))}
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[28%]">Nome</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[16%]">Data</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-[10%]">Contatos</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-[10%]">Enviados</th>
+                <th className="px-4 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider w-[9%]">Falhas</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[13%]">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider w-[14%]">Ações</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -392,14 +410,14 @@ export default function CampaignsPage() {
               )}
               {campaigns?.data?.map((c: any) => (
                 <tr key={c.id} className="hover:bg-gray-50">
-                  <td className="px-4 py-3 max-w-[160px]">
+                  <td className="px-4 py-3 overflow-hidden">
                     <button
                       onClick={() => { setDetailCampaign(c); setMsgFilter('all'); }}
-                      className="font-medium text-brand-600 hover:text-brand-800 truncate flex items-center gap-1 text-left"
+                      className="font-medium text-brand-600 hover:text-brand-800 flex items-center gap-1 text-left w-full min-w-0"
                     >
-                      {c.name}
-                      {c.batch_mode && <span title="Envio em lotes"><Layers size={11} className="text-orange-500 shrink-0" /></span>}
-                      <ChevronRight size={13} />
+                      <span className="truncate">{c.name}</span>
+                      {c.batch_mode && <span title="Envio em lotes" className="shrink-0"><Layers size={11} className="text-orange-500" /></span>}
+                      <ChevronRight size={13} className="shrink-0" />
                     </button>
                   </td>
                   <td className="px-4 py-3 text-gray-500 text-xs whitespace-nowrap">
@@ -1072,8 +1090,7 @@ export default function CampaignsPage() {
                 <div className="flex gap-2 px-6 py-3 pb-4 border-b border-gray-100 overflow-x-auto shrink-0">
                   {[
                     { key: 'all', label: `Todos (${detail?.stats?.total ?? 0})` },
-                    { key: 'sent', label: `Enviados (${detail?.stats?.sent ?? 0})` },
-                    { key: 'delivered', label: `Entregues (${detail?.stats?.delivered ?? 0})` },
+                    { key: 'sent', label: `Enviados (${(detail?.stats?.sent ?? 0) + (detail?.stats?.delivered ?? 0)})` },
                     { key: 'failed', label: `Falhas (${detail?.stats?.failed ?? 0})` },
                     { key: 'queued', label: `Na fila (${detail?.stats?.queued ?? 0})` },
                   ].map((f) => (
@@ -1088,30 +1105,49 @@ export default function CampaignsPage() {
                 </div>
 
                 {/* Tabela de mensagens */}
-                <div className="overflow-y-auto flex-1 divide-y divide-gray-100 text-sm">
-                  {filteredMessages.length === 0 && (
-                    <p className="px-6 py-10 text-center text-gray-400">Nenhuma mensagem neste filtro</p>
-                  )}
-                  {filteredMessages.map((m: any) => (
-                    <div key={m.id} className="px-6 py-3 flex items-center gap-4">
-                      <div className="min-w-0 flex-1">
-                        <p className="font-medium text-gray-800 flex items-center gap-1.5">
-                          {m.Contact?.name ?? '—'}
-                          {m.media_url && <span title={m.media_filename}><Paperclip size={11} className="text-gray-400 shrink-0" /></span>}
-                        </p>
-                        <p className="text-xs text-gray-500">{m.Contact?.phone}</p>
+                <div className="overflow-y-auto flex-1 text-sm flex flex-col">
+                  {/* Cabeçalho ordenável */}
+                  <div className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200 px-6 py-2 flex items-center gap-4 shrink-0">
+                    <button
+                      onClick={() => setMsgSort((s) => s.by === 'name' ? { by: 'name', dir: s.dir === 'asc' ? 'desc' : 'asc' } : { by: 'name', dir: 'asc' })}
+                      className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-wider flex-1 hover:text-gray-700 transition-colors ${msgSort.by === 'name' ? 'text-brand-600' : 'text-gray-500'}`}
+                    >
+                      Contato
+                      {msgSort.by === 'name' ? (msgSort.dir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />) : <ChevronDown size={12} className="opacity-30" />}
+                    </button>
+                    <button
+                      onClick={() => setMsgSort((s) => s.by === 'sent_at' ? { by: 'sent_at', dir: s.dir === 'asc' ? 'desc' : 'asc' } : { by: 'sent_at', dir: 'desc' })}
+                      className={`flex items-center gap-1 text-xs font-semibold uppercase tracking-wider shrink-0 hover:text-gray-700 transition-colors ${msgSort.by === 'sent_at' ? 'text-brand-600' : 'text-gray-500'}`}
+                    >
+                      Enviado em
+                      {msgSort.by === 'sent_at' ? (msgSort.dir === 'asc' ? <ChevronUp size={12} /> : <ChevronDown size={12} />) : <ChevronDown size={12} className="opacity-30" />}
+                    </button>
+                  </div>
+                  <div className="divide-y divide-gray-100">
+                    {sortedMessages.length === 0 && (
+                      <p className="px-6 py-10 text-center text-gray-400">Nenhuma mensagem neste filtro</p>
+                    )}
+                    {sortedMessages.map((m: any) => (
+                      <div key={m.id} className="px-6 py-3 flex items-center gap-4">
+                        <div className="min-w-0 flex-1">
+                          <p className="font-medium text-gray-800 flex items-center gap-1.5">
+                            {m.Contact?.name ?? '—'}
+                            {m.media_url && <span title={m.media_filename}><Paperclip size={11} className="text-gray-400 shrink-0" /></span>}
+                          </p>
+                          <p className="text-xs text-gray-500">{m.Contact?.phone}</p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <span className={`badge text-xs ${STATUS_STYLE[m.status] ?? 'bg-gray-100 text-gray-600'}`}>
+                            {STATUS_LABEL[m.status] ?? m.status}
+                          </span>
+                          {m.sent_at && <p className="text-xs text-gray-400 mt-0.5">{formatDate(m.sent_at)}</p>}
+                          {m.status === 'failed' && m.error_message && (
+                            <p className="text-xs text-red-500 mt-0.5 max-w-[200px] text-right">{m.error_message}</p>
+                          )}
+                        </div>
                       </div>
-                      <div className="text-right shrink-0">
-                        <span className={`badge text-xs ${STATUS_STYLE[m.status] ?? 'bg-gray-100 text-gray-600'}`}>
-                          {STATUS_LABEL[m.status] ?? m.status}
-                        </span>
-                        {m.sent_at && <p className="text-xs text-gray-400 mt-0.5">{formatDate(m.sent_at)}</p>}
-                        {m.status === 'failed' && m.error_message && (
-                          <p className="text-xs text-red-500 mt-0.5 max-w-[200px] text-right">{m.error_message}</p>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
                 </div>
               </>
             )}
