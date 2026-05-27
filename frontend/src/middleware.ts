@@ -14,7 +14,7 @@ export function middleware(request: NextRequest) {
   // ── email.clicaai.ia.br ────────────────────────────────────────────────────
   // Allow only email-related routes. Redirect everything else to /email
   if (hostname.startsWith('email.')) {
-    const isEmailPath = pathname.startsWith('/email') || pathname.startsWith('/contacts') || pathname.startsWith('/dashboard') || pathname.startsWith('/planos') || pathname.startsWith('/guide');
+    const isEmailPath = pathname.startsWith('/email') || pathname.startsWith('/contacts') || pathname.startsWith('/dashboard') || pathname.startsWith('/planos') || pathname.startsWith('/guide') || pathname.startsWith('/admin');
     if (!isEmailPath) {
       return NextResponse.redirect(new URL('/email', request.url));
     }
