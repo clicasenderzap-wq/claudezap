@@ -2,13 +2,14 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
 import { LayoutDashboard, Users, MessageSquare, Megaphone, Smartphone, Flame, Bot, ShieldCheck, LogOut, AlertTriangle, BookOpen, MailWarning, Clock, Inbox, Mail, Ban } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
 import api from '@/lib/api';
 
-const NAV = [
+const NAV_ALL = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/contacts', label: 'Contatos', icon: Users },
   { href: '/messages', label: 'Mensagens', icon: MessageSquare },
@@ -19,6 +20,25 @@ const NAV = [
   { href: '/bots', label: 'Bot de Atendimento', icon: Bot },
   { href: '/inbox', label: 'Caixa de Entrada', icon: Inbox },
   { href: '/optouts', label: 'Lista Negra', icon: Ban },
+  { href: '/email', label: 'Campanhas de Email', icon: Mail },
+];
+
+const NAV_WHATSAPP = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/contacts', label: 'Contatos', icon: Users },
+  { href: '/messages', label: 'Mensagens', icon: MessageSquare },
+  { href: '/campaigns', label: 'Campanhas', icon: Megaphone },
+  { href: '/scheduled', label: 'Agendamentos', icon: Clock },
+  { href: '/whatsapp', label: 'WhatsApp', icon: Smartphone },
+  { href: '/warmup', label: 'Aquecimento', icon: Flame },
+  { href: '/bots', label: 'Bot de Atendimento', icon: Bot },
+  { href: '/inbox', label: 'Caixa de Entrada', icon: Inbox },
+  { href: '/optouts', label: 'Lista Negra', icon: Ban },
+];
+
+const NAV_EMAIL = [
+  { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { href: '/contacts', label: 'Contatos', icon: Users },
   { href: '/email', label: 'Campanhas de Email', icon: Mail },
 ];
 
@@ -39,6 +59,13 @@ export default function Sidebar() {
   const router = useRouter();
   const { user, logout } = useAuthStore();
 
+  const [hostname, setHostname] = useState('');
+  useEffect(() => { setHostname(window.location.hostname); }, []);
+
+  const isEmailSubdomain = hostname.startsWith('email.');
+  const isZapSubdomain = hostname.startsWith('zap.') || hostname.startsWith('app.');
+  const activeNav = isEmailSubdomain ? NAV_EMAIL : isZapSubdomain ? NAV_WHATSAPP : NAV_ALL;
+
   function handleLogout() {
     logout();
     router.push('/login');
@@ -48,7 +75,7 @@ export default function Sidebar() {
     queryKey: ['optout-count'],
     queryFn: () => api.get('/whatsapp/inbox/optout-count').then((r) => r.data),
     refetchInterval: 60_000,
-    enabled: !!user,
+    enabled: !!user && !isEmailSubdomain,
   });
   const optoutCount = optoutData?.count ?? 0;
 
@@ -109,7 +136,7 @@ export default function Sidebar() {
       )}
 
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-        {NAV.map(({ href, label, icon: Icon }) => (
+        {activeNav.map(({ href, label, icon: Icon }) => (
           <Link
             key={href}
             href={href}
