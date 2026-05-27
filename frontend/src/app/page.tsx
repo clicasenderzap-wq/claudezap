@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import {
   Send, Flame, Bot, Smartphone, BarChart2, Check, ChevronDown, ChevronUp,
-  Zap, Shield, Users, Star, ArrowRight, Menu, X, Sparkles,
+  Zap, Shield, Users, Star, ArrowRight, Menu, X, Sparkles, Mail,
   AlertTriangle, Lock, ShieldCheck, FileText, Link2, ClipboardCheck,
   Layers, Paperclip, UserCheck, Monitor,
 } from 'lucide-react';
@@ -286,9 +286,70 @@ function PhoneMockup() {
   );
 }
 
+// ─── Selector Modal ───────────────────────────────────────────────────────────
+
+function SelectorModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div
+      className="fixed inset-0 z-[200] bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+      onClick={onClose}
+    >
+      <div
+        className="bg-white rounded-3xl p-8 max-w-md w-full shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-black text-gray-900">Qual sistema você quer acessar?</h2>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-xl hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <a
+            href="https://zap.clicaai.ia.br/login"
+            className="group flex flex-col items-center gap-3 p-6 border-2 border-gray-100 hover:border-green-400 rounded-2xl transition-all hover:shadow-lg hover:-translate-y-0.5"
+          >
+            <div className="w-14 h-14 bg-green-100 rounded-2xl flex items-center justify-center group-hover:bg-green-600 transition-colors">
+              <Smartphone size={26} className="text-green-600 group-hover:text-white transition-colors" />
+            </div>
+            <div className="text-center">
+              <p className="font-black text-gray-900 text-sm">WhatsApp</p>
+              <p className="text-xs text-gray-500 mt-1 leading-relaxed">Disparos, automação e bot de IA</p>
+            </div>
+          </a>
+
+          <a
+            href="https://email.clicaai.ia.br/login"
+            className="group flex flex-col items-center gap-3 p-6 border-2 border-gray-100 hover:border-blue-400 rounded-2xl transition-all hover:shadow-lg hover:-translate-y-0.5"
+          >
+            <div className="w-14 h-14 bg-blue-100 rounded-2xl flex items-center justify-center group-hover:bg-blue-600 transition-colors">
+              <Mail size={26} className="text-blue-600 group-hover:text-white transition-colors" />
+            </div>
+            <div className="text-center">
+              <p className="font-black text-gray-900 text-sm">E-mail</p>
+              <p className="text-xs text-gray-500 mt-1 leading-relaxed">Campanhas de email marketing</p>
+            </div>
+          </a>
+        </div>
+
+        <p className="text-center text-xs text-gray-400 mt-5">
+          Ainda não tem conta?{' '}
+          <a href="/register" className="text-green-600 font-semibold hover:underline">
+            Cadastre-se grátis
+          </a>
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Navbar ───────────────────────────────────────────────────────────────────
 
-function Navbar() {
+function Navbar({ onEnter }: { onEnter?: () => void }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -315,7 +376,11 @@ function Navbar() {
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
-          <Link href="/login" className="text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 transition-colors">Entrar</Link>
+          {onEnter ? (
+            <button onClick={onEnter} className="text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 transition-colors">Entrar</button>
+          ) : (
+            <Link href="/login" className="text-sm font-medium text-gray-600 hover:text-gray-900 px-3 py-2 transition-colors">Entrar</Link>
+          )}
           <Link href="/register" className="bg-green-600 hover:bg-green-700 text-white text-sm font-bold px-5 py-2.5 rounded-xl transition-colors shadow-sm">
             Começar grátis
           </Link>
@@ -332,7 +397,11 @@ function Navbar() {
             <a key={h} href={h} onClick={() => setOpen(false)} className="block text-sm font-medium text-gray-600 hover:text-green-600 py-2.5">{l}</a>
           ))}
           <div className="pt-3 flex flex-col gap-2 border-t border-gray-100 mt-2">
-            <Link href="/login" className="text-center text-sm font-medium text-gray-700 border border-gray-200 rounded-xl py-2.5">Entrar</Link>
+            {onEnter ? (
+              <button onClick={() => { setOpen(false); onEnter(); }} className="text-center text-sm font-medium text-gray-700 border border-gray-200 rounded-xl py-2.5 w-full">Entrar</button>
+            ) : (
+              <Link href="/login" className="text-center text-sm font-medium text-gray-700 border border-gray-200 rounded-xl py-2.5">Entrar</Link>
+            )}
             <Link href="/register" className="text-center bg-green-600 text-white text-sm font-bold rounded-xl py-2.5">Começar grátis</Link>
           </div>
         </div>
@@ -367,6 +436,16 @@ function FAQItem({ q, a }: { q: string; a: string }) {
 
 export default function LandingPage() {
   const [plans, setPlans] = useState(PLANS_DEFAULT);
+  const [showSelector, setShowSelector] = useState(false);
+  const [hostname, setHostname] = useState('');
+
+  useEffect(() => { setHostname(window.location.hostname); }, []);
+
+  const isMainDomain =
+    hostname !== '' &&
+    !hostname.startsWith('email.') &&
+    !hostname.startsWith('zap.') &&
+    !hostname.startsWith('app.');
 
   useEffect(() => {
     const apiBase = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api').replace(/\/api\/?$/, '');
@@ -387,7 +466,8 @@ export default function LandingPage() {
 
   return (
     <>
-      <Navbar />
+      {showSelector && <SelectorModal onClose={() => setShowSelector(false)} />}
+      <Navbar onEnter={isMainDomain ? () => setShowSelector(true) : undefined} />
       <main className="bg-white text-gray-900 overflow-x-hidden">
 
         {/* ── HERO ── */}
