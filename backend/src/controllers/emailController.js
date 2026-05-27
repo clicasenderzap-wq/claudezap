@@ -64,14 +64,20 @@ async function sendCampaign(req, res, next) {
       return res.status(400).json({ error: 'Campanha já foi enviada ou está em andamento' });
     }
 
-    const { scheduled_for, tag_filter, manual_emails } = req.body;
+    const { scheduled_for, tag_filter, manual_emails, contact_ids, recipient_source = 'all' } = req.body;
 
-    // Build contact list from database
+    // Build contact list from database (skipped when mode is manual-only)
     const recipients = []; // { to_email, to_name, contact_id }
-    const where = { user_id: req.user.id, email_opt_out: false, email: { [Op.and]: [{ [Op.not]: null }, { [Op.ne]: '' }] } };
-    if (tag_filter) where.tags = { [Op.contains]: [tag_filter] };
-    const contacts = await Contact.findAll({ where, attributes: ['id', 'name', 'email'] });
-    for (const c of contacts) recipients.push({ to_email: c.email, to_name: c.name, contact_id: c.id });
+    if (recipient_source !== 'manual') {
+      const where = { user_id: req.user.id, email_opt_out: false, email: { [Op.and]: [{ [Op.not]: null }, { [Op.ne]: '' }] } };
+      if (recipient_source === 'tag' && tag_filter) {
+        where.tags = { [Op.contains]: [tag_filter] };
+      } else if (recipient_source === 'contacts' && Array.isArray(contact_ids) && contact_ids.length > 0) {
+        where.id = { [Op.in]: contact_ids };
+      }
+      const contacts = await Contact.findAll({ where, attributes: ['id', 'name', 'email'] });
+      for (const c of contacts) recipients.push({ to_email: c.email, to_name: c.name, contact_id: c.id });
+    }
 
     // Add manual emails (dedup against contacts already in list)
     if (Array.isArray(manual_emails) && manual_emails.length > 0) {

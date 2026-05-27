@@ -4,7 +4,7 @@ import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
-  Mail, Send, Clock, Users, ChevronLeft, Check,
+  Mail, Send, Clock, Users, ChevronLeft, Check, Search,
   Bold, Italic, Underline, Heading2, Type, List,
   AlignLeft, AlignCenter, AlignRight, Link2, Image as ImageIcon, Minus,
 } from 'lucide-react';
@@ -172,6 +172,10 @@ function NovaCampanhaForm() {
   });
   const [sendOpts, setSendOpts] = useState({ tag_filter: '', scheduled_for: '' });
   const [manualEmails, setManualEmails] = useState('');
+  const [recipientMode, setRecipientMode] = useState<'manual' | 'all' | 'tag' | 'contacts'>('all');
+  const [selectedContactIds, setSelectedContactIds] = useState<string[]>([]);
+  const [contactSearch, setContactSearch] = useState('');
+  const [showExtraEmails, setShowExtraEmails] = useState(false);
   const [step, setStep] = useState<'edit' | 'send'>('edit');
   const [savedId, setSavedId] = useState<string | null>(null);
 
@@ -202,6 +206,14 @@ function NovaCampanhaForm() {
   const tags: string[] = Array.isArray(tagsData)
     ? tagsData.map((t: any) => (typeof t === 'string' ? t : t.tag ?? ''))
     : [];
+
+  const { data: pickerData } = useQuery({
+    queryKey: ['contacts-email-picker', contactSearch],
+    queryFn: () => api.get(`/contacts?search=${encodeURIComponent(contactSearch)}&limit=100`).then((r) => r.data),
+    enabled: recipientMode === 'contacts',
+    staleTime: 60_000,
+  });
+  const pickerContacts: { id: string; name: string; email: string | null; phone: string }[] = pickerData?.data ?? [];
 
   const saveMutation = useMutation({
     mutationFn: (body: object) =>
@@ -234,16 +246,32 @@ function NovaCampanhaForm() {
     saveMutation.mutate(form);
   }
 
+  function parseEmails(raw: string) {
+    return raw.split(/[\n,;]+/).map((e) => e.trim().toLowerCase()).filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+  }
+
   function handleSend() {
     if (!savedId) return;
-    const parsed = manualEmails
-      .split(/[\n,;]+/)
-      .map((e) => e.trim().toLowerCase())
-      .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    if (recipientMode === 'manual' && parseEmails(manualEmails).length === 0) {
+      toast.error('Adicione pelo menos um email válido');
+      return;
+    }
+    if (recipientMode === 'contacts' && selectedContactIds.length === 0) {
+      toast.error('Selecione pelo menos um contato');
+      return;
+    }
+    if (recipientMode === 'tag' && !sendOpts.tag_filter) {
+      toast.error('Selecione uma tag');
+      return;
+    }
+    const manualParsed = parseEmails(manualEmails);
+    const includeManual = recipientMode === 'manual' || (showExtraEmails && manualParsed.length > 0);
     sendMutation.mutate({
-      tag_filter: sendOpts.tag_filter || undefined,
+      recipient_source: recipientMode,
+      tag_filter: recipientMode === 'tag' ? sendOpts.tag_filter || undefined : undefined,
+      contact_ids: recipientMode === 'contacts' ? selectedContactIds : undefined,
+      manual_emails: includeManual ? manualParsed : undefined,
       scheduled_for: sendOpts.scheduled_for || undefined,
-      manual_emails: parsed.length > 0 ? parsed : undefined,
     });
   }
 
@@ -335,35 +363,163 @@ function NovaCampanhaForm() {
             <h2 className="font-semibold text-gray-800 flex items-center gap-2">
               <Users size={16} /> Destinatários
             </h2>
-            <div>
-              <label className="label">Filtrar por tag (deixe em branco para todos)</label>
-              <select className="input" value={sendOpts.tag_filter}
-                onChange={(e) => setSendOpts({ ...sendOpts, tag_filter: e.target.value })}>
-                <option value="">Todos os contatos com email</option>
-                {tags.map((t) => <option key={t} value={t}>{t}</option>)}
-              </select>
-              <p className="text-xs text-gray-400 mt-1">
-                Apenas contatos com email cadastrado e sem opt-out serão incluídos.
-              </p>
-            </div>
-          </div>
 
-          <div className="card p-5 space-y-4">
-            <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-              <Users size={16} /> Emails manuais (opcional)
-            </h2>
-            <div>
-              <label className="label">Cole endereços de email (um por linha ou separados por vírgula)</label>
-              <textarea
-                className="input font-mono text-xs min-h-24 resize-none"
-                value={manualEmails}
-                onChange={(e) => setManualEmails(e.target.value)}
-                placeholder={'joao@exemplo.com\nmaria@empresa.com\ncliente@gmail.com'}
-              />
-              <p className="text-xs text-gray-400 mt-1">
-                Estes emails serão enviados além dos contatos filtrados acima. Útil para testes rápidos.
-              </p>
+            {/* Recipient mode selector */}
+            <div className="space-y-2">
+              <label className="label">Para quem enviar?</label>
+              {(
+                [
+                  { value: 'manual', label: 'Apenas emails manuais', desc: 'Somente os endereços que você digitar — ideal para testes' },
+                  { value: 'all', label: 'Todos os contatos com email', desc: 'Todos os contatos com email cadastrado e sem opt-out' },
+                  { value: 'tag', label: 'Filtrar por tag', desc: 'Contatos de uma tag específica' },
+                  { value: 'contacts', label: 'Contatos específicos', desc: 'Selecione contatos individualmente' },
+                ] as { value: 'manual' | 'all' | 'tag' | 'contacts'; label: string; desc: string }[]
+              ).map((opt) => (
+                <label
+                  key={opt.value}
+                  className={`flex items-start gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                    recipientMode === opt.value ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
+                  }`}
+                >
+                  <input
+                    type="radio"
+                    name="recipientMode"
+                    value={opt.value}
+                    checked={recipientMode === opt.value}
+                    onChange={() => { setRecipientMode(opt.value); setSelectedContactIds([]); setContactSearch(''); }}
+                    className="mt-0.5 accent-indigo-600"
+                  />
+                  <div>
+                    <p className="text-sm font-medium text-gray-800">{opt.label}</p>
+                    <p className="text-xs text-gray-500">{opt.desc}</p>
+                  </div>
+                </label>
+              ))}
             </div>
+
+            {/* Tag selector */}
+            {recipientMode === 'tag' && (
+              <div>
+                <label className="label">Tag</label>
+                <select className="input" value={sendOpts.tag_filter}
+                  onChange={(e) => setSendOpts({ ...sendOpts, tag_filter: e.target.value })}>
+                  <option value="">Selecione uma tag...</option>
+                  {tags.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <p className="text-xs text-gray-400 mt-1">
+                  Apenas contatos com email cadastrado e sem opt-out serão incluídos.
+                </p>
+              </div>
+            )}
+
+            {/* Contact picker */}
+            {recipientMode === 'contacts' && (
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <label className="label mb-0 flex-1">Selecionar contatos</label>
+                  {selectedContactIds.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedContactIds([])}
+                      className="text-xs text-red-500 hover:text-red-700"
+                    >
+                      Limpar ({selectedContactIds.length})
+                    </button>
+                  )}
+                </div>
+                <div className="relative">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
+                  <input
+                    className="input pl-8 text-sm"
+                    placeholder="Buscar por nome ou telefone..."
+                    value={contactSearch}
+                    onChange={(e) => setContactSearch(e.target.value)}
+                  />
+                </div>
+                <div className="border border-gray-200 rounded-lg max-h-52 overflow-y-auto divide-y divide-gray-100">
+                  {pickerContacts.length === 0 && (
+                    <p className="text-xs text-gray-400 text-center py-5">
+                      {contactSearch ? 'Nenhum contato encontrado' : 'Carregando...'}
+                    </p>
+                  )}
+                  {pickerContacts.map((c) => {
+                    const checked = selectedContactIds.includes(c.id);
+                    const hasEmail = !!c.email;
+                    return (
+                      <label
+                        key={c.id}
+                        className={`flex items-center gap-3 px-3 py-2 transition-colors ${
+                          hasEmail ? 'cursor-pointer' : 'cursor-not-allowed opacity-40'
+                        } ${checked ? 'bg-indigo-50' : hasEmail ? 'hover:bg-gray-50' : ''}`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={!hasEmail}
+                          onChange={() => {
+                            if (!hasEmail) return;
+                            setSelectedContactIds((prev) =>
+                              checked ? prev.filter((id) => id !== c.id) : [...prev, c.id]
+                            );
+                          }}
+                          className="accent-indigo-600 flex-shrink-0"
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-medium text-gray-800 truncate">{c.name}</p>
+                          <p className="text-xs truncate">
+                            {c.email
+                              ? <span className="text-gray-400">{c.email}</span>
+                              : <span className="text-amber-600 italic">sem email</span>}
+                          </p>
+                        </div>
+                      </label>
+                    );
+                  })}
+                </div>
+                {selectedContactIds.length > 0 && (
+                  <p className="text-xs text-indigo-600 font-medium">
+                    {selectedContactIds.length} contato{selectedContactIds.length !== 1 ? 's' : ''} selecionado{selectedContactIds.length !== 1 ? 's' : ''}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Manual emails */}
+            {recipientMode === 'manual' ? (
+              <div>
+                <label className="label">Endereços de email</label>
+                <textarea
+                  className="input font-mono text-xs min-h-24 resize-none"
+                  value={manualEmails}
+                  onChange={(e) => setManualEmails(e.target.value)}
+                  placeholder={'joao@exemplo.com\nmaria@empresa.com\ncliente@gmail.com'}
+                />
+                <p className="text-xs text-gray-400 mt-1">Um por linha ou separados por vírgula.</p>
+              </div>
+            ) : (
+              <div className="pt-1 border-t border-gray-100">
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={showExtraEmails}
+                    onChange={(e) => setShowExtraEmails(e.target.checked)}
+                    className="accent-indigo-600"
+                  />
+                  <span className="text-sm text-gray-700">Também enviar para emails adicionais</span>
+                </label>
+                {showExtraEmails && (
+                  <div className="mt-2">
+                    <textarea
+                      className="input font-mono text-xs min-h-20 resize-none"
+                      value={manualEmails}
+                      onChange={(e) => setManualEmails(e.target.value)}
+                      placeholder={'joao@exemplo.com\nmaria@empresa.com'}
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Um por linha ou separados por vírgula.</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="card p-5 space-y-4">
