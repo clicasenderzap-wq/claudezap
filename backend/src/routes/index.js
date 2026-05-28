@@ -45,5 +45,6 @@ router.use('/admin', auth, require('./admin'));
 router.use('/media', auth, requireActive, require('./media'));
 router.use('/email/campaigns', auth, requireActive, require('./email'));
 router.use('/optouts', auth, requireActive, require('./optout'));
+router.use('/webhooks', require('./webhooks'));
 
 module.exports = router;

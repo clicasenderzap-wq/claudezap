@@ -220,6 +220,70 @@ async function cancelCampaign(req, res, next) {
   } catch (e) { next(e); }
 }
 
+async function listUnsubscribed(req, res, next) {
+  try {
+    const contacts = await Contact.findAll({
+      where: { user_id: req.user.id, email_opt_out: true },
+      attributes: ['id', 'name', 'email', 'updated_at'],
+      order: [['updated_at', 'DESC']],
+    });
+    res.json(contacts);
+  } catch (e) { next(e); }
+}
+
+async function resubscribeContact(req, res, next) {
+  try {
+    const contact = await Contact.findOne({ where: { id: req.params.contactId, user_id: req.user.id } });
+    if (!contact) return res.status(404).json({ error: 'Contato não encontrado' });
+    await contact.update({ email_opt_out: false });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+}
+
+async function resendUnopened(req, res, next) {
+  try {
+    const campaign = await EmailCampaign.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    if (!campaign) return res.status(404).json({ error: 'Campanha não encontrada' });
+    if (campaign.status !== 'completed') return res.status(400).json({ error: 'Apenas campanhas concluídas podem ser reenviadas' });
+
+    const unopened = await EmailMessage.findAll({
+      where: { campaign_id: campaign.id, status: 'sent' },
+      attributes: ['to_email', 'to_name', 'contact_id'],
+    });
+    if (unopened.length === 0) return res.status(400).json({ error: 'Todos os destinatários já abriram ou tiveram falha no envio' });
+
+    const newCampaign = await EmailCampaign.create({
+      user_id: req.user.id,
+      name: `Reenvio: ${campaign.name}`,
+      subject: campaign.subject,
+      from_name: campaign.from_name,
+      html_body: campaign.html_body,
+      delay_ms: campaign.delay_ms,
+      status: 'running',
+      total_contacts: unopened.length,
+      sent_count: 0,
+      failed_count: 0,
+      open_count: 0,
+    });
+
+    for (let i = 0; i < unopened.length; i++) {
+      const r = unopened[i];
+      const msg = await EmailMessage.create({
+        campaign_id: newCampaign.id,
+        user_id: req.user.id,
+        contact_id: r.contact_id,
+        to_email: r.to_email,
+        to_name: r.to_name,
+        status: 'queued',
+      });
+      const jobId = await enqueueEmail(msg.id, i * (newCampaign.delay_ms ?? 1000));
+      await msg.update({ queue_job_id: String(jobId) });
+    }
+
+    res.status(201).json({ ok: true, campaign: newCampaign, total: unopened.length });
+  } catch (e) { next(e); }
+}
+
 async function getRecipientCount(req, res, next) {
   try {
     const { recipient_source = 'all', tag_filter, contact_ids } = req.query;
@@ -236,4 +300,4 @@ async function getRecipientCount(req, res, next) {
   } catch (e) { next(e); }
 }
 
-module.exports = { listCampaigns, getCampaign, createCampaign, updateCampaign, deleteCampaign, sendCampaign, getCampaignStats, trackOpen, unsubscribe, testCampaign, duplicateCampaign, cancelCampaign, getRecipientCount };
+module.exports = { listCampaigns, getCampaign, createCampaign, updateCampaign, deleteCampaign, sendCampaign, getCampaignStats, trackOpen, unsubscribe, testCampaign, duplicateCampaign, cancelCampaign, getRecipientCount, listUnsubscribed, resubscribeContact, resendUnopened };

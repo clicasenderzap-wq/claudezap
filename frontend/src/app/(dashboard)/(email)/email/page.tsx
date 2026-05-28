@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Mail, Plus, Trash2, BarChart2, Send, Clock, CheckCircle2, XCircle, Eye, Pencil, Copy, CalendarX } from 'lucide-react';
+import { Mail, Plus, Trash2, BarChart2, Send, Clock, CheckCircle2, XCircle, Eye, Pencil, Copy, CalendarX, RotateCcw } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -139,6 +139,15 @@ export default function EmailPage() {
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao cancelar'),
   });
 
+  const resendMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/email/campaigns/${id}/resend-unopened`).then((r) => r.data),
+    onSuccess: (data: any) => {
+      qc.invalidateQueries({ queryKey: ['email-campaigns'] });
+      toast.success(`Reenvio iniciado para ${data.total} contatos que não abriram!`);
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao reenviar'),
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -207,6 +216,21 @@ export default function EmailPage() {
                   title="Cancelar agendamento"
                 >
                   <CalendarX size={16} />
+                </button>
+              )}
+              {c.status === 'completed' && c.sent_count > c.open_count && (
+                <button
+                  onClick={() => {
+                    const notOpened = c.sent_count - c.open_count;
+                    if (confirm(`Reenviar para ${notOpened} contato${notOpened !== 1 ? 's' : ''} que não abriram este email?`)) {
+                      resendMutation.mutate(c.id);
+                    }
+                  }}
+                  disabled={resendMutation.isPending}
+                  className="p-2 text-gray-400 hover:text-teal-600 hover:bg-teal-50 rounded-lg disabled:opacity-40"
+                  title="Reenviar para quem não abriu"
+                >
+                  <RotateCcw size={16} />
                 </button>
               )}
               {!['running'].includes(c.status) && (
