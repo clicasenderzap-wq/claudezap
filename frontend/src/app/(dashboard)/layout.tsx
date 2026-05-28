@@ -1,6 +1,7 @@
 import AuthGuard from '@/components/AuthGuard';
 import Sidebar from '@/components/Sidebar';
 import RunningCampaignBanner from '@/components/RunningCampaignBanner';
+import WhatsAppOnboardingModal from '@/components/WhatsAppOnboardingModal';
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -12,6 +13,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <main className="flex-1 p-8 overflow-y-auto">{children}</main>
         </div>
       </div>
+      <WhatsAppOnboardingModal />
     </AuthGuard>
   );
 }
