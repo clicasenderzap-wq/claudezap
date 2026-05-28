@@ -220,19 +220,40 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
     if (!editorRef.current) return;
     restoreRange();
     const sel = window.getSelection();
-    if (!sel || !sel.rangeCount || sel.isCollapsed) return;
-    try {
-      const range = sel.getRangeAt(0);
-      const frag = range.extractContents();
-      const span = document.createElement('span');
-      (span.style as any)[styleProp] = styleVal;
-      span.appendChild(frag);
-      range.insertNode(span);
-      const r = document.createRange();
-      r.selectNodeContents(span);
+    if (!sel || !sel.rangeCount) return;
+
+    if (sel.isCollapsed) {
+      // Sem seleção: aplica ao bloco pai (parágrafo, heading, etc.)
+      // O texto novo digitado herdará o estilo do bloco
+      let node: Node | null = sel.getRangeAt(0).startContainer;
+      const BLOCKS = ['P','H1','H2','H3','H4','H5','H6','LI','DIV','BLOCKQUOTE','PRE','TD'];
+      while (node && node !== editorRef.current) {
+        if (node.nodeType === Node.ELEMENT_NODE && BLOCKS.includes((node as Element).tagName)) {
+          (node as HTMLElement).style[styleProp as any] = styleVal;
+          break;
+        }
+        node = node.parentNode;
+      }
+      // Restaura posição do cursor
+      editorRef.current.focus();
+      const r = sel.getRangeAt(0).cloneRange();
       sel.removeAllRanges();
       sel.addRange(r);
-    } catch {}
+    } else {
+      // Com seleção: envolve em span com o estilo
+      try {
+        const range = sel.getRangeAt(0);
+        const frag = range.extractContents();
+        const span = document.createElement('span');
+        (span.style as any)[styleProp] = styleVal;
+        span.appendChild(frag);
+        range.insertNode(span);
+        const r = document.createRange();
+        r.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(r);
+      } catch {}
+    }
     onChange(editorRef.current.innerHTML);
   }
 
@@ -409,6 +430,13 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
             <Sep />
             <Btn onClick={() => exec('removeFormat')} title="Remover toda formatação do texto selecionado"><Eraser size={14} /></Btn>
           </div>
+        </div>
+      )}
+
+      {/* Dica de uso */}
+      {mode === 'visual' && (
+        <div className="px-3 py-1.5 bg-indigo-50 border-b border-indigo-100 text-[11px] text-indigo-500">
+          💡 <strong>Fonte e tamanho:</strong> clique no parágrafo para aplicar ao bloco inteiro, ou selecione o texto para aplicar só na seleção.
         </div>
       )}
 
