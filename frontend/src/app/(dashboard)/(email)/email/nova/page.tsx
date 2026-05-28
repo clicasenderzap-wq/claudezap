@@ -177,9 +177,12 @@ const BLOCK_TYPES = [
   { label: 'Citação', value: 'blockquote' },
 ];
 
+const BLOCK_TAGS = ['P','H1','H2','H3','H4','H5','H6','LI','DIV','BLOCKQUOTE','PRE','TD'];
+
 function VisualEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const savedRangeRef = useRef<Range | null>(null);
+  const lastBlockRef = useRef<HTMLElement | null>(null);
   const [mode, setMode] = useState<EditorMode>('visual');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
 
@@ -189,24 +192,23 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
     }
   }, [mode]);
 
-  function saveRange() {
+  // Salva range e bloco atual sempre que o usuário interage com o editor
+  function trackEditorState() {
     const sel = window.getSelection();
     if (!sel || !sel.rangeCount) return;
     try {
       const range = sel.getRangeAt(0);
-      if (editorRef.current?.contains(range.commonAncestorContainer)) {
-        savedRangeRef.current = range.cloneRange();
+      savedRangeRef.current = range.cloneRange();
+      // Sobe até o primeiro elemento de bloco
+      let node: Node | null = range.startContainer;
+      while (node && node !== editorRef.current) {
+        if (node.nodeType === Node.ELEMENT_NODE && BLOCK_TAGS.includes((node as Element).tagName)) {
+          lastBlockRef.current = node as HTMLElement;
+          return;
+        }
+        node = node.parentNode;
       }
     } catch {}
-  }
-
-  function restoreRange() {
-    if (!savedRangeRef.current || !editorRef.current) return;
-    editorRef.current.focus();
-    const sel = window.getSelection();
-    if (!sel) return;
-    sel.removeAllRanges();
-    sel.addRange(savedRangeRef.current);
   }
 
   function exec(command: string, val?: string) {
@@ -218,43 +220,47 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
 
   function applySpanStyle(styleProp: string, styleVal: string) {
     if (!editorRef.current) return;
-    restoreRange();
-    const sel = window.getSelection();
-    if (!sel || !sel.rangeCount) return;
 
-    if (sel.isCollapsed) {
-      // Sem seleção: aplica ao bloco pai (parágrafo, heading, etc.)
-      // O texto novo digitado herdará o estilo do bloco
-      let node: Node | null = sel.getRangeAt(0).startContainer;
-      const BLOCKS = ['P','H1','H2','H3','H4','H5','H6','LI','DIV','BLOCKQUOTE','PRE','TD'];
-      while (node && node !== editorRef.current) {
-        if (node.nodeType === Node.ELEMENT_NODE && BLOCKS.includes((node as Element).tagName)) {
-          (node as HTMLElement).style[styleProp as any] = styleVal;
-          break;
-        }
-        node = node.parentNode;
-      }
-      // Restaura posição do cursor
+    const sel = window.getSelection();
+    if (!sel) return;
+
+    // Tenta restaurar o range salvo antes do foco sair do editor
+    if (savedRangeRef.current) {
       editorRef.current.focus();
-      const r = sel.getRangeAt(0).cloneRange();
+      try {
+        sel.removeAllRanges();
+        sel.addRange(savedRangeRef.current);
+      } catch {}
+    } else {
+      editorRef.current.focus();
+    }
+
+    const hasSelection = sel.rangeCount > 0 && !sel.isCollapsed;
+
+    if (!hasSelection) {
+      // SEM seleção: aplica diretamente no elemento de bloco rastreado
+      const target = lastBlockRef.current;
+      if (target && editorRef.current.contains(target)) {
+        (target.style as any)[styleProp] = styleVal;
+        onChange(editorRef.current.innerHTML);
+      }
+      return;
+    }
+
+    // COM seleção: envolve em <span> com o estilo inline
+    try {
+      const range = sel.getRangeAt(0);
+      const frag = range.extractContents();
+      const span = document.createElement('span');
+      (span.style as any)[styleProp] = styleVal;
+      span.appendChild(frag);
+      range.insertNode(span);
+      const r = document.createRange();
+      r.selectNodeContents(span);
       sel.removeAllRanges();
       sel.addRange(r);
-    } else {
-      // Com seleção: envolve em span com o estilo
-      try {
-        const range = sel.getRangeAt(0);
-        const frag = range.extractContents();
-        const span = document.createElement('span');
-        (span.style as any)[styleProp] = styleVal;
-        span.appendChild(frag);
-        range.insertNode(span);
-        const r = document.createRange();
-        r.selectNodeContents(span);
-        sel.removeAllRanges();
-        sel.addRange(r);
-      } catch {}
-    }
-    onChange(editorRef.current.innerHTML);
+      onChange(editorRef.current.innerHTML);
+    } catch {}
   }
 
   function switchMode(next: EditorMode) {
@@ -263,7 +269,6 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
   }
 
   function insertLink() {
-    restoreRange();
     const url = window.prompt('URL do link (ex: https://seusite.com):');
     if (url) exec('createLink', url);
   }
@@ -360,22 +365,22 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
 
             {/* Bloco */}
             <select className={selectCls} defaultValue="p" title="Formato do bloco"
-              onMouseDown={saveRange}
-              onChange={(e) => { restoreRange(); exec('formatBlock', e.target.value); }}>
+              onMouseDown={trackEditorState}
+              onChange={(e) => { if (savedRangeRef.current) { editorRef.current?.focus(); try { const s = window.getSelection(); s?.removeAllRanges(); s?.addRange(savedRangeRef.current); } catch {} } exec('formatBlock', e.target.value); }}>
               {BLOCK_TYPES.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
             </select>
             <Sep />
 
             {/* Fonte */}
             <select className={`${selectCls} max-w-[108px]`} defaultValue="Arial, Helvetica, sans-serif" title="Fonte"
-              onMouseDown={saveRange}
+              onMouseDown={trackEditorState}
               onChange={(e) => applySpanStyle('fontFamily', e.target.value)}>
               {FONT_FAMILIES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
             </select>
 
             {/* Tamanho */}
             <select className={`${selectCls} w-[68px]`} defaultValue="" title="Tamanho da fonte (selecione o texto primeiro)"
-              onMouseDown={saveRange}
+              onMouseDown={trackEditorState}
               onChange={(e) => {
                 if (e.target.value) { applySpanStyle('fontSize', e.target.value + 'px'); (e.target as HTMLSelectElement).value = ''; }
               }}>
@@ -395,16 +400,16 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
             <label title="Cor do texto (selecione o texto primeiro)" className="relative p-1.5 rounded hover:bg-gray-200 cursor-pointer flex items-center text-gray-600 shrink-0">
               <Palette size={14} />
               <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                onMouseDown={saveRange}
-                onChange={(e) => { restoreRange(); exec('foreColor', e.target.value); }} />
+                onMouseDown={trackEditorState}
+                onChange={(e) => { exec('foreColor', e.target.value); }} />
             </label>
 
             {/* Cor de fundo */}
             <label title="Cor de fundo do texto (selecione o texto primeiro)" className="relative p-1.5 rounded hover:bg-gray-200 cursor-pointer flex items-center text-gray-600 shrink-0">
               <Highlighter size={14} />
               <input type="color" defaultValue="#fef08a" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-                onMouseDown={saveRange}
-                onChange={(e) => { restoreRange(); exec('hiliteColor', e.target.value); }} />
+                onMouseDown={trackEditorState}
+                onChange={(e) => { exec('hiliteColor', e.target.value); }} />
             </label>
           </div>
 
@@ -447,8 +452,10 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
           contentEditable
           suppressContentEditableWarning
           onInput={() => editorRef.current && onChange(editorRef.current.innerHTML)}
-          onMouseUp={saveRange}
-          onKeyUp={saveRange}
+          onMouseUp={trackEditorState}
+          onKeyUp={trackEditorState}
+          onClick={trackEditorState}
+          onBlur={trackEditorState}
           className="min-h-[520px] p-6 focus:outline-none leading-relaxed overflow-y-auto bg-white"
           style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '14px', color: '#374151', lineHeight: '1.75' }}
         />
