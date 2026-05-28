@@ -170,4 +170,70 @@ async function unsubscribe(req, res) {
   </body></html>`);
 }
 
-module.exports = { listCampaigns, getCampaign, createCampaign, updateCampaign, deleteCampaign, sendCampaign, getCampaignStats, trackOpen, unsubscribe };
+async function testCampaign(req, res, next) {
+  try {
+    const campaign = await EmailCampaign.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    if (!campaign) return res.status(404).json({ error: 'Campanha não encontrada' });
+    const { test_email } = req.body;
+    if (!test_email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(test_email.trim())) {
+      return res.status(400).json({ error: 'Email de teste inválido' });
+    }
+    const { sendCampaignEmail } = require('../services/emailService');
+    let html = campaign.html_body
+      .replace(/\{\{name\}\}/gi, 'Contato Teste')
+      .replace(/\{\{email\}\}/gi, test_email.trim())
+      .replace(/\{\{unsubscribe_url\}\}/gi, '#');
+    const banner = `<div style="background:#fef3c7;border-bottom:2px solid #f59e0b;padding:12px 20px;text-align:center;font-family:Arial,sans-serif;font-size:13px;color:#92400e;font-weight:700">⚠️ EMAIL DE TESTE — não enviado para contatos reais</div>`;
+    html = html.includes('<body') ? html.replace(/(<body[^>]*>)/i, `$1${banner}`) : banner + html;
+    await sendCampaignEmail({ fromName: campaign.from_name || null, to: test_email.trim(), subject: `[TESTE] ${campaign.subject}`, html });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+}
+
+async function duplicateCampaign(req, res, next) {
+  try {
+    const campaign = await EmailCampaign.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    if (!campaign) return res.status(404).json({ error: 'Campanha não encontrada' });
+    const copy = await EmailCampaign.create({
+      user_id: req.user.id,
+      name: `Cópia de ${campaign.name}`,
+      subject: campaign.subject,
+      from_name: campaign.from_name,
+      html_body: campaign.html_body,
+      delay_ms: campaign.delay_ms,
+    });
+    res.status(201).json(copy);
+  } catch (e) { next(e); }
+}
+
+async function cancelCampaign(req, res, next) {
+  try {
+    const campaign = await EmailCampaign.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    if (!campaign) return res.status(404).json({ error: 'Campanha não encontrada' });
+    if (campaign.status !== 'scheduled') return res.status(400).json({ error: 'Apenas campanhas agendadas podem ser canceladas' });
+    const { cancelEmailJob } = require('../services/emailQueueService');
+    const messages = await EmailMessage.findAll({ where: { campaign_id: campaign.id, status: 'queued' }, attributes: ['id', 'queue_job_id'] });
+    await Promise.all(messages.filter((m) => m.queue_job_id).map((m) => cancelEmailJob(m.queue_job_id).catch(() => {})));
+    await EmailMessage.destroy({ where: { campaign_id: campaign.id } });
+    await campaign.update({ status: 'draft', scheduled_for: null, total_contacts: 0, sent_count: 0, failed_count: 0, open_count: 0 });
+    res.json({ ok: true });
+  } catch (e) { next(e); }
+}
+
+async function getRecipientCount(req, res, next) {
+  try {
+    const { recipient_source = 'all', tag_filter, contact_ids } = req.query;
+    if (recipient_source === 'manual') return res.json({ count: null });
+    const where = { user_id: req.user.id, email_opt_out: false, email: { [Op.and]: [{ [Op.not]: null }, { [Op.ne]: '' }] } };
+    if (recipient_source === 'tag' && tag_filter) {
+      where.tags = { [Op.contains]: [tag_filter] };
+    } else if (recipient_source === 'contacts' && contact_ids) {
+      const ids = Array.isArray(contact_ids) ? contact_ids : String(contact_ids).split(',');
+      where.id = { [Op.in]: ids };
+    }
+    const count = await Contact.count({ where });
+    res.json({ count });
+  } catch (e) { next(e); }
+}
+
+module.exports = { listCampaigns, getCampaign, createCampaign, updateCampaign, deleteCampaign, sendCampaign, getCampaignStats, trackOpen, unsubscribe, testCampaign, duplicateCampaign, cancelCampaign, getRecipientCount };

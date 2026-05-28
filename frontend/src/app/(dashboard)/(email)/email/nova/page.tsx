@@ -7,14 +7,62 @@ import {
   Mail, Send, Clock, Users, ChevronLeft, Check, Search,
   Bold, Italic, Underline, Heading2, Type, List,
   AlignLeft, AlignCenter, AlignRight, Link2, Image as ImageIcon, Minus,
+  RotateCcw, RotateCw, Palette, LayoutTemplate, FlaskConical, Users2,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 
-const DEFAULT_HTML = `<div style="font-family:sans-serif;max-width:600px;margin:0 auto;padding:24px">
+// ── Templates ──────────────────────────────────────────────────────────────────
+
+const TEMPLATES = [
+  {
+    id: 'newsletter',
+    name: 'Newsletter',
+    desc: 'Layout com artigos e destaques',
+    color: '#16a34a',
+    html: `<div style="background:#f3f4f6;padding:32px 16px;font-family:Arial,Helvetica,sans-serif"><div style="max-width:600px;margin:0 auto"><div style="background:#16a34a;border-radius:12px 12px 0 0;padding:36px 40px;text-align:center"><h1 style="color:#ffffff;font-size:26px;font-weight:900;margin:0;letter-spacing:-0.5px">Newsletter</h1><p style="color:#bbf7d0;font-size:13px;margin:8px 0 0">Novidades selecionadas para você</p></div><div style="background:#ffffff;padding:40px"><p style="font-size:16px;color:#1f2937;margin:0 0 16px">Olá, <strong>{{name}}</strong>!</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 28px">Confira as principais novidades desta semana que separamos especialmente para você.</p><div style="border-left:4px solid #16a34a;padding:0 0 0 20px;margin:0 0 28px"><h2 style="font-size:17px;color:#111827;margin:0 0 8px;font-weight:700">Título do assunto principal</h2><p style="font-size:14px;color:#6b7280;line-height:1.6;margin:0 0 12px">Descreva o conteúdo principal aqui. Seja claro e objetivo sobre o que o leitor vai encontrar ao clicar.</p><a href="#" style="font-size:13px;color:#16a34a;font-weight:700;text-decoration:none">Leia mais →</a></div><div style="border-left:4px solid #e5e7eb;padding:0 0 0 20px;margin:0 0 32px"><h2 style="font-size:17px;color:#111827;margin:0 0 8px;font-weight:700">Segundo assunto em destaque</h2><p style="font-size:14px;color:#6b7280;line-height:1.6;margin:0 0 12px">Mais um conteúdo relevante para seu leitor. Edite conforme necessário.</p><a href="#" style="font-size:13px;color:#16a34a;font-weight:700;text-decoration:none">Leia mais →</a></div><table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto"><tr><td align="center" style="background:#16a34a;border-radius:10px;padding:14px 32px"><a href="#" style="color:#ffffff;font-weight:700;font-size:15px;text-decoration:none;font-family:Arial,sans-serif">Ver todas as novidades →</a></td></tr></table></div><div style="background:#f9fafb;border-radius:0 0 12px 12px;padding:24px 40px;text-align:center;border-top:1px solid #e5e7eb"><p style="font-size:12px;color:#9ca3af;margin:0">Você recebeu este email porque está inscrito em nossa lista.<br><a href="{{unsubscribe_url}}" style="color:#6b7280;text-decoration:underline">Cancelar inscrição</a></p></div></div></div>`,
+  },
+  {
+    id: 'promocao',
+    name: 'Promoção',
+    desc: 'Oferta com destaque de desconto',
+    color: '#dc2626',
+    html: `<div style="background:#fff7ed;padding:32px 16px;font-family:Arial,Helvetica,sans-serif"><div style="max-width:600px;margin:0 auto"><div style="background:#dc2626;border-radius:12px 12px 0 0;padding:40px;text-align:center"><p style="color:#fecaca;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 12px">Oferta especial</p><div style="background:rgba(255,255,255,0.15);border-radius:100px;display:inline-block;padding:12px 32px;margin:0 0 16px"><span style="color:#fff;font-size:48px;font-weight:900;line-height:1">30%</span><span style="color:#fca5a5;font-size:20px;font-weight:700"> OFF</span></div><p style="color:#ffffff;font-size:18px;font-weight:700;margin:0">Somente hoje!</p></div><div style="background:#ffffff;padding:40px"><p style="font-size:16px;color:#1f2937;margin:0 0 16px">Olá, <strong>{{name}}</strong>!</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 24px">Preparamos uma oferta exclusiva especialmente para você. Aproveite antes que acabe!</p><div style="background:#fff7ed;border-radius:12px;padding:24px;margin:0 0 28px;text-align:center;border:2px dashed #fca5a5"><p style="font-size:13px;color:#9a3412;font-weight:700;margin:0 0 8px;text-transform:uppercase;letter-spacing:1px">Em destaque</p><h2 style="font-size:20px;color:#111827;margin:0 0 8px">Nome do produto ou serviço</h2><p style="font-size:14px;color:#6b7280;margin:0 0 16px">Descrição breve do produto ou benefício principal aqui.</p><p style="font-size:13px;color:#9ca3af;margin:0;text-decoration:line-through">De R$ 197,00</p><p style="font-size:28px;color:#dc2626;font-weight:900;margin:4px 0">R$ 137,90</p></div><table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto 20px"><tr><td align="center" style="background:#dc2626;border-radius:10px;padding:16px 40px"><a href="#" style="color:#ffffff;font-weight:900;font-size:16px;text-decoration:none;font-family:Arial,sans-serif">QUERO APROVEITAR →</a></td></tr></table><p style="font-size:12px;color:#9ca3af;text-align:center;margin:0">⏰ Oferta válida por tempo limitado</p></div><div style="background:#fff7ed;border-radius:0 0 12px 12px;padding:20px 40px;text-align:center;border-top:1px solid #fca5a5"><p style="font-size:12px;color:#9ca3af;margin:0"><a href="{{unsubscribe_url}}" style="color:#6b7280;text-decoration:underline">Cancelar inscrição</a></p></div></div></div>`,
+  },
+  {
+    id: 'boas_vindas',
+    name: 'Boas-vindas',
+    desc: 'Email de boas-vindas com próximos passos',
+    color: '#15803d',
+    html: `<div style="background:#f0fdf4;padding:32px 16px;font-family:Arial,Helvetica,sans-serif"><div style="max-width:600px;margin:0 auto"><div style="background:#15803d;border-radius:12px 12px 0 0;padding:48px 40px;text-align:center"><p style="font-size:40px;margin:0 0 16px">👋</p><h1 style="color:#ffffff;font-size:28px;font-weight:900;margin:0 0 8px">Bem-vindo!</h1><p style="color:#bbf7d0;font-size:14px;margin:0">Estamos muito felizes em ter você aqui</p></div><div style="background:#ffffff;padding:40px"><p style="font-size:17px;color:#1f2937;font-weight:600;margin:0 0 16px">Olá, {{name}}! 🎉</p><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 24px">Seja muito bem-vindo(a)! Ficamos felizes em ter você com a gente. Preparamos tudo para que você tenha a melhor experiência possível.</p><div style="background:#f9fafb;border-radius:12px;padding:24px;margin:0 0 28px"><p style="font-size:13px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:1px;margin:0 0 16px">Próximos passos:</p><table cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td style="vertical-align:top;width:36px;padding:0 12px 16px 0"><div style="width:28px;height:28px;background:#16a34a;border-radius:50%;text-align:center;line-height:28px;color:#fff;font-weight:700;font-size:13px">1</div></td><td style="padding:0 0 16px"><p style="font-size:14px;font-weight:600;color:#111827;margin:0 0 4px">Complete seu perfil</p><p style="font-size:13px;color:#6b7280;margin:0">Adicione suas informações para personalizar sua experiência.</p></td></tr><tr><td style="vertical-align:top;width:36px;padding:0 12px 16px 0"><div style="width:28px;height:28px;background:#16a34a;border-radius:50%;text-align:center;line-height:28px;color:#fff;font-weight:700;font-size:13px">2</div></td><td style="padding:0 0 16px"><p style="font-size:14px;font-weight:600;color:#111827;margin:0 0 4px">Explore os recursos</p><p style="font-size:13px;color:#6b7280;margin:0">Descubra tudo que preparamos para você.</p></td></tr><tr><td style="vertical-align:top;width:36px"><div style="width:28px;height:28px;background:#16a34a;border-radius:50%;text-align:center;line-height:28px;color:#fff;font-weight:700;font-size:13px">3</div></td><td><p style="font-size:14px;font-weight:600;color:#111827;margin:0 0 4px">Fale com a gente</p><p style="font-size:13px;color:#6b7280;margin:0">Estamos disponíveis sempre que precisar de ajuda.</p></td></tr></table></div><table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto"><tr><td align="center" style="background:#16a34a;border-radius:10px;padding:14px 32px"><a href="#" style="color:#ffffff;font-weight:700;font-size:15px;text-decoration:none;font-family:Arial,sans-serif">Começar agora →</a></td></tr></table></div><div style="background:#f0fdf4;border-radius:0 0 12px 12px;padding:24px 40px;text-align:center;border-top:1px solid #bbf7d0"><p style="font-size:12px;color:#9ca3af;margin:0"><a href="{{unsubscribe_url}}" style="color:#6b7280;text-decoration:underline">Cancelar inscrição</a></p></div></div></div>`,
+  },
+  {
+    id: 'evento',
+    name: 'Evento',
+    desc: 'Convite para evento com data e local',
+    color: '#1d4ed8',
+    html: `<div style="background:#eff6ff;padding:32px 16px;font-family:Arial,Helvetica,sans-serif"><div style="max-width:600px;margin:0 auto"><div style="background:#1d4ed8;border-radius:12px 12px 0 0;padding:40px;text-align:center"><p style="color:#bfdbfe;font-size:12px;font-weight:700;letter-spacing:2px;text-transform:uppercase;margin:0 0 8px">Você está convidado</p><h1 style="color:#ffffff;font-size:26px;font-weight:900;margin:0 0 12px">Nome do Evento</h1><p style="color:#c4b5fd;font-size:14px;margin:0">Uma experiência que você não pode perder</p></div><div style="background:#ffffff;padding:40px"><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 28px">Olá, <strong>{{name}}</strong>! Temos um convite especial para você. Confira os detalhes do evento abaixo.</p><div style="background:#eff6ff;border-radius:12px;padding:24px;margin:0 0 28px;border:1px solid #bfdbfe"><table cellpadding="0" cellspacing="0" border="0" width="100%"><tr><td style="padding:0 0 16px"><p style="font-size:12px;color:#3b82f6;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">📅 Data</p><p style="font-size:15px;color:#1e40af;font-weight:700;margin:0">DD de Mês de 2026</p></td></tr><tr><td style="padding:0 0 16px"><p style="font-size:12px;color:#3b82f6;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">🕐 Horário</p><p style="font-size:15px;color:#1e40af;font-weight:700;margin:0">19h às 22h (horário de Brasília)</p></td></tr><tr><td><p style="font-size:12px;color:#3b82f6;font-weight:700;text-transform:uppercase;letter-spacing:1px;margin:0 0 4px">📍 Local</p><p style="font-size:15px;color:#1e40af;font-weight:700;margin:0">Online — link enviado após inscrição</p></td></tr></table></div><p style="font-size:14px;color:#374151;line-height:1.7;margin:0 0 28px">Descreva o que o participante vai aprender, quem são os palestrantes e por que vale a pena participar.</p><table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto"><tr><td align="center" style="background:#1d4ed8;border-radius:10px;padding:15px 36px"><a href="#" style="color:#ffffff;font-weight:700;font-size:15px;text-decoration:none;font-family:Arial,sans-serif">Garantir minha vaga →</a></td></tr></table></div><div style="background:#eff6ff;border-radius:0 0 12px 12px;padding:24px 40px;text-align:center;border-top:1px solid #bfdbfe"><p style="font-size:12px;color:#9ca3af;margin:0"><a href="{{unsubscribe_url}}" style="color:#6b7280;text-decoration:underline">Cancelar inscrição</a></p></div></div></div>`,
+  },
+  {
+    id: 'atualizacao',
+    name: 'Novidade/Produto',
+    desc: 'Anúncio de atualização ou lançamento',
+    color: '#111827',
+    html: `<div style="background:#fafafa;padding:32px 16px;font-family:Arial,Helvetica,sans-serif"><div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb"><div style="padding:28px 40px;border-bottom:1px solid #f3f4f6;text-align:center"><span style="font-size:20px;font-weight:900;color:#111">Sua <span style="color:#16a34a">Empresa</span></span></div><div style="background:#f0fdf4;padding:40px;text-align:center;border-bottom:1px solid #f3f4f6"><div style="background:#16a34a;border-radius:12px;display:inline-block;padding:14px 20px;margin:0 0 20px"><span style="font-size:28px">🚀</span></div><h1 style="font-size:22px;color:#111827;font-weight:900;margin:0 0 8px">Nova Atualização Disponível!</h1><p style="font-size:14px;color:#6b7280;margin:0">Confira o que mudou e como isso beneficia você</p></div><div style="padding:40px"><p style="font-size:15px;color:#374151;line-height:1.7;margin:0 0 24px">Olá, <strong>{{name}}</strong>! Temos novidades incríveis para compartilhar com você.</p><p style="font-size:14px;font-weight:700;color:#111827;margin:0 0 16px">O que há de novo:</p><div style="margin:0 0 14px;padding:16px;background:#f9fafb;border-radius:8px;border-left:3px solid #16a34a"><p style="font-size:14px;font-weight:700;color:#111827;margin:0 0 4px">✅ Nova funcionalidade 1</p><p style="font-size:13px;color:#6b7280;margin:0">Descrição do benefício para o usuário.</p></div><div style="margin:0 0 14px;padding:16px;background:#f9fafb;border-radius:8px;border-left:3px solid #3b82f6"><p style="font-size:14px;font-weight:700;color:#111827;margin:0 0 4px">✅ Nova funcionalidade 2</p><p style="font-size:13px;color:#6b7280;margin:0">Descrição do benefício para o usuário.</p></div><div style="margin:0 0 28px;padding:16px;background:#f9fafb;border-radius:8px;border-left:3px solid #8b5cf6"><p style="font-size:14px;font-weight:700;color:#111827;margin:0 0 4px">✅ Nova funcionalidade 3</p><p style="font-size:13px;color:#6b7280;margin:0">Descrição do benefício para o usuário.</p></div><table cellpadding="0" cellspacing="0" border="0" style="margin:0 auto"><tr><td align="center" style="background:#111827;border-radius:10px;padding:14px 32px"><a href="#" style="color:#ffffff;font-weight:700;font-size:15px;text-decoration:none;font-family:Arial,sans-serif">Ver todas as novidades →</a></td></tr></table></div><div style="padding:24px 40px;text-align:center;border-top:1px solid #f3f4f6"><p style="font-size:12px;color:#9ca3af;margin:0"><a href="{{unsubscribe_url}}" style="color:#6b7280;text-decoration:underline">Cancelar inscrição</a></p></div></div></div>`,
+  },
+  {
+    id: 'minimalista',
+    name: 'Minimalista',
+    desc: 'Texto limpo, estilo carta pessoal',
+    color: '#6b7280',
+    html: `<div style="background:#ffffff;padding:48px 24px;font-family:Arial,Helvetica,sans-serif;max-width:560px;margin:0 auto"><div style="border-bottom:2px solid #111827;padding-bottom:24px;margin-bottom:32px"><p style="font-size:12px;font-weight:700;letter-spacing:3px;text-transform:uppercase;color:#6b7280;margin:0">Sua Empresa</p></div><p style="font-size:16px;color:#374151;margin:0 0 24px;line-height:1.5">Olá, {{name}},</p><h1 style="font-size:26px;color:#111827;font-weight:700;margin:0 0 20px;line-height:1.3">Assunto principal do seu email aqui</h1><p style="font-size:16px;color:#374151;line-height:1.8;margin:0 0 20px">Parágrafo introdutório. Comece com o ponto mais importante. Seja direto e claro sobre o que você quer comunicar.</p><p style="font-size:16px;color:#374151;line-height:1.8;margin:0 0 32px">Continue com mais detalhes aqui. Este template é ideal para comunicações pessoais, textos longos ou quando você quer um visual mais sério e profissional.</p><table cellpadding="0" cellspacing="0" border="0" style="margin:0 0 32px"><tr><td style="border:2px solid #111827;border-radius:6px;padding:12px 28px"><a href="#" style="color:#111827;font-weight:700;font-size:14px;text-decoration:none;letter-spacing:0.5px">CLIQUE AQUI →</a></td></tr></table><p style="font-size:15px;color:#374151;line-height:1.8;margin:0 0 40px">Atenciosamente,<br><strong>Seu nome</strong><br><span style="color:#6b7280;font-size:14px">Cargo — Empresa</span></p><div style="border-top:1px solid #e5e7eb;padding-top:24px"><p style="font-size:12px;color:#9ca3af;margin:0"><a href="{{unsubscribe_url}}" style="color:#9ca3af;text-decoration:underline">Cancelar inscrição</a></p></div></div>`,
+  },
+];
+
+const DEFAULT_HTML = `<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px 24px">
   <h1 style="color:#111827;font-size:24px;margin-bottom:8px">Olá, {{name}}!</h1>
-  <p style="color:#374151;line-height:1.6">Escreva sua mensagem aqui.</p>
-  <p style="color:#374151;line-height:1.6">Use <strong>{{name}}</strong> e <strong>{{email}}</strong> para personalizar.</p>
+  <p style="color:#374151;line-height:1.7">Escreva sua mensagem aqui.</p>
+  <p style="color:#374151;line-height:1.7">Use <strong>{{name}}</strong> e <strong>{{email}}</strong> para personalizar.</p>
   <hr style="border:none;border-top:1px solid #e5e7eb;margin:24px 0">
   <p style="color:#9ca3af;font-size:12px">
     <a href="{{unsubscribe_url}}" style="color:#6b7280">Cancelar inscrição</a>
@@ -23,9 +71,98 @@ const DEFAULT_HTML = `<div style="font-family:sans-serif;max-width:600px;margin:
 
 type EditorMode = 'visual' | 'html' | 'preview';
 
+// ── Template Picker ────────────────────────────────────────────────────────────
+
+function TemplatePickerModal({ onSelect, onClose }: { onSelect: (html: string) => void; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between shrink-0">
+          <div>
+            <h2 className="font-bold text-gray-900">Escolher template</h2>
+            <p className="text-sm text-gray-500 mt-0.5">Selecione um ponto de partida — você pode editar tudo depois</p>
+          </div>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none w-8 h-8 flex items-center justify-center">×</button>
+        </div>
+        <div className="overflow-y-auto flex-1 p-6 grid grid-cols-2 sm:grid-cols-3 gap-4">
+          {TEMPLATES.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => { onSelect(t.html); onClose(); }}
+              className="group text-left border-2 border-gray-100 hover:border-indigo-400 rounded-xl overflow-hidden transition-all hover:shadow-lg focus:outline-none"
+            >
+              <div className="h-20 flex items-center justify-center text-white font-black text-2xl" style={{ background: t.color }}>
+                {t.name.charAt(0)}
+              </div>
+              <div className="p-3">
+                <p className="font-semibold text-gray-900 text-sm">{t.name}</p>
+                <p className="text-xs text-gray-400 mt-0.5 leading-relaxed">{t.desc}</p>
+              </div>
+            </button>
+          ))}
+          <button
+            onClick={() => { onSelect(DEFAULT_HTML); onClose(); }}
+            className="text-left border-2 border-dashed border-gray-200 hover:border-indigo-300 rounded-xl overflow-hidden transition-all focus:outline-none"
+          >
+            <div className="h-20 flex items-center justify-center text-gray-300 text-4xl">+</div>
+            <div className="p-3">
+              <p className="font-semibold text-gray-700 text-sm">Em branco</p>
+              <p className="text-xs text-gray-400 mt-0.5">Comece do zero</p>
+            </div>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Test Email Modal ───────────────────────────────────────────────────────────
+
+function TestEmailModal({ onClose, onSend, isSending }: { onClose: () => void; onSend: (email: string) => void; isSending: boolean }) {
+  const [email, setEmail] = useState('');
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm" onClick={(e) => e.stopPropagation()}>
+        <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
+          <h2 className="font-bold text-gray-900">Enviar email de teste</h2>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-2xl leading-none">×</button>
+        </div>
+        <div className="p-6 space-y-4">
+          <p className="text-sm text-gray-600 leading-relaxed">
+            O email será enviado com o assunto <strong>[TESTE]</strong> e as variáveis preenchidas com dados de exemplo.
+          </p>
+          <div>
+            <label className="label">Endereço de email para teste</label>
+            <input
+              className="input"
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="seu@email.com"
+              autoFocus
+              onKeyDown={(e) => { if (e.key === 'Enter' && email) onSend(email); }}
+            />
+          </div>
+          <button
+            onClick={() => onSend(email)}
+            disabled={!email || isSending}
+            className="btn btn-primary w-full gap-2 disabled:opacity-50"
+          >
+            <FlaskConical size={15} />
+            {isSending ? 'Enviando...' : 'Enviar teste'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── Visual Editor ──────────────────────────────────────────────────────────────
+
 function VisualEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const editorRef = useRef<HTMLDivElement>(null);
   const [mode, setMode] = useState<EditorMode>('visual');
+  const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
 
   useEffect(() => {
     if (mode === 'visual' && editorRef.current) {
@@ -64,25 +201,41 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
     cmd('insertHTML',
       `<table cellpadding="0" cellspacing="0" style="margin:16px 0">` +
       `<tr><td style="background:#16a34a;border-radius:8px;padding:13px 28px;text-align:center">` +
-      `<a href="${url}" target="_blank" style="color:#ffffff;font-weight:700;font-size:15px;` +
-      `text-decoration:none;font-family:sans-serif">${text}</a></td></tr></table>`
+      `<a href="${url}" target="_blank" style="color:#ffffff;font-weight:700;font-size:15px;text-decoration:none;font-family:Arial,sans-serif">${text}</a></td></tr></table>`
     );
+  }
+
+  function insertCallout() {
+    cmd('insertHTML',
+      `<div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 8px 8px 0;padding:16px 20px;margin:16px 0;font-family:Arial,sans-serif">` +
+      `<p style="font-size:14px;font-weight:700;color:#166534;margin:0 0 6px">💡 Dica importante</p>` +
+      `<p style="font-size:14px;color:#374151;margin:0;line-height:1.6">Escreva sua mensagem de destaque aqui.</p></div>`
+    );
+  }
+
+  function insertDivider() {
+    cmd('insertHTML', `<hr style="border:none;border-top:1px solid #e5e7eb;margin:28px 0" />`);
   }
 
   const Sep = () => <span className="w-px h-4 bg-gray-200 mx-0.5 self-center" />;
 
-  function ToolBtn({ onClick, title, children }: { onClick: () => void; title: string; children: React.ReactNode }) {
+  function ToolBtn({ onClick, title, children, active }: { onClick: () => void; title: string; children: React.ReactNode; active?: boolean }) {
     return (
       <button
         type="button"
         title={title}
         onMouseDown={(e) => { e.preventDefault(); onClick(); }}
-        className="p-1.5 rounded hover:bg-gray-100 text-gray-600 hover:text-gray-800 transition-colors"
+        className={`p-1.5 rounded transition-colors ${active ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-gray-100 text-gray-600 hover:text-gray-800'}`}
       >
         {children}
       </button>
     );
   }
+
+  const previewHtml = value
+    .replace(/\{\{name\}\}/gi, 'João Silva')
+    .replace(/\{\{email\}\}/gi, 'joao@exemplo.com')
+    .replace(/\{\{unsubscribe_url\}\}/gi, '#');
 
   return (
     <div className="border border-gray-200 rounded-xl overflow-hidden">
@@ -100,33 +253,68 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
             {m === 'visual' ? 'Visual' : m === 'html' ? 'HTML' : 'Pré-visualizar'}
           </button>
         ))}
-        <span className="ml-auto text-xs text-gray-400">
-          {mode === 'visual' && 'Editor visual — sem precisar de código'}
-          {mode === 'html' && 'Edição direta do HTML'}
-        </span>
+        {mode === 'preview' && (
+          <div className="ml-auto flex gap-1">
+            <button
+              type="button"
+              onClick={() => setPreviewDevice('desktop')}
+              className={`text-xs px-2 py-1 rounded font-medium transition-colors ${previewDevice === 'desktop' ? 'bg-gray-200 text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              🖥 Desktop
+            </button>
+            <button
+              type="button"
+              onClick={() => setPreviewDevice('mobile')}
+              className={`text-xs px-2 py-1 rounded font-medium transition-colors ${previewDevice === 'mobile' ? 'bg-gray-200 text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}
+            >
+              📱 Mobile
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Formatting toolbar — visual only */}
       {mode === 'visual' && (
         <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-100 bg-white">
-          <ToolBtn onClick={() => cmd('bold')} title="Negrito (Ctrl+B)"><Bold size={13} /></ToolBtn>
-          <ToolBtn onClick={() => cmd('italic')} title="Itálico (Ctrl+I)"><Italic size={13} /></ToolBtn>
-          <ToolBtn onClick={() => cmd('underline')} title="Sublinhado (Ctrl+U)"><Underline size={13} /></ToolBtn>
+          {/* Undo/Redo */}
+          <ToolBtn onClick={() => cmd('undo')} title="Desfazer (Ctrl+Z)"><RotateCcw size={13} /></ToolBtn>
+          <ToolBtn onClick={() => cmd('redo')} title="Refazer"><RotateCw size={13} /></ToolBtn>
           <Sep />
+          {/* Text formatting */}
+          <ToolBtn onClick={() => cmd('bold')} title="Negrito"><Bold size={13} /></ToolBtn>
+          <ToolBtn onClick={() => cmd('italic')} title="Itálico"><Italic size={13} /></ToolBtn>
+          <ToolBtn onClick={() => cmd('underline')} title="Sublinhado"><Underline size={13} /></ToolBtn>
+          <Sep />
+          {/* Blocks */}
           <ToolBtn onClick={() => cmd('formatBlock', 'h2')} title="Título"><Heading2 size={13} /></ToolBtn>
           <ToolBtn onClick={() => cmd('formatBlock', 'p')} title="Parágrafo"><Type size={13} /></ToolBtn>
-          <ToolBtn onClick={() => cmd('insertUnorderedList')} title="Lista com marcadores"><List size={13} /></ToolBtn>
+          <ToolBtn onClick={() => cmd('insertUnorderedList')} title="Lista"><List size={13} /></ToolBtn>
           <Sep />
-          <ToolBtn onClick={() => cmd('justifyLeft')} title="Alinhar à esquerda"><AlignLeft size={13} /></ToolBtn>
+          {/* Alignment */}
+          <ToolBtn onClick={() => cmd('justifyLeft')} title="Esquerda"><AlignLeft size={13} /></ToolBtn>
           <ToolBtn onClick={() => cmd('justifyCenter')} title="Centralizar"><AlignCenter size={13} /></ToolBtn>
-          <ToolBtn onClick={() => cmd('justifyRight')} title="Alinhar à direita"><AlignRight size={13} /></ToolBtn>
+          <ToolBtn onClick={() => cmd('justifyRight')} title="Direita"><AlignRight size={13} /></ToolBtn>
           <Sep />
+          {/* Text color */}
+          <label title="Cor do texto" className="relative p-1.5 rounded hover:bg-gray-100 cursor-pointer flex items-center">
+            <Palette size={13} className="text-gray-600" />
+            <input
+              type="color"
+              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+              onChange={(e) => { if (editorRef.current) { editorRef.current.focus(); document.execCommand('foreColor', false, e.target.value); onChange(editorRef.current.innerHTML); } }}
+            />
+          </label>
+          <Sep />
+          {/* Insert */}
           <ToolBtn onClick={insertLink} title="Inserir link"><Link2 size={13} /></ToolBtn>
           <ToolBtn onClick={insertImage} title="Inserir imagem por URL"><ImageIcon size={13} /></ToolBtn>
-          <ToolBtn onClick={insertButton} title="Inserir botão de chamada para ação">
-            <span className="text-[10px] font-bold px-1.5 py-0.5 bg-green-600 text-white rounded leading-none">BTN</span>
+          <ToolBtn onClick={insertButton} title="Inserir botão CTA">
+            <span className="text-[10px] font-bold px-1 py-0.5 bg-green-600 text-white rounded leading-none">BTN</span>
           </ToolBtn>
-          <ToolBtn onClick={() => cmd('insertHorizontalRule')} title="Linha divisória"><Minus size={13} /></ToolBtn>
+          <ToolBtn onClick={insertCallout} title="Inserir caixa de destaque">
+            <span className="text-[10px] font-bold px-1 py-0.5 bg-indigo-100 text-indigo-700 rounded leading-none">💡</span>
+          </ToolBtn>
+          <ToolBtn onClick={insertDivider} title="Linha divisória"><Minus size={13} /></ToolBtn>
         </div>
       )}
 
@@ -137,30 +325,32 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
           contentEditable
           suppressContentEditableWarning
           onInput={() => editorRef.current && onChange(editorRef.current.innerHTML)}
-          className="min-h-80 p-4 focus:outline-none text-sm leading-relaxed"
-          style={{ fontFamily: 'sans-serif' }}
+          className="min-h-96 p-4 focus:outline-none text-sm leading-relaxed overflow-y-auto"
+          style={{ fontFamily: 'Arial, sans-serif' }}
         />
       )}
       {mode === 'html' && (
         <textarea
-          className="w-full min-h-80 p-3 font-mono text-xs focus:outline-none resize-none"
+          className="w-full min-h-96 p-3 font-mono text-xs focus:outline-none resize-none"
           value={value}
           onChange={(e) => onChange(e.target.value)}
         />
       )}
       {mode === 'preview' && (
-        <iframe
-          srcDoc={value
-            .replace(/\{\{name\}\}/gi, 'João Silva')
-            .replace(/\{\{email\}\}/gi, 'joao@exemplo.com')
-            .replace(/\{\{unsubscribe_url\}\}/gi, '#')}
-          className="w-full min-h-80 bg-white"
-          sandbox="allow-same-origin"
-        />
+        <div className="bg-gray-100 p-4 flex justify-center min-h-96">
+          <iframe
+            srcDoc={previewHtml}
+            className={`bg-white rounded shadow transition-all ${previewDevice === 'mobile' ? 'w-80' : 'w-full max-w-2xl'}`}
+            style={{ minHeight: '380px', border: 'none' }}
+            sandbox="allow-same-origin"
+          />
+        </div>
       )}
     </div>
   );
 }
+
+// ── Main Form ──────────────────────────────────────────────────────────────────
 
 function NovaCampanhaForm() {
   const router = useRouter();
@@ -178,8 +368,9 @@ function NovaCampanhaForm() {
   const [showExtraEmails, setShowExtraEmails] = useState(false);
   const [step, setStep] = useState<'edit' | 'send'>('edit');
   const [savedId, setSavedId] = useState<string | null>(null);
+  const [showTemplates, setShowTemplates] = useState(!editId);
+  const [showTestModal, setShowTestModal] = useState(false);
 
-  // Load existing campaign when editing
   const { data: existingCampaign } = useQuery({
     queryKey: ['email-campaign-edit', editId],
     queryFn: () => api.get(`/email/campaigns/${editId}`).then((r) => r.data),
@@ -196,6 +387,7 @@ function NovaCampanhaForm() {
         delay_ms: existingCampaign.delay_ms ?? 1500,
       });
       setSavedId(existingCampaign.id);
+      setShowTemplates(false);
     }
   }, [existingCampaign]);
 
@@ -214,6 +406,18 @@ function NovaCampanhaForm() {
     staleTime: 60_000,
   });
   const pickerContacts: { id: string; name: string; email: string | null; phone: string }[] = pickerData?.data ?? [];
+
+  const { data: recipientCountData } = useQuery<{ count: number | null }>({
+    queryKey: ['email-recipient-count', recipientMode, sendOpts.tag_filter, selectedContactIds.join(',')],
+    queryFn: () => {
+      const p: Record<string, any> = { recipient_source: recipientMode };
+      if (recipientMode === 'tag' && sendOpts.tag_filter) p.tag_filter = sendOpts.tag_filter;
+      if (recipientMode === 'contacts' && selectedContactIds.length > 0) p.contact_ids = selectedContactIds.join(',');
+      return api.get('/email/recipient-count', { params: p }).then((r) => r.data);
+    },
+    enabled: step === 'send' && recipientMode !== 'manual',
+    staleTime: 30_000,
+  });
 
   const saveMutation = useMutation({
     mutationFn: (body: object) =>
@@ -236,6 +440,16 @@ function NovaCampanhaForm() {
       router.push('/email');
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao enviar'),
+  });
+
+  const testMutation = useMutation({
+    mutationFn: (test_email: string) =>
+      api.post(`/email/campaigns/${savedId}/test`, { test_email }).then((r) => r.data),
+    onSuccess: () => {
+      toast.success('Email de teste enviado! Verifique sua caixa de entrada.');
+      setShowTestModal(false);
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao enviar teste'),
   });
 
   function handleSave() {
@@ -275,36 +489,63 @@ function NovaCampanhaForm() {
     });
   }
 
+  const recipientCount = recipientCountData?.count;
+
   return (
     <div className="space-y-6 max-w-4xl">
+      {/* Modals */}
+      {showTemplates && (
+        <TemplatePickerModal
+          onSelect={(html) => setForm((f) => ({ ...f, html_body: html }))}
+          onClose={() => setShowTemplates(false)}
+        />
+      )}
+      {showTestModal && savedId && (
+        <TestEmailModal
+          onClose={() => setShowTestModal(false)}
+          onSend={(email) => testMutation.mutate(email)}
+          isSending={testMutation.isPending}
+        />
+      )}
+
+      {/* Header */}
       <div className="flex items-center gap-3">
         <button onClick={() => router.push('/email')} className="text-gray-400 hover:text-gray-600">
           <ChevronLeft size={20} />
         </button>
-        <div>
+        <div className="flex-1">
           <h1 className="text-2xl font-bold text-gray-900">
             {editId ? 'Editar campanha' : 'Nova campanha de email'}
           </h1>
-          <p className="text-sm text-gray-500 mt-0.5">
-            Configure e envie emails personalizados para seus contatos
-          </p>
+          <p className="text-sm text-gray-500 mt-0.5">Configure e envie emails personalizados para seus contatos</p>
         </div>
+        {step === 'send' && savedId && (
+          <button
+            onClick={() => setShowTestModal(true)}
+            className="btn btn-secondary gap-2 text-sm"
+          >
+            <FlaskConical size={14} /> Enviar teste
+          </button>
+        )}
       </div>
 
-      {/* Step indicator */}
+      {/* Progress */}
       <div className="flex gap-1">
         <div className="h-1 flex-1 rounded-full bg-indigo-500" />
         <div className={`h-1 flex-1 rounded-full transition-colors ${step === 'send' ? 'bg-indigo-500' : 'bg-gray-200'}`} />
       </div>
 
+      {/* ── Step 1: Edit ── */}
       {step === 'edit' && (
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Left: settings */}
           <div className="space-y-4">
             <div className="card p-5 space-y-4">
-              <h2 className="font-semibold text-gray-800 flex items-center gap-2">
-                <Mail size={16} /> Configurações
-              </h2>
+              <div className="flex items-center justify-between">
+                <h2 className="font-semibold text-gray-800 flex items-center gap-2">
+                  <Mail size={16} /> Configurações
+                </h2>
+              </div>
               <div>
                 <label className="label">Nome da campanha (interno)</label>
                 <input className="input" value={form.name}
@@ -346,9 +587,18 @@ function NovaCampanhaForm() {
             </div>
           </div>
 
-          {/* Right: Visual editor */}
+          {/* Right: editor */}
           <div className="card p-5 space-y-3">
-            <h2 className="font-semibold text-gray-800">Conteúdo do email</h2>
+            <div className="flex items-center justify-between">
+              <h2 className="font-semibold text-gray-800">Conteúdo do email</h2>
+              <button
+                type="button"
+                onClick={() => setShowTemplates(true)}
+                className="flex items-center gap-1.5 text-xs text-indigo-600 hover:text-indigo-800 font-semibold border border-indigo-200 hover:border-indigo-400 px-2.5 py-1.5 rounded-lg transition-colors"
+              >
+                <LayoutTemplate size={13} /> Usar template
+              </button>
+            </div>
             <VisualEditor
               value={form.html_body}
               onChange={(v) => setForm({ ...form, html_body: v })}
@@ -357,6 +607,7 @@ function NovaCampanhaForm() {
         </div>
       )}
 
+      {/* ── Step 2: Send ── */}
       {step === 'send' && (
         <div className="max-w-lg space-y-4">
           <div className="card p-5 space-y-4">
@@ -364,7 +615,6 @@ function NovaCampanhaForm() {
               <Users size={16} /> Destinatários
             </h2>
 
-            {/* Recipient mode selector */}
             <div className="space-y-2">
               <label className="label">Para quem enviar?</label>
               {(
@@ -397,6 +647,19 @@ function NovaCampanhaForm() {
               ))}
             </div>
 
+            {/* Recipient count badge */}
+            {recipientMode !== 'manual' && recipientCount != null && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-indigo-50 border border-indigo-200 rounded-lg text-sm text-indigo-800">
+                <Users2 size={14} className="text-indigo-500 shrink-0" />
+                <span><strong>{recipientCount.toLocaleString('pt-BR')}</strong> contato{recipientCount !== 1 ? 's' : ''} receberá este email</span>
+              </div>
+            )}
+            {recipientMode !== 'manual' && recipientCount === 0 && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 rounded-lg text-sm text-amber-700">
+                ⚠️ Nenhum contato encontrado com email válido para este filtro
+              </div>
+            )}
+
             {/* Tag selector */}
             {recipientMode === 'tag' && (
               <div>
@@ -406,9 +669,6 @@ function NovaCampanhaForm() {
                   <option value="">Selecione uma tag...</option>
                   {tags.map((t) => <option key={t} value={t}>{t}</option>)}
                 </select>
-                <p className="text-xs text-gray-400 mt-1">
-                  Apenas contatos com email cadastrado e sem opt-out serão incluídos.
-                </p>
               </div>
             )}
 
@@ -418,11 +678,7 @@ function NovaCampanhaForm() {
                 <div className="flex items-center gap-2">
                   <label className="label mb-0 flex-1">Selecionar contatos</label>
                   {selectedContactIds.length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setSelectedContactIds([])}
-                      className="text-xs text-red-500 hover:text-red-700"
-                    >
+                    <button type="button" onClick={() => setSelectedContactIds([])} className="text-xs text-red-500 hover:text-red-700">
                       Limpar ({selectedContactIds.length})
                     </button>
                   )}
@@ -431,7 +687,7 @@ function NovaCampanhaForm() {
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none" />
                   <input
                     className="input pl-8 text-sm"
-                    placeholder="Buscar por nome ou telefone..."
+                    placeholder="Buscar por nome..."
                     value={contactSearch}
                     onChange={(e) => setContactSearch(e.target.value)}
                   />
@@ -537,14 +793,14 @@ function NovaCampanhaForm() {
             <p className="font-semibold mb-1">Antes de enviar</p>
             <ul className="space-y-0.5">
               <li>· Inclua <code className="bg-amber-100 px-1 rounded text-xs">{`{{unsubscribe_url}}`}</code> no conteúdo (obrigatório por lei)</li>
-              <li>· O domínio clicaai.ia.br precisa estar verificado no Resend para boa entregabilidade</li>
+              <li>· Use o botão <strong>Enviar teste</strong> acima para ver como o email chega na caixa de entrada</li>
             </ul>
           </div>
         </div>
       )}
 
       {/* Action buttons */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 flex-wrap">
         {step === 'send' && (
           <button onClick={() => setStep('edit')} className="btn btn-secondary">
             ← Voltar ao editor

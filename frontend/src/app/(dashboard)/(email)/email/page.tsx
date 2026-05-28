@@ -2,8 +2,9 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Mail, Plus, Trash2, BarChart2, Send, Clock, CheckCircle2, XCircle, Eye, Pencil } from 'lucide-react';
+import { Mail, Plus, Trash2, BarChart2, Send, Clock, CheckCircle2, XCircle, Eye, Pencil, Copy, CalendarX } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { formatDate } from '@/lib/utils';
@@ -24,40 +25,51 @@ function StatsModal({ campaign, onClose }: { campaign: any; onClose: () => void 
   const { data, isLoading } = useQuery({
     queryKey: ['email-stats', campaign.id],
     queryFn: () => api.get(`/email/campaigns/${campaign.id}/stats`).then((r) => r.data),
+    refetchInterval: campaign.status === 'running' ? 5000 : false,
   });
 
   const msgs = data?.messages ?? [];
   const sent = msgs.filter((m: any) => ['sent', 'opened'].includes(m.status)).length;
   const opened = msgs.filter((m: any) => m.status === 'opened').length;
   const failed = msgs.filter((m: any) => m.status === 'failed').length;
+  const queued = msgs.filter((m: any) => m.status === 'queued').length;
   const openRate = sent > 0 ? Math.round((opened / sent) * 100) : 0;
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4" onClick={onClose}>
       <div className="bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col" onClick={(e) => e.stopPropagation()}>
         <div className="px-6 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h2 className="font-bold text-gray-900">{campaign.name}</h2>
+          <div>
+            <h2 className="font-bold text-gray-900">{campaign.name}</h2>
+            <p className="text-xs text-gray-400 mt-0.5">Assunto: {campaign.subject}</p>
+          </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>
         </div>
         {isLoading ? (
           <p className="text-center py-10 text-gray-400">Carregando...</p>
         ) : (
           <>
-            <div className="grid grid-cols-4 gap-4 p-6">
+            <div className="grid grid-cols-5 gap-3 p-5">
               {[
-                { label: 'Total', value: campaign.total_contacts, icon: Mail, color: 'text-gray-600' },
-                { label: 'Entregues', value: sent, icon: CheckCircle2, color: 'text-green-600' },
-                { label: 'Abertos', value: opened, icon: Eye, color: 'text-blue-600' },
-                { label: 'Taxa abertura', value: `${openRate}%`, icon: BarChart2, color: 'text-indigo-600' },
-              ].map(({ label, value, icon: Icon, color }) => (
-                <div key={label} className="text-center">
-                  <Icon size={20} className={`mx-auto mb-1 ${color}`} />
-                  <p className="text-2xl font-black text-gray-900">{value}</p>
+                { label: 'Total', value: campaign.total_contacts, icon: Mail, color: 'text-gray-600', bg: 'bg-gray-50' },
+                { label: 'Na fila', value: queued, icon: Clock, color: 'text-yellow-600', bg: 'bg-yellow-50' },
+                { label: 'Entregues', value: sent, icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-50' },
+                { label: 'Abertos', value: opened, icon: Eye, color: 'text-blue-600', bg: 'bg-blue-50' },
+                { label: 'Taxa abertura', value: `${openRate}%`, icon: BarChart2, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+              ].map(({ label, value, icon: Icon, color, bg }) => (
+                <div key={label} className={`${bg} rounded-xl p-3 text-center`}>
+                  <Icon size={18} className={`mx-auto mb-1 ${color}`} />
+                  <p className="text-xl font-black text-gray-900">{value}</p>
                   <p className="text-xs text-gray-400">{label}</p>
                 </div>
               ))}
             </div>
-            <div className="overflow-y-auto flex-1 px-6 pb-6">
+            {failed > 0 && (
+              <div className="mx-5 mb-3 px-3 py-2 bg-red-50 border border-red-100 rounded-lg text-xs text-red-600 flex items-center gap-2">
+                <XCircle size={13} /> {failed} falha{failed !== 1 ? 's' : ''} de entrega
+              </div>
+            )}
+            <div className="overflow-y-auto flex-1 px-5 pb-5">
               <table className="w-full text-sm">
                 <thead>
                   <tr className="text-xs text-gray-400 uppercase border-b border-gray-100">
@@ -70,7 +82,7 @@ function StatsModal({ campaign, onClose }: { campaign: any; onClose: () => void 
                 <tbody className="divide-y divide-gray-50">
                   {msgs.map((m: any, i: number) => (
                     <tr key={i}>
-                      <td className="py-2 text-gray-700">{m.to_name ? `${m.to_name} <${m.to_email}>` : m.to_email}</td>
+                      <td className="py-2 text-gray-700 text-xs">{m.to_name ? `${m.to_name} <${m.to_email}>` : m.to_email}</td>
                       <td className="py-2">
                         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_COLORS[m.status] ?? 'bg-gray-100 text-gray-500'}`}>
                           {STATUS_LABELS[m.status] ?? m.status}
@@ -92,17 +104,39 @@ function StatsModal({ campaign, onClose }: { campaign: any; onClose: () => void 
 
 export default function EmailPage() {
   const qc = useQueryClient();
+  const router = useRouter();
   const [statsFor, setStatsFor] = useState<any>(null);
 
-  const { data: campaigns = [], isLoading } = useQuery({
+  const { data: campaigns = [], isLoading } = useQuery<any[]>({
     queryKey: ['email-campaigns'],
     queryFn: () => api.get('/email/campaigns').then((r) => r.data),
+    refetchInterval: (query) => {
+      const data = query.state.data as any[] | undefined;
+      if (!data) return false;
+      return data.some((c) => ['running', 'scheduled'].includes(c.status)) ? 5000 : false;
+    },
   });
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => api.delete(`/email/campaigns/${id}`),
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['email-campaigns'] }); toast.success('Campanha excluída'); },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao excluir'),
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/email/campaigns/${id}/duplicate`).then((r) => r.data),
+    onSuccess: (data: any) => {
+      qc.invalidateQueries({ queryKey: ['email-campaigns'] });
+      toast.success('Campanha duplicada!');
+      router.push(`/email/nova?id=${data.id}`);
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao duplicar'),
+  });
+
+  const cancelMutation = useMutation({
+    mutationFn: (id: string) => api.post(`/email/campaigns/${id}/cancel`),
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['email-campaigns'] }); toast.success('Agendamento cancelado — campanha voltou para rascunho'); },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao cancelar'),
   });
 
   return (
@@ -134,23 +168,23 @@ export default function EmailPage() {
               <Mail size={18} className="text-indigo-500" />
             </div>
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <p className="font-semibold text-gray-800 truncate">{c.name}</p>
                 <span className={`text-xs px-2 py-0.5 rounded-full font-medium shrink-0 ${STATUS_COLORS[c.status]}`}>
                   {STATUS_LABELS[c.status]}
                 </span>
               </div>
               <p className="text-xs text-gray-400 truncate mt-0.5">Assunto: {c.subject}</p>
-              <div className="flex items-center gap-4 mt-1 text-xs text-gray-400">
+              <div className="flex items-center gap-4 mt-1 text-xs text-gray-400 flex-wrap">
                 {c.total_contacts > 0 && (
                   <>
-                    <span className="flex items-center gap-1"><Send size={11} /> {c.sent_count}/{c.total_contacts}</span>
+                    <span className="flex items-center gap-1"><Send size={11} /> {c.sent_count}/{c.total_contacts} enviados</span>
                     <span className="flex items-center gap-1"><Eye size={11} /> {c.open_count} abertos</span>
                     {c.failed_count > 0 && <span className="flex items-center gap-1 text-red-400"><XCircle size={11} /> {c.failed_count} falhas</span>}
                   </>
                 )}
                 {c.scheduled_for && c.status === 'scheduled' && (
-                  <span className="flex items-center gap-1"><Clock size={11} /> {formatDate(c.scheduled_for)}</span>
+                  <span className="flex items-center gap-1 text-yellow-600"><Clock size={11} /> Agendado: {formatDate(c.scheduled_for)}</span>
                 )}
               </div>
             </div>
@@ -165,8 +199,33 @@ export default function EmailPage() {
                   <Pencil size={16} />
                 </Link>
               )}
+              {c.status === 'scheduled' && (
+                <button
+                  onClick={() => { if (confirm('Cancelar agendamento e voltar para rascunho?')) cancelMutation.mutate(c.id); }}
+                  disabled={cancelMutation.isPending}
+                  className="p-2 text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 rounded-lg disabled:opacity-40"
+                  title="Cancelar agendamento"
+                >
+                  <CalendarX size={16} />
+                </button>
+              )}
+              {!['running'].includes(c.status) && (
+                <button
+                  onClick={() => duplicateMutation.mutate(c.id)}
+                  disabled={duplicateMutation.isPending}
+                  className="p-2 text-gray-400 hover:text-purple-600 hover:bg-purple-50 rounded-lg disabled:opacity-40"
+                  title="Duplicar campanha"
+                >
+                  <Copy size={16} />
+                </button>
+              )}
               {['draft', 'completed', 'failed'].includes(c.status) && (
-                <button onClick={() => deleteMutation.mutate(c.id)} className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg" title="Excluir">
+                <button
+                  onClick={() => { if (confirm(`Excluir "${c.name}"?`)) deleteMutation.mutate(c.id); }}
+                  disabled={deleteMutation.isPending}
+                  className="p-2 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg"
+                  title="Excluir"
+                >
                   <Trash2 size={16} />
                 </button>
               )}
