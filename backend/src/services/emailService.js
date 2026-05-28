@@ -1,6 +1,7 @@
 const RESEND_API_KEY = process.env.RESEND_API_KEY;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'Clica Aí <noreply@clicaai.ia.br>';
 const APP_URL = process.env.APP_URL || 'https://clicaai.ia.br';
+const API_URL = process.env.API_URL || 'https://claudezap-api.onrender.com';
 const ADMIN_EMAIL = process.env.ADMIN_NOTIFY_EMAIL || 'clicasenderzap@gmail.com';
 
 async function sendEmail({ to, subject, html }) {
@@ -98,7 +99,7 @@ async function sendAdminNewUserNotification(user) {
 }
 
 async function sendSenderVerificationEmail(user, senderEmail, token) {
-  const url = `${APP_URL}/api/auth/verify-sender-email?token=${token}`;
+  const url = `${API_URL}/api/auth/verify-sender-email?token=${token}`;
   await sendEmail({
     to: senderEmail,
     subject: 'Confirme seu email de remetente — Clica Aí',
