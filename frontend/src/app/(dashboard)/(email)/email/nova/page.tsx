@@ -5,9 +5,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import {
   Mail, Send, Clock, Users, ChevronLeft, Check, Search,
-  Bold, Italic, Underline, Heading2, Type, List,
-  AlignLeft, AlignCenter, AlignRight, Link2, Image as ImageIcon, Minus,
-  RotateCcw, RotateCw, Palette, LayoutTemplate, FlaskConical, Users2, AlertTriangle, Settings,
+  Bold, Italic, Underline, Strikethrough, List, ListOrdered,
+  AlignLeft, AlignCenter, AlignRight, AlignJustify, Link2, Image as ImageIcon, Minus,
+  RotateCcw, RotateCw, Palette, Highlighter, Eraser, LayoutTemplate, FlaskConical, Users2, AlertTriangle, Settings,
 } from 'lucide-react';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -160,8 +160,26 @@ function TestEmailModal({ onClose, onSend, isSending }: { onClose: () => void; o
 
 // ── Visual Editor ──────────────────────────────────────────────────────────────
 
+const FONT_SIZES = ['10','11','12','13','14','15','16','18','20','22','24','28','32','36','40','48'];
+const FONT_FAMILIES = [
+  { label: 'Arial', value: 'Arial, Helvetica, sans-serif' },
+  { label: 'Georgia', value: 'Georgia, serif' },
+  { label: 'Verdana', value: 'Verdana, sans-serif' },
+  { label: 'Trebuchet MS', value: "'Trebuchet MS', sans-serif" },
+  { label: 'Times New Roman', value: "'Times New Roman', serif" },
+  { label: 'Courier New', value: "'Courier New', monospace" },
+];
+const BLOCK_TYPES = [
+  { label: 'Parágrafo', value: 'p' },
+  { label: 'Título 1', value: 'h1' },
+  { label: 'Título 2', value: 'h2' },
+  { label: 'Título 3', value: 'h3' },
+  { label: 'Citação', value: 'blockquote' },
+];
+
 function VisualEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
   const editorRef = useRef<HTMLDivElement>(null);
+  const savedRangeRef = useRef<Range | null>(null);
   const [mode, setMode] = useState<EditorMode>('visual');
   const [previewDevice, setPreviewDevice] = useState<'desktop' | 'mobile'>('desktop');
 
@@ -171,27 +189,68 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
     }
   }, [mode]);
 
-  function switchMode(next: EditorMode) {
-    if (mode === 'visual' && editorRef.current) onChange(editorRef.current.innerHTML);
-    setMode(next);
+  function saveRange() {
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount) return;
+    try {
+      const range = sel.getRangeAt(0);
+      if (editorRef.current?.contains(range.commonAncestorContainer)) {
+        savedRangeRef.current = range.cloneRange();
+      }
+    } catch {}
   }
 
-  function cmd(command: string, val?: string) {
+  function restoreRange() {
+    if (!savedRangeRef.current || !editorRef.current) return;
+    editorRef.current.focus();
+    const sel = window.getSelection();
+    if (!sel) return;
+    sel.removeAllRanges();
+    sel.addRange(savedRangeRef.current);
+  }
+
+  function exec(command: string, val?: string) {
     if (!editorRef.current) return;
     editorRef.current.focus();
     document.execCommand(command, false, val);
     onChange(editorRef.current.innerHTML);
   }
 
+  function applySpanStyle(styleProp: string, styleVal: string) {
+    if (!editorRef.current) return;
+    restoreRange();
+    const sel = window.getSelection();
+    if (!sel || !sel.rangeCount || sel.isCollapsed) return;
+    try {
+      const range = sel.getRangeAt(0);
+      const frag = range.extractContents();
+      const span = document.createElement('span');
+      (span.style as any)[styleProp] = styleVal;
+      span.appendChild(frag);
+      range.insertNode(span);
+      const r = document.createRange();
+      r.selectNodeContents(span);
+      sel.removeAllRanges();
+      sel.addRange(r);
+    } catch {}
+    onChange(editorRef.current.innerHTML);
+  }
+
+  function switchMode(next: EditorMode) {
+    if (mode === 'visual' && editorRef.current) onChange(editorRef.current.innerHTML);
+    setMode(next);
+  }
+
   function insertLink() {
+    restoreRange();
     const url = window.prompt('URL do link (ex: https://seusite.com):');
-    if (url) cmd('createLink', url);
+    if (url) exec('createLink', url);
   }
 
   function insertImage() {
     const url = window.prompt('URL da imagem:');
     if (!url) return;
-    cmd('insertHTML', `<img src="${url}" alt="" style="max-width:100%;height:auto;display:block;margin:12px 0" />`);
+    exec('insertHTML', `<img src="${url}" alt="" style="max-width:100%;height:auto;display:block;margin:12px 0" />`);
   }
 
   function insertButton() {
@@ -199,7 +258,7 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
     if (!text) return;
     const url = window.prompt('URL do botão:');
     if (!url) return;
-    cmd('insertHTML',
+    exec('insertHTML',
       `<table cellpadding="0" cellspacing="0" style="margin:16px 0">` +
       `<tr><td style="background:#16a34a;border-radius:8px;padding:13px 28px;text-align:center">` +
       `<a href="${url}" target="_blank" style="color:#ffffff;font-weight:700;font-size:15px;text-decoration:none;font-family:Arial,sans-serif">${text}</a></td></tr></table>`
@@ -207,7 +266,7 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
   }
 
   function insertCallout() {
-    cmd('insertHTML',
+    exec('insertHTML',
       `<div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 8px 8px 0;padding:16px 20px;margin:16px 0;font-family:Arial,sans-serif">` +
       `<p style="font-size:14px;font-weight:700;color:#166534;margin:0 0 6px">💡 Dica importante</p>` +
       `<p style="font-size:14px;color:#374151;margin:0;line-height:1.6">Escreva sua mensagem de destaque aqui.</p></div>`
@@ -215,23 +274,25 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
   }
 
   function insertDivider() {
-    cmd('insertHTML', `<hr style="border:none;border-top:1px solid #e5e7eb;margin:28px 0" />`);
+    exec('insertHTML', `<hr style="border:none;border-top:1px solid #e5e7eb;margin:28px 0" />`);
   }
 
-  const Sep = () => <span className="w-px h-4 bg-gray-200 mx-0.5 self-center" />;
+  const Sep = () => <span className="w-px h-5 bg-gray-200 mx-1 self-center shrink-0" />;
 
-  function ToolBtn({ onClick, title, children, active }: { onClick: () => void; title: string; children: React.ReactNode; active?: boolean }) {
+  function Btn({ onClick, title, children }: { onClick: () => void; title: string; children: React.ReactNode }) {
     return (
       <button
         type="button"
         title={title}
         onMouseDown={(e) => { e.preventDefault(); onClick(); }}
-        className={`p-1.5 rounded transition-colors ${active ? 'bg-indigo-100 text-indigo-700' : 'hover:bg-gray-100 text-gray-600 hover:text-gray-800'}`}
+        className="p-1.5 rounded transition-colors hover:bg-gray-200 text-gray-600 hover:text-gray-900 shrink-0"
       >
         {children}
       </button>
     );
   }
+
+  const selectCls = "h-7 text-xs border border-gray-200 rounded-md bg-white text-gray-700 px-1.5 focus:outline-none focus:ring-1 focus:ring-indigo-400 cursor-pointer hover:border-gray-300 transition-colors";
 
   const previewHtml = value
     .replace(/\{\{name\}\}/gi, 'João Silva')
@@ -239,7 +300,7 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
     .replace(/\{\{unsubscribe_url\}\}/gi, '#');
 
   return (
-    <div className="border border-gray-200 rounded-xl overflow-hidden">
+    <div className="border border-gray-200 rounded-xl overflow-hidden shadow-sm">
       {/* Mode tabs */}
       <div className="flex items-center gap-1 px-3 py-2 bg-gray-50 border-b border-gray-200">
         {(['visual', 'html', 'preview'] as EditorMode[]).map((m) => (
@@ -247,8 +308,8 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
             key={m}
             type="button"
             onClick={() => switchMode(m)}
-            className={`text-xs px-3 py-1 rounded-md font-medium transition-colors ${
-              mode === m ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+            className={`text-xs px-3 py-1.5 rounded-md font-medium transition-colors ${
+              mode === m ? 'bg-indigo-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
             }`}
           >
             {m === 'visual' ? 'Visual' : m === 'html' ? 'HTML' : 'Pré-visualizar'}
@@ -256,93 +317,127 @@ function VisualEditor({ value, onChange }: { value: string; onChange: (v: string
         ))}
         {mode === 'preview' && (
           <div className="ml-auto flex gap-1">
-            <button
-              type="button"
-              onClick={() => setPreviewDevice('desktop')}
+            <button type="button" onClick={() => setPreviewDevice('desktop')}
               className={`text-xs px-2 py-1 rounded font-medium transition-colors ${previewDevice === 'desktop' ? 'bg-gray-200 text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}
-            >
-              🖥 Desktop
-            </button>
-            <button
-              type="button"
-              onClick={() => setPreviewDevice('mobile')}
+            >🖥 Desktop</button>
+            <button type="button" onClick={() => setPreviewDevice('mobile')}
               className={`text-xs px-2 py-1 rounded font-medium transition-colors ${previewDevice === 'mobile' ? 'bg-gray-200 text-gray-800' : 'text-gray-400 hover:text-gray-600'}`}
-            >
-              📱 Mobile
-            </button>
+            >📱 Mobile</button>
           </div>
         )}
       </div>
 
-      {/* Formatting toolbar — visual only */}
+      {/* Toolbar — visual only */}
       {mode === 'visual' && (
-        <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5 border-b border-gray-100 bg-white">
-          {/* Undo/Redo */}
-          <ToolBtn onClick={() => cmd('undo')} title="Desfazer (Ctrl+Z)"><RotateCcw size={13} /></ToolBtn>
-          <ToolBtn onClick={() => cmd('redo')} title="Refazer"><RotateCw size={13} /></ToolBtn>
-          <Sep />
-          {/* Text formatting */}
-          <ToolBtn onClick={() => cmd('bold')} title="Negrito"><Bold size={13} /></ToolBtn>
-          <ToolBtn onClick={() => cmd('italic')} title="Itálico"><Italic size={13} /></ToolBtn>
-          <ToolBtn onClick={() => cmd('underline')} title="Sublinhado"><Underline size={13} /></ToolBtn>
-          <Sep />
-          {/* Blocks */}
-          <ToolBtn onClick={() => cmd('formatBlock', 'h2')} title="Título"><Heading2 size={13} /></ToolBtn>
-          <ToolBtn onClick={() => cmd('formatBlock', 'p')} title="Parágrafo"><Type size={13} /></ToolBtn>
-          <ToolBtn onClick={() => cmd('insertUnorderedList')} title="Lista"><List size={13} /></ToolBtn>
-          <Sep />
-          {/* Alignment */}
-          <ToolBtn onClick={() => cmd('justifyLeft')} title="Esquerda"><AlignLeft size={13} /></ToolBtn>
-          <ToolBtn onClick={() => cmd('justifyCenter')} title="Centralizar"><AlignCenter size={13} /></ToolBtn>
-          <ToolBtn onClick={() => cmd('justifyRight')} title="Direita"><AlignRight size={13} /></ToolBtn>
-          <Sep />
-          {/* Text color */}
-          <label title="Cor do texto" className="relative p-1.5 rounded hover:bg-gray-100 cursor-pointer flex items-center">
-            <Palette size={13} className="text-gray-600" />
-            <input
-              type="color"
-              className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
-              onChange={(e) => { if (editorRef.current) { editorRef.current.focus(); document.execCommand('foreColor', false, e.target.value); onChange(editorRef.current.innerHTML); } }}
-            />
-          </label>
-          <Sep />
-          {/* Insert */}
-          <ToolBtn onClick={insertLink} title="Inserir link"><Link2 size={13} /></ToolBtn>
-          <ToolBtn onClick={insertImage} title="Inserir imagem por URL"><ImageIcon size={13} /></ToolBtn>
-          <ToolBtn onClick={insertButton} title="Inserir botão CTA">
-            <span className="text-[10px] font-bold px-1 py-0.5 bg-green-600 text-white rounded leading-none">BTN</span>
-          </ToolBtn>
-          <ToolBtn onClick={insertCallout} title="Inserir caixa de destaque">
-            <span className="text-[10px] font-bold px-1 py-0.5 bg-indigo-100 text-indigo-700 rounded leading-none">💡</span>
-          </ToolBtn>
-          <ToolBtn onClick={insertDivider} title="Linha divisória"><Minus size={13} /></ToolBtn>
+        <div className="border-b border-gray-200 bg-gray-50 divide-y divide-gray-100">
+
+          {/* ── Fileira 1: Histórico · Bloco · Fonte · Tamanho · Formatação · Cores ── */}
+          <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5">
+            <Btn onClick={() => exec('undo')} title="Desfazer (Ctrl+Z)"><RotateCcw size={14} /></Btn>
+            <Btn onClick={() => exec('redo')} title="Refazer (Ctrl+Y)"><RotateCw size={14} /></Btn>
+            <Sep />
+
+            {/* Bloco */}
+            <select className={selectCls} defaultValue="p" title="Formato do bloco"
+              onMouseDown={saveRange}
+              onChange={(e) => { restoreRange(); exec('formatBlock', e.target.value); }}>
+              {BLOCK_TYPES.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}
+            </select>
+            <Sep />
+
+            {/* Fonte */}
+            <select className={`${selectCls} max-w-[108px]`} defaultValue="Arial, Helvetica, sans-serif" title="Fonte"
+              onMouseDown={saveRange}
+              onChange={(e) => applySpanStyle('fontFamily', e.target.value)}>
+              {FONT_FAMILIES.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
+            </select>
+
+            {/* Tamanho */}
+            <select className={`${selectCls} w-[68px]`} defaultValue="" title="Tamanho da fonte (selecione o texto primeiro)"
+              onMouseDown={saveRange}
+              onChange={(e) => {
+                if (e.target.value) { applySpanStyle('fontSize', e.target.value + 'px'); (e.target as HTMLSelectElement).value = ''; }
+              }}>
+              <option value="" disabled>Tam.</option>
+              {FONT_SIZES.map((s) => <option key={s} value={s}>{s}px</option>)}
+            </select>
+            <Sep />
+
+            {/* Formatação de texto */}
+            <Btn onClick={() => exec('bold')} title="Negrito (Ctrl+B)"><Bold size={14} /></Btn>
+            <Btn onClick={() => exec('italic')} title="Itálico (Ctrl+I)"><Italic size={14} /></Btn>
+            <Btn onClick={() => exec('underline')} title="Sublinhado (Ctrl+U)"><Underline size={14} /></Btn>
+            <Btn onClick={() => exec('strikeThrough')} title="Tachado"><Strikethrough size={14} /></Btn>
+            <Sep />
+
+            {/* Cor do texto */}
+            <label title="Cor do texto (selecione o texto primeiro)" className="relative p-1.5 rounded hover:bg-gray-200 cursor-pointer flex items-center text-gray-600 shrink-0">
+              <Palette size={14} />
+              <input type="color" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                onMouseDown={saveRange}
+                onChange={(e) => { restoreRange(); exec('foreColor', e.target.value); }} />
+            </label>
+
+            {/* Cor de fundo */}
+            <label title="Cor de fundo do texto (selecione o texto primeiro)" className="relative p-1.5 rounded hover:bg-gray-200 cursor-pointer flex items-center text-gray-600 shrink-0">
+              <Highlighter size={14} />
+              <input type="color" defaultValue="#fef08a" className="absolute inset-0 opacity-0 cursor-pointer w-full h-full"
+                onMouseDown={saveRange}
+                onChange={(e) => { restoreRange(); exec('hiliteColor', e.target.value); }} />
+            </label>
+          </div>
+
+          {/* ── Fileira 2: Alinhamento · Listas · Inserir · Limpar ── */}
+          <div className="flex flex-wrap items-center gap-0.5 px-2 py-1.5">
+            <Btn onClick={() => exec('justifyLeft')} title="Alinhar à esquerda"><AlignLeft size={14} /></Btn>
+            <Btn onClick={() => exec('justifyCenter')} title="Centralizar"><AlignCenter size={14} /></Btn>
+            <Btn onClick={() => exec('justifyRight')} title="Alinhar à direita"><AlignRight size={14} /></Btn>
+            <Btn onClick={() => exec('justifyFull')} title="Justificar"><AlignJustify size={14} /></Btn>
+            <Sep />
+            <Btn onClick={() => exec('insertUnorderedList')} title="Lista com marcadores"><List size={14} /></Btn>
+            <Btn onClick={() => exec('insertOrderedList')} title="Lista numerada"><ListOrdered size={14} /></Btn>
+            <Sep />
+            <Btn onClick={insertLink} title="Inserir link"><Link2 size={14} /></Btn>
+            <Btn onClick={insertImage} title="Inserir imagem por URL"><ImageIcon size={14} /></Btn>
+            <Btn onClick={insertButton} title="Inserir botão CTA">
+              <span className="text-[9px] font-black px-1.5 py-0.5 bg-green-600 text-white rounded leading-none">BTN</span>
+            </Btn>
+            <Btn onClick={insertCallout} title="Inserir caixa de destaque">
+              <span className="text-[9px] font-black px-1.5 py-0.5 bg-amber-100 text-amber-700 rounded leading-none">💡</span>
+            </Btn>
+            <Btn onClick={insertDivider} title="Linha divisória"><Minus size={14} /></Btn>
+            <Sep />
+            <Btn onClick={() => exec('removeFormat')} title="Remover toda formatação do texto selecionado"><Eraser size={14} /></Btn>
+          </div>
         </div>
       )}
 
-      {/* Editor content */}
+      {/* Área de edição */}
       {mode === 'visual' && (
         <div
           ref={editorRef}
           contentEditable
           suppressContentEditableWarning
           onInput={() => editorRef.current && onChange(editorRef.current.innerHTML)}
-          className="min-h-96 p-4 focus:outline-none text-sm leading-relaxed overflow-y-auto"
-          style={{ fontFamily: 'Arial, sans-serif' }}
+          onMouseUp={saveRange}
+          onKeyUp={saveRange}
+          className="min-h-[520px] p-6 focus:outline-none leading-relaxed overflow-y-auto bg-white"
+          style={{ fontFamily: 'Arial, Helvetica, sans-serif', fontSize: '14px', color: '#374151', lineHeight: '1.75' }}
         />
       )}
       {mode === 'html' && (
         <textarea
-          className="w-full min-h-96 p-3 font-mono text-xs focus:outline-none resize-none"
+          className="w-full min-h-[520px] p-4 font-mono text-xs focus:outline-none resize-none bg-gray-50 text-gray-700"
           value={value}
           onChange={(e) => onChange(e.target.value)}
         />
       )}
       {mode === 'preview' && (
-        <div className="bg-gray-100 p-4 flex justify-center min-h-96">
+        <div className="bg-gray-100 p-6 flex justify-center min-h-[520px]">
           <iframe
             srcDoc={previewHtml}
-            className={`bg-white rounded shadow transition-all ${previewDevice === 'mobile' ? 'w-80' : 'w-full max-w-2xl'}`}
-            style={{ minHeight: '380px', border: 'none' }}
+            className={`bg-white rounded-lg shadow-md transition-all ${previewDevice === 'mobile' ? 'w-80' : 'w-full max-w-2xl'}`}
+            style={{ minHeight: '480px', border: 'none' }}
             sandbox="allow-same-origin"
           />
         </div>
