@@ -371,6 +371,7 @@ function NovaCampanhaForm() {
   const [savedId, setSavedId] = useState<string | null>(null);
   const [showTemplates, setShowTemplates] = useState(!editId);
   const [showTestModal, setShowTestModal] = useState(false);
+  const [editorKey, setEditorKey] = useState(0);
 
   const { data: existingCampaign } = useQuery({
     queryKey: ['email-campaign-edit', editId],
@@ -503,7 +504,7 @@ function NovaCampanhaForm() {
       {/* Modals */}
       {showTemplates && (
         <TemplatePickerModal
-          onSelect={(html) => setForm((f) => ({ ...f, html_body: html }))}
+          onSelect={(html) => { setForm((f) => ({ ...f, html_body: html })); setEditorKey((k) => k + 1); }}
           onClose={() => setShowTemplates(false)}
         />
       )}
@@ -607,6 +608,7 @@ function NovaCampanhaForm() {
               </button>
             </div>
             <VisualEditor
+              key={editorKey}
               value={form.html_body}
               onChange={(v) => setForm({ ...form, html_body: v })}
             />
