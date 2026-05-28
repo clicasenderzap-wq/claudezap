@@ -7,8 +7,9 @@ import {
   Mail, Send, Clock, Users, ChevronLeft, Check, Search,
   Bold, Italic, Underline, Heading2, Type, List,
   AlignLeft, AlignCenter, AlignRight, Link2, Image as ImageIcon, Minus,
-  RotateCcw, RotateCw, Palette, LayoutTemplate, FlaskConical, Users2,
+  RotateCcw, RotateCw, Palette, LayoutTemplate, FlaskConical, Users2, AlertTriangle, Settings,
 } from 'lucide-react';
+import Link from 'next/link';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 
@@ -419,6 +420,12 @@ function NovaCampanhaForm() {
     staleTime: 30_000,
   });
 
+  const { data: senderData } = useQuery<{ sender_email: string | null; sender_email_verified: boolean }>({
+    queryKey: ['sender-email'],
+    queryFn: () => api.get('/auth/sender-email').then((r) => r.data),
+  });
+  const senderOk = senderData?.sender_email_verified === true;
+
   const saveMutation = useMutation({
     mutationFn: (body: object) =>
       savedId
@@ -610,6 +617,27 @@ function NovaCampanhaForm() {
       {/* ── Step 2: Send ── */}
       {step === 'send' && (
         <div className="max-w-lg space-y-4">
+          {/* Bloqueio: email de remetente não verificado */}
+          {!senderOk && (
+            <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+              <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm text-amber-800">Email de remetente não verificado</p>
+                <p className="text-xs text-amber-600 mt-0.5">
+                  {senderData?.sender_email
+                    ? `Confirme o email ${senderData.sender_email} clicando no link enviado para sua caixa de entrada.`
+                    : 'Configure um email de remetente antes de enviar campanhas.'}
+                </p>
+              </div>
+              <Link
+                href="/email/configuracoes"
+                className="shrink-0 flex items-center gap-1.5 text-xs font-semibold text-amber-700 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors"
+              >
+                <Settings size={12} /> Configurar
+              </Link>
+            </div>
+          )}
+
           <div className="card p-5 space-y-4">
             <h2 className="font-semibold text-gray-800 flex items-center gap-2">
               <Users size={16} /> Destinatários
@@ -813,7 +841,7 @@ function NovaCampanhaForm() {
           </button>
         )}
         {step === 'send' && (
-          <button onClick={handleSend} disabled={sendMutation.isPending} className="btn btn-primary gap-2">
+          <button onClick={handleSend} disabled={sendMutation.isPending || !senderOk} className="btn btn-primary gap-2 disabled:opacity-40">
             <Send size={15} />
             {sendMutation.isPending
               ? 'Enfileirando...'

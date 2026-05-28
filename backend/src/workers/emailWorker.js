@@ -57,6 +57,7 @@ const worker = new Worker(
         to: msg.to_email,
         subject: campaign.subject,
         html,
+        replyTo: campaign.reply_to || null,
       });
 
       await msg.update({ status: 'sent', sent_at: new Date(), resend_message_id: resendId });

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Mail, Plus, Trash2, BarChart2, Send, Clock, CheckCircle2, XCircle, Eye, Pencil, Copy, CalendarX, RotateCcw } from 'lucide-react';
+import { Mail, Plus, Trash2, BarChart2, Send, Clock, CheckCircle2, XCircle, Eye, Pencil, Copy, CalendarX, RotateCcw, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -107,6 +107,13 @@ export default function EmailPage() {
   const router = useRouter();
   const [statsFor, setStatsFor] = useState<any>(null);
 
+  const { data: senderData } = useQuery<{ sender_email: string | null; sender_email_verified: boolean }>({
+    queryKey: ['sender-email'],
+    queryFn: () => api.get('/auth/sender-email').then((r) => r.data),
+  });
+
+  const senderOk = senderData?.sender_email_verified === true;
+
   const { data: campaigns = [], isLoading } = useQuery<any[]>({
     queryKey: ['email-campaigns'],
     queryFn: () => api.get('/email/campaigns').then((r) => r.data),
@@ -159,6 +166,27 @@ export default function EmailPage() {
           <Plus size={16} /> Nova campanha
         </Link>
       </div>
+
+      {/* Banner: email de remetente não verificado */}
+      {senderData !== undefined && !senderOk && (
+        <div className="flex items-start gap-3 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+          <AlertTriangle size={18} className="text-amber-500 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-sm text-amber-800">Email de remetente não configurado</p>
+            <p className="text-xs text-amber-600 mt-0.5">
+              {senderData.sender_email
+                ? `O email ${senderData.sender_email} ainda não foi verificado. Verifique sua caixa de entrada ou reenvie o link.`
+                : 'Configure e verifique um email de remetente antes de enviar campanhas.'}
+            </p>
+          </div>
+          <Link
+            href="/email/configuracoes"
+            className="shrink-0 text-xs font-semibold text-amber-700 hover:text-amber-900 bg-amber-100 hover:bg-amber-200 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            Configurar
+          </Link>
+        </div>
+      )}
 
       {isLoading && <p className="text-center py-10 text-gray-400">Carregando...</p>}
       {!isLoading && campaigns.length === 0 && (

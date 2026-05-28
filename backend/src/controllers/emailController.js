@@ -1,5 +1,5 @@
 const { Op } = require('sequelize');
-const { EmailCampaign, EmailMessage, Contact } = require('../models');
+const { EmailCampaign, EmailMessage, Contact, User } = require('../models');
 const { enqueueEmail } = require('../services/emailQueueService');
 
 // ── Campaigns ─────────────────────────────────────────────────────────────────
@@ -58,6 +58,15 @@ async function deleteCampaign(req, res, next) {
 
 async function sendCampaign(req, res, next) {
   try {
+    // Verificar se o usuário tem email de remetente verificado
+    const sender = await User.findByPk(req.user.id, { attributes: ['sender_email', 'sender_email_verified'] });
+    if (!sender || !sender.sender_email_verified) {
+      return res.status(403).json({
+        error: 'É necessário verificar um email de remetente antes de enviar campanhas.',
+        code: 'SENDER_EMAIL_REQUIRED',
+      });
+    }
+
     const campaign = await EmailCampaign.findOne({ where: { id: req.params.id, user_id: req.user.id } });
     if (!campaign) return res.status(404).json({ error: 'Campanha não encontrada' });
     if (!['draft', 'scheduled'].includes(campaign.status)) {
@@ -104,6 +113,7 @@ async function sendCampaign(req, res, next) {
       failed_count: 0,
       open_count: 0,
       tag_filter: tag_filter || null,
+      reply_to: sender.sender_email,
     });
 
     // Create EmailMessage records and enqueue

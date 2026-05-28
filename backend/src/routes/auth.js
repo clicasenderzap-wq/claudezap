@@ -44,4 +44,10 @@ router.post('/resend-verification', rateLimit({
 
 router.get('/me', auth, ctrl.me);
 
+router.get('/sender-email', auth, ctrl.getSenderEmail);
+router.post('/sender-email', auth, [
+  body('email').isEmail().normalizeEmail().withMessage('Email inválido'),
+], ctrl.setSenderEmail);
+router.get('/verify-sender-email', ctrl.verifySenderEmail);
+
 module.exports = router;

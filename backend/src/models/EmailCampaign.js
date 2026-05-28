@@ -19,6 +19,7 @@ const EmailCampaign = sequelize.define('EmailCampaign', {
   open_count:     { type: DataTypes.INTEGER, defaultValue: 0 },
   delay_ms:       { type: DataTypes.INTEGER, defaultValue: 1000 },
   tag_filter:     { type: DataTypes.STRING, allowNull: true },
+  reply_to:       { type: DataTypes.STRING, allowNull: true },
 }, { tableName: 'email_campaigns', underscored: true });
 
 module.exports = EmailCampaign;

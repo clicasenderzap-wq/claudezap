@@ -97,21 +97,39 @@ async function sendAdminNewUserNotification(user) {
   });
 }
 
+async function sendSenderVerificationEmail(user, senderEmail, token) {
+  const url = `${APP_URL}/api/auth/verify-sender-email?token=${token}`;
+  await sendEmail({
+    to: senderEmail,
+    subject: 'Confirme seu email de remetente — Clica Aí',
+    html: baseLayout(`
+      <h2 style="color:#111;font-size:20px;margin:0 0 8px">Olá, ${user.name.split(' ')[0]}!</h2>
+      <p style="color:#374151;margin:0 0 8px">Você solicitou usar <strong>${senderEmail}</strong> como email de remetente nas suas campanhas de email marketing.</p>
+      <p style="color:#374151;margin:0 0 24px">Clique no botão abaixo para confirmar este endereço.</p>
+      <a href="${url}" style="display:block;text-align:center;background:#4f46e5;color:#fff;font-weight:700;padding:14px 24px;border-radius:8px;text-decoration:none;font-size:16px">Confirmar email de remetente</a>
+      <p style="color:#6b7280;font-size:13px;margin:16px 0 0;text-align:center">Se não foi você, ignore este email.</p>
+    `),
+  });
+}
+
 // ── Campaign emails (throws on error, returns Resend ID) ─────────────────────
 
-async function sendCampaignEmail({ fromName, to, subject, html }) {
+async function sendCampaignEmail({ fromName, to, subject, html, replyTo }) {
   if (!RESEND_API_KEY) throw new Error('RESEND_API_KEY não configurado no servidor');
   const fromAddr = FROM_EMAIL.match(/<(.+)>/)?.[1] || 'noreply@clicaai.ia.br';
   const from = fromName ? `${fromName} <${fromAddr}>` : FROM_EMAIL;
 
+  const payload = { from, to, subject, html };
+  if (replyTo) payload.reply_to = replyTo;
+
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${RESEND_API_KEY}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from, to, subject, html }),
+    body: JSON.stringify(payload),
   });
   const body = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(body.message || `Resend HTTP ${res.status}`);
   return body.id;
 }
 
-module.exports = { sendVerificationEmail, sendApprovalEmail, sendRejectionEmail, sendAdminNewUserNotification, sendCampaignEmail };
+module.exports = { sendVerificationEmail, sendApprovalEmail, sendRejectionEmail, sendAdminNewUserNotification, sendSenderVerificationEmail, sendCampaignEmail };

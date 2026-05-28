@@ -28,6 +28,8 @@ function safeUser(user) {
     role: user.role,
     trial_ends_at: user.trial_ends_at,
     email_verified: user.email_verified,
+    sender_email: user.sender_email || null,
+    sender_email_verified: user.sender_email_verified || false,
   };
 }
 
@@ -227,4 +229,64 @@ async function me(req, res) {
   res.json({ user: req.user });
 }
 
-module.exports = { register, verifyEmail, resendVerification, login, me };
+async function getSenderEmail(req, res) {
+  const user = await User.findByPk(req.user.id, {
+    attributes: ['sender_email', 'sender_email_verified'],
+  });
+  res.json({
+    sender_email: user.sender_email || null,
+    sender_email_verified: user.sender_email_verified || false,
+  });
+}
+
+async function setSenderEmail(req, res) {
+  const { email } = req.body;
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(422).json({ error: 'Email inválido' });
+  }
+
+  const token = crypto.randomBytes(32).toString('hex');
+  await User.update(
+    { sender_email: email.toLowerCase().trim(), sender_email_verified: false, sender_email_token: token },
+    { where: { id: req.user.id } }
+  );
+
+  const user = await User.findByPk(req.user.id, { attributes: ['name', 'email'] });
+  emailSvc.sendSenderVerificationEmail(user, email.toLowerCase().trim(), token).catch((e) =>
+    console.error('[SetSenderEmail] Falha ao enviar verificação:', e.message)
+  );
+
+  res.json({ ok: true, message: 'Email de verificação enviado. Clique no link recebido para confirmar.' });
+}
+
+async function verifySenderEmail(req, res) {
+  const { token } = req.query;
+  if (!token) return res.status(400).send(senderVerificationHtml(false));
+
+  const user = await User.findOne({ where: { sender_email_token: token } });
+  if (!user) return res.status(400).send(senderVerificationHtml(false));
+
+  await user.update({ sender_email_verified: true, sender_email_token: null });
+  res.send(senderVerificationHtml(true, user.sender_email));
+}
+
+function senderVerificationHtml(success, email) {
+  const color = success ? '#16a34a' : '#dc2626';
+  const title = success ? 'Email de remetente verificado!' : 'Link inválido ou expirado';
+  const msg = success
+    ? `O email <strong>${email}</strong> foi verificado com sucesso.<br>Você já pode enviar campanhas de email.`
+    : 'Este link de verificação é inválido ou já foi utilizado.<br>Acesse a plataforma e solicite um novo link.';
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${title}</title></head>
+<body style="font-family:sans-serif;background:#f9fafb;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0">
+<div style="background:#fff;border-radius:12px;padding:40px;max-width:420px;text-align:center;box-shadow:0 4px 24px rgba(0,0,0,.08)">
+  <div style="font-size:48px;margin-bottom:16px">${success ? '✅' : '❌'}</div>
+  <h1 style="color:${color};font-size:20px;margin:0 0 12px">${title}</h1>
+  <p style="color:#374151;font-size:14px;margin:0 0 24px;line-height:1.6">${msg}</p>
+  <a href="${process.env.APP_URL || 'https://email.clicaai.ia.br'}/email/configuracoes"
+     style="display:inline-block;background:${color};color:#fff;font-weight:700;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:14px">
+    ${success ? 'Ir para a plataforma' : 'Voltar à plataforma'}
+  </a>
+</div></body></html>`;
+}
+
+module.exports = { register, verifyEmail, resendVerification, login, me, getSenderEmail, setSenderEmail, verifySenderEmail };

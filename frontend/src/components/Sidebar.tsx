@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { LayoutDashboard, Users, MessageSquare, Megaphone, Smartphone, Flame, Bot, ShieldCheck, LogOut, AlertTriangle, BookOpen, MailWarning, Clock, Inbox, Mail, Ban } from 'lucide-react';
+import { LayoutDashboard, Users, MessageSquare, Megaphone, Smartphone, Flame, Bot, ShieldCheck, LogOut, AlertTriangle, BookOpen, MailWarning, Clock, Inbox, Mail, Ban, Settings, UserMinus } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/lib/utils';
 import { useQuery } from '@tanstack/react-query';
@@ -40,6 +40,8 @@ const NAV_EMAIL = [
   { href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { href: '/contacts', label: 'Contatos', icon: Users },
   { href: '/email', label: 'Campanhas de Email', icon: Mail },
+  { href: '/email/descadastrados', label: 'Descadastros', icon: UserMinus },
+  { href: '/email/configuracoes', label: 'Configurações', icon: Settings },
 ];
 
 const PLAN_LABELS: Record<string, string> = {

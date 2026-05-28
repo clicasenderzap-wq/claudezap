@@ -87,6 +87,20 @@ const User = sequelize.define('User', {
     type: DataTypes.STRING(64),
     allowNull: true,
   },
+  // Verified sender email for email campaigns (Reply-To header)
+  sender_email: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
+  sender_email_verified: {
+    type: DataTypes.BOOLEAN,
+    allowNull: false,
+    defaultValue: false,
+  },
+  sender_email_token: {
+    type: DataTypes.STRING,
+    allowNull: true,
+  },
 }, {
   tableName: 'users',
   underscored: true,

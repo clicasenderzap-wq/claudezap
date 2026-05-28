@@ -11,6 +11,8 @@ interface User {
   plan?: 'starter' | 'pro';
   status?: 'trial' | 'active' | 'inactive';
   trial_ends_at?: string | null;
+  sender_email?: string | null;
+  sender_email_verified?: boolean;
 }
 
 interface AuthState {
