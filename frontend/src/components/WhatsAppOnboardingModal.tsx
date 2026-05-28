@@ -80,20 +80,28 @@ export default function WhatsAppOnboardingModal() {
             <div className="p-2 bg-green-50 rounded-lg shrink-0 h-fit">
               <CheckCircle2 size={18} className="text-green-500" />
             </div>
-            <div>
-              <p className="font-semibold text-gray-800 mb-2">Como configurar em 3 passos</p>
+            <div className="min-w-0">
+              <p className="font-semibold text-gray-800 mb-2">Como configurar em 4 passos</p>
               <ol className="space-y-2 text-gray-500">
-                <li className="flex gap-2">
-                  <span className="font-bold text-green-600 shrink-0">1.</span>
-                  Baixe e instale o app clicando no botão abaixo
+                <li className="flex items-start gap-2">
+                  <span className="font-bold text-green-600 shrink-0 leading-5">1.</span>
+                  <span>Baixe e instale o app clicando no botão abaixo</span>
                 </li>
-                <li className="flex gap-2">
-                  <span className="font-bold text-green-600 shrink-0">2.</span>
-                  Abra o app e faça login com o mesmo email e senha deste sistema
+                <li className="flex items-start gap-2">
+                  <span className="font-bold text-green-600 shrink-0 leading-5">2.</span>
+                  <span>Abra o app e faça login com o mesmo email e senha deste sistema</span>
                 </li>
-                <li className="flex gap-2">
-                  <span className="font-bold text-green-600 shrink-0">3.</span>
-                  Mantenha o app aberto (pode ficar minimizado) enquanto realiza envios
+                <li className="flex items-start gap-2">
+                  <span className="font-bold text-green-600 shrink-0 leading-5">3.</span>
+                  <span>Mantenha o app aberto (pode ficar minimizado) enquanto realiza envios</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <span className="font-bold text-green-600 shrink-0 leading-5">4.</span>
+                  <span>
+                    <strong className="text-gray-700">Use o navegador que abre pelo próprio app</strong> para acessar o sistema —
+                    o envio de mensagens <strong className="text-gray-700">não funciona no Chrome comum</strong>.
+                    Quando o app está em execução, ele abre uma janela de navegador integrada; é nela que o sistema deve ser usado.
+                  </span>
                 </li>
               </ol>
               <a
@@ -110,24 +118,24 @@ export default function WhatsAppOnboardingModal() {
             <div className="p-2 bg-amber-50 rounded-lg shrink-0 h-fit">
               <ShieldAlert size={18} className="text-amber-500" />
             </div>
-            <div>
-              <p className="font-semibold text-gray-800 mb-1">Uso responsável — leia com atenção</p>
-              <ul className="space-y-1.5 text-gray-500">
-                <li className="flex gap-2">
-                  <AlertTriangle size={13} className="text-amber-400 shrink-0 mt-0.5" />
-                  Envie mensagens <strong>apenas para contatos que autorizaram</strong> receber suas mensagens
+            <div className="min-w-0">
+              <p className="font-semibold text-gray-800 mb-2">Uso responsável — leia com atenção</p>
+              <ul className="space-y-2 text-gray-500">
+                <li className="flex items-start gap-2">
+                  <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
+                  <span>Envie mensagens <strong className="text-gray-700">apenas para contatos que autorizaram</strong> receber suas mensagens</span>
                 </li>
-                <li className="flex gap-2">
-                  <AlertTriangle size={13} className="text-amber-400 shrink-0 mt-0.5" />
-                  <strong>Spam e disparos em massa para listas compradas são proibidos</strong> e podem banir seu número permanentemente do WhatsApp
+                <li className="flex items-start gap-2">
+                  <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
+                  <span><strong className="text-gray-700">Spam e disparos para listas compradas são proibidos</strong> e podem banir seu número permanentemente do WhatsApp</span>
                 </li>
-                <li className="flex gap-2">
-                  <AlertTriangle size={13} className="text-amber-400 shrink-0 mt-0.5" />
-                  Use intervalos entre mensagens para evitar bloqueios automáticos pelo WhatsApp
+                <li className="flex items-start gap-2">
+                  <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
+                  <span>Use intervalos entre mensagens para evitar bloqueios automáticos pelo WhatsApp</span>
                 </li>
-                <li className="flex gap-2">
-                  <AlertTriangle size={13} className="text-amber-400 shrink-0 mt-0.5" />
-                  O usuário é o único responsável pelo conteúdo e pelo uso da plataforma
+                <li className="flex items-start gap-2">
+                  <AlertTriangle size={14} className="text-amber-400 shrink-0 mt-0.5" />
+                  <span>O usuário é o único responsável pelo conteúdo e pelo uso da plataforma</span>
                 </li>
               </ul>
             </div>
