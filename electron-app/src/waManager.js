@@ -72,8 +72,11 @@ class WAManager extends EventEmitter {
         this.emit('ready', { accountId, phone: existing.info?.wid?.user ?? null });
         return;
       }
-      console.log(`[WA] ${accountId}: inicialização em andamento`);
-      return;
+      // Cliente existe mas não está conectado (zombie/travado) — destruir e recriar
+      console.log(`[WA] ${accountId}: cliente travado sem conexão — reiniciando`);
+      this.clients.delete(accountId);
+      try { existing.destroy().catch(() => {}); } catch {}
+      // continua para criar novo cliente
     }
 
     const puppeteerOpts = {

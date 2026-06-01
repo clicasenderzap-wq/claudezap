@@ -293,6 +293,16 @@ function initConnection() {
 
   wsClient.on('connected', () => {
     mainWindow?.webContents.send('connection:status', { connected: true });
+    // Ao reconectar, reportar contas que já estão conectadas em memória
+    // Isso cobre o caso onde 'ready' foi enviado enquanto WS estava caído
+    if (waManager) {
+      for (const [accountId, client] of waManager.clients) {
+        if (client.info) {
+          console.log(`[App] reconexão WS — reemitindo ready para ${accountId}`);
+          wsClient.send({ type: 'ready', accountId, phone: client.info?.wid?.user ?? null });
+        }
+      }
+    }
   });
 
   wsClient.on('disconnected', () => {
