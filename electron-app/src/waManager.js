@@ -1,248 +1,226 @@
-const { Client, LocalAuth, MessageMedia } = require('whatsapp-web.js');
+const {
+  default: makeWASocket,
+  useMultiFileAuthState,
+  DisconnectReason,
+  fetchLatestBaileysVersion,
+  makeCacheableSignalKeyStore,
+} = require('@whiskeysockets/baileys');
 const { EventEmitter } = require('events');
 const path = require('path');
 const fs = require('fs');
+const pino = require('pino');
 
-const CHROME_ARGS = [
-  '--no-sandbox',
-  '--disable-setuid-sandbox',
-  '--disable-dev-shm-usage',
-  '--disable-accelerated-2d-canvas',
-  '--no-first-run',
-  '--no-zygote',
-  '--disable-gpu',
-  '--disable-extensions',
-  '--disable-background-networking',
-  '--mute-audio',
-  '--disable-blink-features=AutomationControlled',
-];
+// Logger silencioso — só erros críticos aparecem no console
+const logger = pino({ level: 'silent' });
 
-function findChrome() {
-  const candidates = [];
-
-  // 1. Bundled via extraResources (production build)
-  if (process.resourcesPath) {
-    candidates.push(path.join(process.resourcesPath, 'chrome', 'chrome.exe'));
-  }
-
-  // 2. Puppeteer's managed cache (development / puppeteer default)
-  try {
-    const puppeteer = require('puppeteer');
-    const exe = puppeteer.executablePath();
-    if (exe) candidates.push(exe);
-  } catch {}
-
-  // 3. System Chrome (fallback)
-  candidates.push(
-    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
-    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
-    path.join(process.env.LOCALAPPDATA || '', 'Google', 'Chrome', 'Application', 'chrome.exe'),
-    '/usr/bin/chromium-browser',
-    '/usr/bin/chromium',
-    '/usr/bin/google-chrome',
-  );
-
-  for (const p of candidates) {
-    if (p && fs.existsSync(p)) {
-      console.log('[WA] Chrome encontrado:', p);
-      return p;
-    }
-  }
-  console.warn('[WA] Chrome não encontrado — puppeteer usará padrão');
-  return null;
-}
+// Delays de reconexão com backoff
+const RECONNECT_DELAYS = [3000, 5000, 10000, 30000];
 
 class WAManager extends EventEmitter {
   constructor(userDataPath) {
     super();
     this.userDataPath = userDataPath;
-    this.clients = new Map(); // accountId → client
-    this._chromeBin = findChrome(userDataPath);
+    this._sessions = new Map(); // accountId → { socket, phone, reconnectAttempt }
   }
 
   _sessionPath(accountId) {
-    return path.join(this.userDataPath, 'wa-sessions');
+    return path.join(this.userDataPath, 'wa-sessions-v2', accountId);
+  }
+
+  // Getter de compatibilidade com main.js que itera waManager.clients
+  get clients() {
+    const map = new Map();
+    for (const [id, s] of this._sessions) {
+      map.set(id, { info: s.phone ? { wid: { user: s.phone } } : null });
+    }
+    return map;
   }
 
   async connect(accountId) {
-    if (this.clients.has(accountId)) {
-      const existing = this.clients.get(accountId);
-      if (existing.info) {
+    const existing = this._sessions.get(accountId);
+    if (existing) {
+      if (existing.phone) {
+        // Já conectado — reemite ready para sincronizar o backend
         console.log(`[WA] ${accountId}: já conectado — reemitindo ready`);
-        this.emit('ready', { accountId, phone: existing.info?.wid?.user ?? null });
+        this.emit('ready', { accountId, phone: existing.phone });
         return;
       }
-      // Cliente existe mas não está conectado (zombie/travado) — destruir e recriar
-      console.log(`[WA] ${accountId}: cliente travado sem conexão — reiniciando`);
-      this.clients.delete(accountId);
-      try { existing.destroy().catch(() => {}); } catch {}
-      // continua para criar novo cliente
+      // Em processo de conexão — ignora para não criar socket duplicado
+      console.log(`[WA] ${accountId}: conexão em andamento`);
+      return;
     }
 
-    const puppeteerOpts = {
-      headless: 'new',
-      args: CHROME_ARGS,
-      ignoreDefaultArgs: ['--enable-automation'],
-    };
-    if (this._chromeBin) puppeteerOpts.executablePath = this._chromeBin;
+    const sessionPath = this._sessionPath(accountId);
+    fs.mkdirSync(sessionPath, { recursive: true });
 
-    const client = new Client({
-      authStrategy: new LocalAuth({
-        clientId: accountId,
-        dataPath: this._sessionPath(accountId),
-      }),
-      authTimeoutMs: 600_000, // 10 minutes — generous to allow long syncs
-      puppeteer: puppeteerOpts,
+    let version;
+    try {
+      const result = await fetchLatestBaileysVersion();
+      version = result.version;
+      console.log(`[WA] ${accountId}: versão WhatsApp Web: ${version.join('.')}`);
+    } catch {
+      version = [2, 3000, 1015901307]; // fallback
+      console.warn(`[WA] ${accountId}: usando versão fallback do WhatsApp Web`);
+    }
+
+    const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
+
+    const socket = makeWASocket({
+      version,
+      auth: {
+        creds: state.creds,
+        keys: makeCacheableSignalKeyStore(state.keys, logger),
+      },
+      logger,
+      browser: ['Clica Aí', 'Desktop', '1.0.0'],
+      connectTimeoutMs: 60_000,
+      defaultQueryTimeoutMs: 60_000,
+      keepAliveIntervalMs: 15_000,
+      syncFullHistory: false,        // Não sincroniza histórico completo — conecta muito mais rápido
+      generateHighQualityLinkPreview: false,
+      shouldIgnoreJid: (jid) => jid?.endsWith('@broadcast'),
     });
 
-    this.clients.set(accountId, client);
+    this._sessions.set(accountId, { socket, phone: null, reconnectAttempt: 0 });
 
-    client.on('qr', (qr) => {
-      console.log(`[WA] ${accountId}: QR gerado`);
-      this.emit('qr', { accountId, qr });
-    });
+    // ── Eventos de conexão ─────────────────────────────────────────────────────
 
-    client.on('authenticated', () => {
-      console.log(`[WA] ${accountId}: QR escaneado — sincronizando...`);
-    });
+    socket.ev.on('connection.update', async (update) => {
+      const { connection, lastDisconnect, qr } = update;
 
-    client.on('ready', () => {
-      const phone = client.info?.wid?.user ?? null;
-      console.log(`[WA] ${accountId}: conectado — ${phone}`);
-      this.emit('ready', { accountId, phone });
-    });
+      if (qr) {
+        console.log(`[WA] ${accountId}: QR gerado`);
+        this.emit('qr', { accountId, qr });
+      }
 
-    client.on('auth_failure', (msg) => {
-      console.error(`[WA] ${accountId}: falha de autenticação — ${msg}`);
-      this.clients.delete(accountId);
-      this.emit('disconnected', { accountId, code: 'AUTH_FAILURE' });
-    });
+      if (connection === 'open') {
+        const rawId = socket.user?.id ?? '';
+        // id pode ser "5511999999999:0@s.whatsapp.net" ou "5511999999999@s.whatsapp.net"
+        const phone = rawId.split(':')[0].split('@')[0] || null;
+        console.log(`[WA] ${accountId}: conectado — ${phone}`);
+        const prev = this._sessions.get(accountId);
+        this._sessions.set(accountId, { socket, phone, reconnectAttempt: 0 });
+        this.emit('ready', { accountId, phone });
+      }
 
-    client.on('disconnected', (reason) => {
-      console.log(`[WA] ${accountId}: desconectado — ${reason}`);
-      this.clients.delete(accountId);
-      this.emit('disconnected', { accountId, code: reason });
-    });
+      if (connection === 'close') {
+        const statusCode = lastDisconnect?.error?.output?.statusCode;
+        const loggedOut = statusCode === DisconnectReason.loggedOut;
 
-    client.on('message', (msg) => {
-      if (msg.fromMe) return;
-      if (msg.from.includes('@g.us')) return;
-      const from = msg.from.replace('@c.us', '');
-      if (from && msg.body) {
-        this.emit('message', { accountId, from, text: msg.body, isSync: false });
+        console.log(`[WA] ${accountId}: conexão encerrada — código: ${statusCode} | logout: ${loggedOut}`);
+
+        const prev = this._sessions.get(accountId);
+        const attempt = (prev?.reconnectAttempt ?? 0);
+
+        this._sessions.delete(accountId);
+
+        if (loggedOut) {
+          // Sessão encerrada pelo WhatsApp — limpa arquivos de sessão
+          try { fs.rmSync(sessionPath, { recursive: true, force: true }); } catch {}
+          this.emit('disconnected', { accountId, code: 'LOGGED_OUT' });
+        } else if (statusCode === DisconnectReason.restartRequired) {
+          // WhatsApp pediu restart — reconecta imediatamente
+          console.log(`[WA] ${accountId}: restart necessário — reconectando`);
+          setTimeout(() => this.connect(accountId).catch(console.error), 1000);
+        } else {
+          // Queda de rede ou erro temporário — reconecta com backoff
+          const delay = RECONNECT_DELAYS[Math.min(attempt, RECONNECT_DELAYS.length - 1)];
+          console.log(`[WA] ${accountId}: reconectando em ${delay}ms (tentativa ${attempt + 1})`);
+          setTimeout(async () => {
+            // Marca tentativa antes de tentar
+            if (!this._sessions.has(accountId)) {
+              this._sessions.set(accountId, { socket: null, phone: null, reconnectAttempt: attempt + 1 });
+              this._sessions.delete(accountId); // limpa antes de connect criar novo
+              await this.connect(accountId).catch(console.error);
+              // Ajusta contador de tentativas no novo socket
+              const newSession = this._sessions.get(accountId);
+              if (newSession) newSession.reconnectAttempt = attempt + 1;
+            }
+          }, delay);
+        }
       }
     });
 
-    console.log(`[WA] ${accountId}: iniciando Chrome...`);
-    client.initialize().catch((e) => {
-      console.error(`[WA] ${accountId}: erro ao inicializar:`, e.message);
-      this.clients.delete(accountId);
-      this.emit('disconnected', { accountId, code: 'INIT_ERROR' });
+    // ── Salva credenciais sempre que atualizam ─────────────────────────────────
+
+    socket.ev.on('creds.update', saveCreds);
+
+    // ── Mensagens recebidas ────────────────────────────────────────────────────
+
+    socket.ev.on('messages.upsert', ({ messages, type }) => {
+      if (type !== 'notify') return;
+      for (const msg of messages) {
+        if (msg.key.fromMe) continue;
+        const jid = msg.key.remoteJid ?? '';
+        if (jid.endsWith('@g.us') || jid.endsWith('@broadcast')) continue;
+        const from = jid.split('@')[0];
+        const text =
+          msg.message?.conversation ||
+          msg.message?.extendedTextMessage?.text ||
+          msg.message?.imageMessage?.caption ||
+          msg.message?.videoMessage?.caption ||
+          null;
+        if (from && text) {
+          this.emit('message', { accountId, from, text, isSync: false });
+        }
+      }
     });
   }
 
   async disconnect(accountId) {
-    const client = this.clients.get(accountId);
-    this.clients.delete(accountId);
-    if (client) {
-      try { await client.destroy(); } catch {}
+    const session = this._sessions.get(accountId);
+    this._sessions.delete(accountId);
+    if (session?.socket) {
+      try { session.socket.end(undefined); } catch {}
     }
   }
 
   async disconnectAll() {
-    const ids = [...this.clients.keys()];
-    await Promise.all(ids.map((id) => this.disconnect(id)));
-  }
-
-  _isContextError(e) {
-    return (
-      e.message?.includes('getChat') ||
-      e.message?.includes('Execution context') ||
-      e.message?.includes('Target closed') ||
-      e.message?.includes('Session closed')
-    );
-  }
-
-  async _trySend(accountId, fn, timeoutMs = 15_000) {
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        // Race the send against a timeout so a hung Chrome doesn't block forever.
-        // 15s < backend's 30s timeout — ensures Electron always responds before backend gives up.
-        return await Promise.race([
-          fn(),
-          new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('Timeout ao enviar mensagem')), timeoutMs)
-          ),
-        ]);
-      } catch (e) {
-        const isContext = this._isContextError(e);
-        const isTimeout = e.message?.includes('Timeout ao enviar');
-
-        if (isTimeout) {
-          // Chrome is hung — destroy client so it reconnects automatically
-          console.error(`[WA] ${accountId}: timeout de envio — destruindo cliente para reconexão`);
-          this.clients.delete(accountId);
-          this.emit('disconnected', { accountId, code: 'SEND_TIMEOUT' });
-          throw e;
-        }
-
-        if (isContext && attempt < 3) {
-          console.warn(`[WA] ${accountId}: contexto perdido, aguardando 4s (tentativa ${attempt}/3)...`);
-          await new Promise((r) => setTimeout(r, 4000));
-          continue;
-        }
-        if (isContext) {
-          console.error(`[WA] ${accountId}: contexto perdido após retry`);
-          this.clients.delete(accountId);
-          this.emit('disconnected', { accountId, code: 'CONTEXT_LOST' });
-        }
-        throw e;
-      }
-    }
-  }
-
-  async _resolveChatId(client, phone) {
-    const clean = String(phone).replace(/\D/g, '');
-    // getNumberId resolves the correct ID including LID format for newer accounts
-    const numberId = await client.getNumberId(clean).catch(() => null);
-    if (numberId) return numberId._serialized;
-    // Fallback to legacy format if getNumberId fails (offline / older WA versions)
-    return `${clean}@c.us`;
-  }
-
-  async sendText(accountId, phone, text) {
-    const client = this.clients.get(accountId);
-    if (!client?.info) throw new Error('Conta não conectada');
-    return this._trySend(accountId, async () => {
-      const chatId = await this._resolveChatId(client, phone);
-      return client.sendMessage(chatId, text).then((m) => m.id._serialized);
-    });
-  }
-
-  async sendMedia(accountId, phone, mediaUrl, mediaType, fileName, caption = '') {
-    const client = this.clients.get(accountId);
-    if (!client?.info) throw new Error('Conta não conectada');
-    return this._trySend(accountId, async () => {
-      const chatId = await this._resolveChatId(client, phone);
-      const media = await MessageMedia.fromUrl(mediaUrl, { unsafeMime: true });
-      if (fileName) media.filename = fileName;
-      const msg = await client.sendMessage(chatId, media, { caption });
-      return msg.id._serialized;
-    });
+    await Promise.all([...this._sessions.keys()].map((id) => this.disconnect(id)));
   }
 
   status(accountId) {
-    const c = this.clients.get(accountId);
-    if (!c) return 'disconnected';
-    return c.info ? 'connected' : 'connecting';
+    const s = this._sessions.get(accountId);
+    if (!s) return 'disconnected';
+    return s.phone ? 'connected' : 'connecting';
   }
 
-  getAllStatuses() {
-    const result = {};
-    for (const [id, client] of this.clients) {
-      result[id] = client.info ? 'connected' : 'connecting';
+  async sendText(accountId, phone, text) {
+    const session = this._sessions.get(accountId);
+    if (!session?.phone) throw new Error('Conta não conectada');
+    const jid = `${String(phone).replace(/\D/g, '')}@s.whatsapp.net`;
+    const result = await session.socket.sendMessage(jid, { text });
+    return result?.key?.id ?? null;
+  }
+
+  async sendMedia(accountId, phone, mediaUrl, mediaType, fileName, caption = '') {
+    const session = this._sessions.get(accountId);
+    if (!session?.phone) throw new Error('Conta não conectada');
+    const jid = `${String(phone).replace(/\D/g, '')}@s.whatsapp.net`;
+
+    const resp = await fetch(mediaUrl);
+    if (!resp.ok) throw new Error(`Falha ao baixar mídia: HTTP ${resp.status}`);
+    const buffer = Buffer.from(await resp.arrayBuffer());
+
+    const mtype = (mediaType || '').toLowerCase();
+    let content;
+    if (mtype.startsWith('image')) {
+      content = { image: buffer, caption };
+    } else if (mtype.startsWith('video')) {
+      content = { video: buffer, caption };
+    } else if (mtype.startsWith('audio')) {
+      content = { audio: buffer, ptt: false };
+    } else {
+      content = {
+        document: buffer,
+        fileName: fileName || 'arquivo',
+        caption,
+        mimetype: mediaType || 'application/octet-stream',
+      };
     }
-    return result;
+
+    const result = await session.socket.sendMessage(jid, content);
+    return result?.key?.id ?? null;
   }
 }
 

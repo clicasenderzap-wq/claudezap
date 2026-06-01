@@ -47,9 +47,7 @@ jobs:
 
       - name: Install dependencies
         working-directory: electron-app
-        run: npm ci
-        env:
-          PUPPETEER_SKIP_DOWNLOAD: 'true'
+        run: npm install --legacy-peer-deps
 
       - name: Build Windows installer
         working-directory: electron-app
@@ -57,7 +55,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CSC_IDENTITY_AUTO_DISCOVERY: 'false'
-          PUPPETEER_SKIP_DOWNLOAD: 'true'
 
       - name: Commit version bump
         shell: bash
