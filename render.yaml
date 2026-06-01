@@ -20,6 +20,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       # Configurar manualmente no painel do Render após criar os serviços:
-      # DATABASE_URL  → connection string do Neon
-      # REDIS_URL     → connection string do Upstash (rediss://...)
+      # DATABASE_URL  → connection string do Neon/PostgreSQL
       # CORS_ORIGIN   → URL do seu frontend no Vercel (ex: https://claudezap.vercel.app)
+      # RESEND_API_KEY → chave da API do Resend para envio de emails
+      # API_URL       → URL deste serviço no Render (ex: https://claudezap-api.onrender.com)
