@@ -1,14 +1,21 @@
-const {
-  default: makeWASocket,
-  useMultiFileAuthState,
-  DisconnectReason,
-  fetchLatestBaileysVersion,
-  makeCacheableSignalKeyStore,
-} = require('@whiskeysockets/baileys');
 const { EventEmitter } = require('events');
 const path = require('path');
 const fs = require('fs');
 const pino = require('pino');
+
+// Baileys é ES Module — não aceita require(), usa import() dinâmico
+const _baileysPromise = import('@whiskeysockets/baileys');
+
+async function loadBaileys() {
+  const m = await _baileysPromise;
+  return {
+    makeWASocket: m.default,
+    useMultiFileAuthState: m.useMultiFileAuthState,
+    DisconnectReason: m.DisconnectReason,
+    fetchLatestBaileysVersion: m.fetchLatestBaileysVersion,
+    makeCacheableSignalKeyStore: m.makeCacheableSignalKeyStore,
+  };
+}
 
 // Logger silencioso — só erros críticos aparecem no console
 const logger = pino({ level: 'silent' });
@@ -52,6 +59,8 @@ class WAManager extends EventEmitter {
 
     const sessionPath = this._sessionPath(accountId);
     fs.mkdirSync(sessionPath, { recursive: true });
+
+    const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = await loadBaileys();
 
     let version;
     try {
