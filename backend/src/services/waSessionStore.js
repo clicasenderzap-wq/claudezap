@@ -19,10 +19,11 @@ const _tableReady = ensureTable().catch((e) =>
 
 async function dbGet(accountId, key) {
   await _tableReady;
-  const [[row]] = await sequelize.query(
+  const rows = await sequelize.query(
     'SELECT value FROM wa_sessions WHERE account_id = $1 AND key_name = $2',
     { bind: [accountId, key], type: sequelize.QueryTypes.SELECT }
   );
+  const row = rows[0];
   return row ? row.value : null;
 }
 
@@ -110,11 +111,11 @@ async function deleteSession(accountId) {
 
 async function hasSession(accountId) {
   await _tableReady;
-  const [[row]] = await sequelize.query(
-    'SELECT 1 FROM wa_sessions WHERE account_id = $1 AND key_name = $2 LIMIT 1',
+  const rows = await sequelize.query(
+    'SELECT 1 AS exists FROM wa_sessions WHERE account_id = $1 AND key_name = $2 LIMIT 1',
     { bind: [accountId, 'creds'], type: sequelize.QueryTypes.SELECT }
   );
-  return !!row;
+  return rows.length > 0;
 }
 
 module.exports = { useRedisAuthState, deleteSession, hasSession };
