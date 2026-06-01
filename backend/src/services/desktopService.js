@@ -167,24 +167,34 @@ class DesktopService extends EventEmitter {
     const { type, correlationId } = msg;
 
     if (type === 'result' && correlationId) {
+      if (msg.error) {
+        console.error(`[Desktop] ERRO do Electron app — correlationId=${correlationId} erro="${msg.error}"`);
+      } else {
+        console.log(`[Desktop] resultado OK — correlationId=${correlationId}`);
+      }
       this.emit(`result:${correlationId}`, msg);
       return;
     }
 
     if (type === 'pong') return;
 
+    console.log(`[Desktop] evento recebido: type=${type} accountId=${msg.accountId || '-'}`);
+
     switch (type) {
       case 'qr':
+        console.log(`[Desktop] QR recebido para conta ${msg.accountId} — repassando ao frontend`);
         this._accountToUser.set(msg.accountId, userId);
         this.emit('qr', { accountId: msg.accountId, qr: msg.qr });
         break;
 
       case 'ready':
+        console.log(`[Desktop] PRONTO — conta ${msg.accountId} phone=${msg.phone}`);
         this._accountToUser.set(msg.accountId, userId);
         this.emit('ready', { accountId: msg.accountId, phone: msg.phone });
         break;
 
       case 'disconnected':
+        console.log(`[Desktop] desconectado — conta ${msg.accountId} code=${msg.code}`);
         this._accountToUser.delete(msg.accountId);
         this.emit('disconnected', { accountId: msg.accountId, code: msg.code });
         break;

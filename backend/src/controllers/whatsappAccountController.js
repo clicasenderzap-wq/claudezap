@@ -138,10 +138,23 @@ async function getQR(req, res) {
   const account = await WhatsappAccount.findOne({ where: { id: req.params.id, user_id: req.user.id } });
   if (!account) return res.status(404).json({ error: 'Conta não encontrada' });
 
-  if (account.status === 'connected') return res.json({ status: 'connected' });
+  console.log(`[getQR] iniciando para conta ${account.id} status=${account.status}`);
 
-  await whatsapp.connect(account.id);
+  if (account.status === 'connected') {
+    console.log(`[getQR] conta já conectada — retornando connected`);
+    return res.json({ status: 'connected' });
+  }
+
+  try {
+    await whatsapp.connect(account.id);
+    console.log(`[getQR] comando connect enviado ao Electron com sucesso`);
+  } catch (err) {
+    console.error(`[getQR] ERRO ao enviar connect: ${err.message}`);
+    return res.status(503).json({ error: err.message });
+  }
+
   await account.update({ status: 'connecting' });
+  console.log(`[getQR] aguardando QR (até 90s)...`);
 
   const qr = await new Promise((resolve) => {
     // Se o Electron já está conectado (ready chegou enquanto esperávamos), encerra imediatamente
@@ -165,6 +178,7 @@ async function getQR(req, res) {
       resolve('__connected__');
     };
     const timer = setTimeout(() => {
+      console.log(`[getQR] TIMEOUT 90s — nenhum QR recebido para conta ${account.id}`);
       whatsapp.off('qr', onQR);
       whatsapp.off('ready', onReady);
       resolve(null);
@@ -173,8 +187,15 @@ async function getQR(req, res) {
     whatsapp.on('ready', onReady);
   });
 
-  if (qr === '__connected__') return res.json({ status: 'connected' });
-  if (!qr) return res.status(202).json({ status: 'connecting', message: 'Aguardando QR code...' });
+  if (qr === '__connected__') {
+    console.log(`[getQR] conta ${account.id} conectou durante a espera`);
+    return res.json({ status: 'connected' });
+  }
+  if (!qr) {
+    console.log(`[getQR] sem QR após 90s para conta ${account.id}`);
+    return res.status(202).json({ status: 'connecting', message: 'Aguardando QR code...' });
+  }
+  console.log(`[getQR] QR obtido — enviando ao frontend`);
 
   const qrImage = await QRCode.toDataURL(qr);
   res.json({ status: 'qr', qr: qrImage });
