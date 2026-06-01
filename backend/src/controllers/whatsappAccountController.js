@@ -144,18 +144,36 @@ async function getQR(req, res) {
   await account.update({ status: 'connecting' });
 
   const qr = await new Promise((resolve) => {
+    // Se o Electron já está conectado (ready chegou enquanto esperávamos), encerra imediatamente
+    if (whatsapp.getStatus(account.id) === 'connected') return resolve('__connected__');
+
     const cached = whatsapp.getPendingQR(account.id);
     if (cached) return resolve(cached);
+
     const onQR = ({ accountId: aid, qr: q }) => {
       if (aid !== account.id) return;
       whatsapp.off('qr', onQR);
+      whatsapp.off('ready', onReady);
       clearTimeout(timer);
       resolve(q);
     };
-    const timer = setTimeout(() => { whatsapp.off('qr', onQR); resolve(null); }, 90_000);
+    const onReady = ({ accountId: aid }) => {
+      if (aid !== account.id) return;
+      whatsapp.off('qr', onQR);
+      whatsapp.off('ready', onReady);
+      clearTimeout(timer);
+      resolve('__connected__');
+    };
+    const timer = setTimeout(() => {
+      whatsapp.off('qr', onQR);
+      whatsapp.off('ready', onReady);
+      resolve(null);
+    }, 90_000);
     whatsapp.on('qr', onQR);
+    whatsapp.on('ready', onReady);
   });
 
+  if (qr === '__connected__') return res.json({ status: 'connected' });
   if (!qr) return res.status(202).json({ status: 'connecting', message: 'Aguardando QR code...' });
 
   const qrImage = await QRCode.toDataURL(qr);

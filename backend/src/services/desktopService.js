@@ -30,13 +30,16 @@ class DesktopService extends EventEmitter {
     console.log(`[Desktop] conectado userId=${userId} device=${deviceId}`);
 
     // After reconnection, ask Electron to reconnect all accounts so we get fresh 'ready' events.
-    // This ensures _accountToUser and _connected are repopulated after a backend restart.
+    // Includes 'connecting' accounts: if the WA client was already ready in Electron but the
+    // WebSocket dropped before the 'ready' event reached the backend (event silently lost),
+    // sending 'connect' again causes Electron to re-emit 'ready' (waManager checks client.info).
     setImmediate(async () => {
       try {
         await this.pushAccountList(userId);
         const { WhatsappAccount } = require('../models');
+        const { Op } = require('sequelize');
         const accounts = await WhatsappAccount.findAll({
-          where: { user_id: userId, status: 'connected' },
+          where: { user_id: userId, status: { [Op.in]: ['connected', 'connecting'] } },
           attributes: ['id'],
         });
         for (const acc of accounts) {
