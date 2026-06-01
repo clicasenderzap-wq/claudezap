@@ -1,38 +1,36 @@
-const { Queue } = require('bullmq');
-const { connection } = require('../config/redis');
+const boss = require('../config/pgboss');
 
-const messageQueue = new Queue('messages', {
-  connection,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: { type: 'exponential', delay: 5000 },
-    removeOnComplete: { count: 500 },
-    removeOnFail: { count: 200 },
-  },
-});
+const QUEUE = 'messages';
+
+// pg-boss usa segundos para startAfter; BullMQ usava ms — converter aqui
+function msToSec(ms) {
+  return Math.max(0, Math.ceil(ms / 1000));
+}
 
 async function enqueueMessage(messageId, userId, phone, content, delayMs = 0) {
-  const job = await messageQueue.add(
-    'send',
-    { messageId, userId, phone, content },
-    { delay: delayMs }
-  );
-  return job.id;
+  const id = await boss.send(QUEUE, { messageId, userId, phone, content }, {
+    startAfter: msToSec(delayMs),
+    retryLimit: 2,
+    retryDelay: 5,
+    retryBackoff: true,
+  });
+  return id;
 }
 
 async function enqueueBulk(messages, baseDelayMs = 3000, startOffset = 0) {
   const jobs = messages.map((msg, index) => ({
-    name: 'send',
+    name: QUEUE,
     data: msg,
-    opts: {
-      delay: startOffset + index * baseDelayMs,
-      // 8 retries with 30s base exponential backoff (~63 min total)
-      // gives the WhatsApp connection plenty of time to reconnect
-      attempts: 8,
-      backoff: { type: 'exponential', delay: 30_000 },
+    options: {
+      startAfter: msToSec(startOffset + index * baseDelayMs),
+      retryLimit: 7,
+      retryDelay: 30,
+      retryBackoff: true,
     },
   }));
-  return messageQueue.addBulk(jobs);
+  await boss.insert(jobs);
+  // Retorna objetos simulados com id para compatibilidade com o controller
+  return jobs.map((_, i) => ({ id: String(i) }));
 }
 
 async function enqueueBatched(messages, baseDelayMs = 3000, batchSize = 50, batchIntervalMs = 28800000, startOffset = 0) {
@@ -40,39 +38,37 @@ async function enqueueBatched(messages, baseDelayMs = 3000, batchSize = 50, batc
     const batchIndex = Math.floor(i / batchSize);
     const posInBatch = i % batchSize;
     return {
-      name: 'send',
+      name: QUEUE,
       data: msg,
-      opts: {
-        delay: startOffset + batchIndex * batchIntervalMs + posInBatch * baseDelayMs,
-        attempts: 8,
-        backoff: { type: 'exponential', delay: 30_000 },
+      options: {
+        startAfter: msToSec(startOffset + batchIndex * batchIntervalMs + posInBatch * baseDelayMs),
+        retryLimit: 7,
+        retryDelay: 30,
+        retryBackoff: true,
       },
     };
   });
-  return messageQueue.addBulk(jobs);
+  await boss.insert(jobs);
+  return jobs.map((_, i) => ({ id: String(i) }));
 }
 
 async function enqueueScheduled(messageId, userId, accountId, phone, content, scheduledFor) {
-  const delay = Math.max(0, new Date(scheduledFor).getTime() - Date.now());
-  const job = await messageQueue.add(
-    'send',
+  const id = await boss.send(QUEUE,
     { messageId, userId, accountId, phone, content },
     {
-      delay,
-      // Retry up to 10x with 5-min base backoff (exponential: 5m, 10m, 20m...)
-      // giving the desktop app time to reconnect before the message is lost
-      attempts: 10,
-      backoff: { type: 'exponential', delay: 300_000 },
+      startAfter: new Date(scheduledFor),
+      retryLimit: 9,
+      retryDelay: 300,
+      retryBackoff: true,
     }
   );
-  return job.id;
+  return id;
 }
 
 async function cancelJob(jobId) {
   try {
-    const job = await messageQueue.getJob(String(jobId));
-    if (job) await job.remove();
-  } catch { /* job may have already run */ }
+    await boss.cancel(QUEUE, String(jobId));
+  } catch { /* job pode já ter rodado */ }
 }
 
-module.exports = { messageQueue, enqueueMessage, enqueueBulk, enqueueBatched, enqueueScheduled, cancelJob };
+module.exports = { enqueueMessage, enqueueBulk, enqueueBatched, enqueueScheduled, cancelJob };

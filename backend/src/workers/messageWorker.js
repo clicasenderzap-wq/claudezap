@@ -1,8 +1,9 @@
-const { Worker } = require('bullmq');
-const { connection } = require('../config/redis');
+const boss = require('../config/pgboss');
 const { Message, Campaign, Contact } = require('../models');
 const { Op } = require('sequelize');
 const whatsapp = require('../services/whatsappService');
+
+const QUEUE = 'messages';
 
 // Per-account send serializer: at most 1 concurrent send per WhatsApp account.
 const _accountQueues = new Map();
@@ -60,120 +61,109 @@ async function handleCampaignFailure(message) {
   }
 }
 
-const worker = new Worker(
-  'messages',
-  async (job) => {
-    const { messageId, userId, accountId, phone } = job.data;
+async function processMessage(job) {
+  const { messageId, userId, accountId, phone } = job.data;
 
-    const message = await Message.findByPk(messageId);
-    if (!message) throw new Error(`Message ${messageId} not found`);
+  // Em pg-boss: job.retryCount = tentativas já feitas, job.retryLimit = máx retries
+  const retryLimit = job.retryLimit ?? 7;
+  const isLastAttempt = job.retryCount >= retryLimit;
 
-    // Idempotency guard: if already sent/delivered by a duplicate job, skip silently
-    if (message.status === 'sent' || message.status === 'delivered') {
-      console.log(`[Worker] msg ${messageId} já enviada (status=${message.status}) — job duplicado ignorado`);
-      return;
-    }
+  const message = await Message.findByPk(messageId);
+  if (!message) throw new Error(`Message ${messageId} not found`);
 
-    // Global blocklist check — never send to permanently opted-out numbers
-    const { isGloballyBlocked } = require('../services/optoutService');
-    if (await isGloballyBlocked(userId, phone)) {
-      await message.update({ status: 'failed', error_message: 'Número na lista negra permanente (enviou SAIR)' });
+  if (message.status === 'sent' || message.status === 'delivered') {
+    console.log(`[Worker] msg ${messageId} já enviada (status=${message.status}) — job duplicado ignorado`);
+    return;
+  }
+
+  const { isGloballyBlocked } = require('../services/optoutService');
+  if (await isGloballyBlocked(userId, phone)) {
+    await message.update({ status: 'failed', error_message: 'Número na lista negra permanente (enviou SAIR)' });
+    await handleCampaignFailure(message);
+    console.log(`[Worker] msg ${messageId} bloqueada — ${phone} está na lista negra`);
+    return;
+  }
+
+  const isConnected = (id) => whatsapp.getStatus(id) === 'connected';
+  const { WhatsappAccount } = require('../models');
+  const allAccounts = await WhatsappAccount.findAll({ where: { user_id: userId }, attributes: ['id', 'status'] });
+
+  let primaryId = accountId;
+  if (!primaryId || !isConnected(primaryId)) {
+    const c = allAccounts.find((a) => isConnected(a.id)) || allAccounts.find((a) => a.status === 'connected');
+    if (c) primaryId = c.id;
+  }
+
+  if (!primaryId) {
+    const statusSummary = allAccounts.map((a) => `${a.id.slice(0,8)}:${a.status}:ws=${isConnected(a.id)}`).join(', ');
+    console.warn(`[Worker] msg ${messageId} — sem conta conectada. Contas: [${statusSummary}]`);
+    if (isLastAttempt) {
+      await message.update({ status: 'failed', error_message: 'Nenhuma conta WhatsApp conectada' });
       await handleCampaignFailure(message);
-      console.log(`[Worker] msg ${messageId} bloqueada — ${phone} está na lista negra`);
-      return;
     }
+    throw new Error('Nenhuma conta WhatsApp conectada');
+  }
 
-    const maxAttempts = job.opts?.attempts ?? 3;
-    const isLastAttempt = job.attemptsMade >= maxAttempts - 1;
+  console.log(`[Worker] msg ${messageId} → conta ${primaryId.slice(0,8)} (tentativa ${job.retryCount + 1}/${retryLimit + 1})`);
 
-    const isConnected = (id) => whatsapp.getStatus(id) === 'connected';
+  let waId;
+  let usedAccountId = primaryId;
+  let lastErr;
 
-    // Build ordered list of accounts to try: assigned first, then others
-    const { WhatsappAccount } = require('../models');
-    const allAccounts = await WhatsappAccount.findAll({ where: { user_id: userId }, attributes: ['id', 'status'] });
-
-    let primaryId = accountId;
-    if (!primaryId || !isConnected(primaryId)) {
-      const c = allAccounts.find((a) => isConnected(a.id)) || allAccounts.find((a) => a.status === 'connected');
-      if (c) primaryId = c.id;
-    }
-
-    if (!primaryId) {
-      const statusSummary = allAccounts.map((a) => `${a.id.slice(0,8)}:${a.status}:ws=${isConnected(a.id)}`).join(', ');
-      console.warn(`[Worker] msg ${messageId} — sem conta conectada. Contas: [${statusSummary}]`);
-      if (isLastAttempt) {
-        await message.update({ status: 'failed', error_message: 'Nenhuma conta WhatsApp conectada' });
-      }
-      throw new Error('Nenhuma conta WhatsApp conectada');
-    }
-    console.log(`[Worker] msg ${messageId} → usando conta ${primaryId.slice(0,8)} (tentativa ${job.attemptsMade + 1}/${maxAttempts})`);
-
-    // Try primary account; on connection error immediately try others (no waiting for BullMQ retry)
-    let waId;
-    let usedAccountId = primaryId;
-    let lastErr;
-
-    try {
-      waId = await trySend(primaryId, message, phone);
-    } catch (err) {
-      lastErr = err;
-      if (isConnErr(err.message)) {
-        // Try remaining connected accounts before giving up this attempt
-        const fallbacks = allAccounts.filter(
-          (a) => a.id !== primaryId && (isConnected(a.id) || a.status === 'connected')
-        );
-        for (const fb of fallbacks) {
-          try {
-            waId = await trySend(fb.id, message, phone);
-            usedAccountId = fb.id;
-            lastErr = null;
-            break;
-          } catch (fbErr) {
-            lastErr = fbErr;
-          }
+  try {
+    waId = await trySend(primaryId, message, phone);
+  } catch (err) {
+    lastErr = err;
+    if (isConnErr(err.message)) {
+      const fallbacks = allAccounts.filter(
+        (a) => a.id !== primaryId && (isConnected(a.id) || a.status === 'connected')
+      );
+      for (const fb of fallbacks) {
+        try {
+          waId = await trySend(fb.id, message, phone);
+          usedAccountId = fb.id;
+          lastErr = null;
+          break;
+        } catch (fbErr) {
+          lastErr = fbErr;
         }
       }
     }
+  }
 
-    if (lastErr) {
-      if (isLastAttempt) {
-        await message.update({ status: 'failed', error_message: lastErr.message });
-        await handleCampaignFailure(message);
-      }
-      throw lastErr;
+  if (lastErr) {
+    if (isLastAttempt) {
+      await message.update({ status: 'failed', error_message: lastErr.message });
+      await handleCampaignFailure(message);
     }
-
-    await message.update({ status: 'sent', wa_message_id: waId, sent_at: new Date(), account_id: usedAccountId });
-    await handleCampaignSuccess(message);
-  },
-  {
-    connection,
-    concurrency: 5,
-    // 5 min lock — prevents stalled jobs when the per-account queue serializes
-    // many messages and BullMQ's 120s default expires before the job gets the lock
-    lockDuration: 300_000,
+    throw lastErr;
   }
-);
 
-worker.on('completed', (job) => {
-  const { messageId, phone } = job.data;
-  console.log(`[Worker] ✓ job ${job.id} | msg ${messageId} → ${phone}`);
-});
+  await message.update({ status: 'sent', wa_message_id: waId, sent_at: new Date(), account_id: usedAccountId });
+  await handleCampaignSuccess(message);
+  console.log(`[Worker] ✓ msg ${messageId} → ${phone}`);
+}
 
-worker.on('failed', (job, err) => {
-  const maxAttempts = job?.opts?.attempts ?? 3;
-  const made = (job?.attemptsMade ?? 0) + 1;
-  const { messageId, phone } = job?.data ?? {};
-  if (made >= maxAttempts) {
-    console.error(`[Worker] ✗ job ${job?.id} | msg ${messageId} → ${phone} | FALHOU após ${made} tentativas: ${err.message}`);
-  } else {
-    console.warn(`[Worker] ↺ job ${job?.id} | msg ${messageId} → ${phone} | tentativa ${made}/${maxAttempts}: ${err.message}`);
-  }
-});
+async function start() {
+  await boss.start();
+  await boss.work(QUEUE, { teamSize: 5, teamConcurrency: 1 }, async (job) => {
+    try {
+      await processMessage(job);
+    } catch (err) {
+      const retryLimit = job.retryLimit ?? 7;
+      const made = job.retryCount + 1;
+      const { messageId, phone } = job.data ?? {};
+      if (made > retryLimit) {
+        console.error(`[Worker] ✗ msg ${messageId} → ${phone} | FALHOU após ${made} tentativas: ${err.message}`);
+      } else {
+        console.warn(`[Worker] ↺ msg ${messageId} → ${phone} | tentativa ${made}/${retryLimit + 1}: ${err.message}`);
+      }
+      throw err; // pg-boss reprocessa se throw
+    }
+  });
+  console.log('[Worker] message worker started (pg-boss)');
+}
 
-worker.on('stalled', (jobId) => {
-  console.warn(`[Worker] ⚠ job ${jobId} marcado como stalled — será reprocessado`);
-});
+start().catch((e) => console.error('[Worker] falha ao iniciar:', e.message));
 
-console.log('[Worker] message worker started');
-module.exports = worker;
+module.exports = { start };

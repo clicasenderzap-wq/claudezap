@@ -1,26 +1,25 @@
-const { Queue } = require('bullmq');
-const { connection } = require('../config/redis');
+const boss = require('../config/pgboss');
 
-const emailQueue = new Queue('emails', {
-  connection,
-  defaultJobOptions: {
-    attempts: 3,
-    backoff: { type: 'exponential', delay: 30_000 },
-    removeOnComplete: { count: 500 },
-    removeOnFail: { count: 200 },
-  },
-});
+const QUEUE = 'emails';
+
+function msToSec(ms) {
+  return Math.max(0, Math.ceil(ms / 1000));
+}
 
 async function enqueueEmail(emailMessageId, delayMs = 0) {
-  const job = await emailQueue.add('send', { emailMessageId }, { delay: delayMs });
-  return job.id;
+  const id = await boss.send(QUEUE, { emailMessageId }, {
+    startAfter: msToSec(delayMs),
+    retryLimit: 2,
+    retryDelay: 30,
+    retryBackoff: true,
+  });
+  return id;
 }
 
 async function cancelEmailJob(jobId) {
   try {
-    const job = await emailQueue.getJob(String(jobId));
-    if (job) await job.remove();
+    await boss.cancel(QUEUE, String(jobId));
   } catch {}
 }
 
-module.exports = { emailQueue, enqueueEmail, cancelEmailJob };
+module.exports = { enqueueEmail, cancelEmailJob };
