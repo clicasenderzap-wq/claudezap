@@ -3,7 +3,10 @@ const path = require('path');
 const fs = require('fs');
 const pino = require('pino');
 
-// Baileys é ES Module — não aceita require(), usa import() dinâmico
+const logger = pino({ level: 'silent' });
+const RECONNECT_DELAYS = [3000, 5000, 10000, 30000];
+
+// Baileys é ES Module — carrega via import() dinâmico
 const _baileysPromise = import('@whiskeysockets/baileys');
 
 async function loadBaileys() {
@@ -13,28 +16,21 @@ async function loadBaileys() {
     useMultiFileAuthState: m.useMultiFileAuthState,
     DisconnectReason: m.DisconnectReason,
     fetchLatestBaileysVersion: m.fetchLatestBaileysVersion,
-    makeCacheableSignalKeyStore: m.makeCacheableSignalKeyStore,
   };
 }
-
-// Logger silencioso — só erros críticos aparecem no console
-const logger = pino({ level: 'silent' });
-
-// Delays de reconexão com backoff
-const RECONNECT_DELAYS = [3000, 5000, 10000, 30000];
 
 class WAManager extends EventEmitter {
   constructor(userDataPath) {
     super();
     this.userDataPath = userDataPath;
-    this._sessions = new Map(); // accountId → { socket, phone, reconnectAttempt }
+    this._sessions = new Map(); // accountId → { socket, phone }
   }
 
   _sessionPath(accountId) {
     return path.join(this.userDataPath, 'wa-sessions-v2', accountId);
   }
 
-  // Getter de compatibilidade com main.js que itera waManager.clients
+  // Compatibilidade com main.js que itera waManager.clients
   get clients() {
     const map = new Map();
     for (const [id, s] of this._sessions) {
@@ -47,54 +43,55 @@ class WAManager extends EventEmitter {
     const existing = this._sessions.get(accountId);
     if (existing) {
       if (existing.phone) {
-        // Já conectado — reemite ready para sincronizar o backend
         console.log(`[WA] ${accountId}: já conectado — reemitindo ready`);
         this.emit('ready', { accountId, phone: existing.phone });
         return;
       }
-      // Em processo de conexão — ignora para não criar socket duplicado
-      console.log(`[WA] ${accountId}: conexão em andamento`);
-      return;
+      // Socket travado sem conexão — destrói e recria
+      console.log(`[WA] ${accountId}: socket travado — reiniciando`);
+      this._sessions.delete(accountId);
+      try { existing.socket?.end(undefined); } catch {}
     }
 
+    await this._createSocket(accountId, 0);
+  }
+
+  async _createSocket(accountId, reconnectAttempt) {
     const sessionPath = this._sessionPath(accountId);
     fs.mkdirSync(sessionPath, { recursive: true });
 
-    const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, makeCacheableSignalKeyStore } = await loadBaileys();
+    const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion } = await loadBaileys();
 
     let version;
     try {
       const result = await fetchLatestBaileysVersion();
       version = result.version;
-      console.log(`[WA] ${accountId}: versão WhatsApp Web: ${version.join('.')}`);
+      console.log(`[WA] ${accountId}: versão WA: ${version.join('.')}`);
     } catch {
-      version = [2, 3000, 1015901307]; // fallback
-      console.warn(`[WA] ${accountId}: usando versão fallback do WhatsApp Web`);
+      version = [2, 3000, 1015901307];
+      console.warn(`[WA] ${accountId}: usando versão fallback`);
     }
 
     const { state, saveCreds } = await useMultiFileAuthState(sessionPath);
 
+    // Configuração mínima e confiável — sem opções que possam causar incompatibilidade
     const socket = makeWASocket({
       version,
-      auth: {
-        creds: state.creds,
-        keys: makeCacheableSignalKeyStore(state.keys, logger),
-      },
+      auth: state,
       logger,
       browser: ['Clica Aí', 'Desktop', '1.0.0'],
       connectTimeoutMs: 60_000,
-      defaultQueryTimeoutMs: 60_000,
       keepAliveIntervalMs: 15_000,
-      syncFullHistory: false,        // Não sincroniza histórico completo — conecta muito mais rápido
-      generateHighQualityLinkPreview: false,
-      shouldIgnoreJid: (jid) => jid?.endsWith('@broadcast'),
+      syncFullHistory: false,
     });
 
-    this._sessions.set(accountId, { socket, phone: null, reconnectAttempt: 0 });
-
-    // ── Eventos de conexão ─────────────────────────────────────────────────────
+    this._sessions.set(accountId, { socket, phone: null });
 
     socket.ev.on('connection.update', async (update) => {
+      // Ignora evento se este socket foi substituído por um novo
+      const current = this._sessions.get(accountId);
+      if (current && current.socket !== socket) return;
+
       const { connection, lastDisconnect, qr } = update;
 
       if (qr) {
@@ -104,57 +101,35 @@ class WAManager extends EventEmitter {
 
       if (connection === 'open') {
         const rawId = socket.user?.id ?? '';
-        // id pode ser "5511999999999:0@s.whatsapp.net" ou "5511999999999@s.whatsapp.net"
         const phone = rawId.split(':')[0].split('@')[0] || null;
         console.log(`[WA] ${accountId}: conectado — ${phone}`);
-        const prev = this._sessions.get(accountId);
-        this._sessions.set(accountId, { socket, phone, reconnectAttempt: 0 });
+        this._sessions.set(accountId, { socket, phone });
         this.emit('ready', { accountId, phone });
       }
 
       if (connection === 'close') {
         const statusCode = lastDisconnect?.error?.output?.statusCode;
         const loggedOut = statusCode === DisconnectReason.loggedOut;
-
-        console.log(`[WA] ${accountId}: conexão encerrada — código: ${statusCode} | logout: ${loggedOut}`);
-
-        const prev = this._sessions.get(accountId);
-        const attempt = (prev?.reconnectAttempt ?? 0);
+        console.log(`[WA] ${accountId}: desconectado código=${statusCode} logout=${loggedOut}`);
 
         this._sessions.delete(accountId);
 
         if (loggedOut) {
-          // Sessão encerrada pelo WhatsApp — limpa arquivos de sessão
           try { fs.rmSync(sessionPath, { recursive: true, force: true }); } catch {}
           this.emit('disconnected', { accountId, code: 'LOGGED_OUT' });
-        } else if (statusCode === DisconnectReason.restartRequired) {
-          // WhatsApp pediu restart — reconecta imediatamente
-          console.log(`[WA] ${accountId}: restart necessário — reconectando`);
-          setTimeout(() => this.connect(accountId).catch(console.error), 1000);
         } else {
-          // Queda de rede ou erro temporário — reconecta com backoff
-          const delay = RECONNECT_DELAYS[Math.min(attempt, RECONNECT_DELAYS.length - 1)];
-          console.log(`[WA] ${accountId}: reconectando em ${delay}ms (tentativa ${attempt + 1})`);
-          setTimeout(async () => {
-            // Marca tentativa antes de tentar
+          const delay = RECONNECT_DELAYS[Math.min(reconnectAttempt, RECONNECT_DELAYS.length - 1)];
+          console.log(`[WA] ${accountId}: reconectando em ${delay}ms`);
+          setTimeout(() => {
             if (!this._sessions.has(accountId)) {
-              this._sessions.set(accountId, { socket: null, phone: null, reconnectAttempt: attempt + 1 });
-              this._sessions.delete(accountId); // limpa antes de connect criar novo
-              await this.connect(accountId).catch(console.error);
-              // Ajusta contador de tentativas no novo socket
-              const newSession = this._sessions.get(accountId);
-              if (newSession) newSession.reconnectAttempt = attempt + 1;
+              this._createSocket(accountId, reconnectAttempt + 1).catch(console.error);
             }
           }, delay);
         }
       }
     });
 
-    // ── Salva credenciais sempre que atualizam ─────────────────────────────────
-
     socket.ev.on('creds.update', saveCreds);
-
-    // ── Mensagens recebidas ────────────────────────────────────────────────────
 
     socket.ev.on('messages.upsert', ({ messages, type }) => {
       if (type !== 'notify') return;
@@ -220,12 +195,7 @@ class WAManager extends EventEmitter {
     } else if (mtype.startsWith('audio')) {
       content = { audio: buffer, ptt: false };
     } else {
-      content = {
-        document: buffer,
-        fileName: fileName || 'arquivo',
-        caption,
-        mimetype: mediaType || 'application/octet-stream',
-      };
+      content = { document: buffer, fileName: fileName || 'arquivo', caption, mimetype: mediaType || 'application/octet-stream' };
     }
 
     const result = await session.socket.sendMessage(jid, content);
