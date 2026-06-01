@@ -1,5 +1,6 @@
 require('dotenv').config();
 
+// v2025-06-01 — migração Redis→PostgreSQL (pg-boss + wa_sessions)
 // Impede que rejeições de Promise não capturadas derrubem o processo no Node.js v15+
 process.on('unhandledRejection', (err) => {
   console.error('[UnhandledRejection]', err?.message || err);
