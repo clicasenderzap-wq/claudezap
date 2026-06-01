@@ -6,7 +6,7 @@ const store = require('./store');
 const WAManager = require('./waManager');
 const WSClient = require('./wsClient');
 
-const API_URL = 'https://claudezap-api.onrender.com';
+const API_URL = 'https://claudezap-api.onrender.com'; // v1.0.16 — Electron 31 + Baileys
 
 // Single-instance lock: if a second instance is launched, focus the existing window
 const gotLock = app.requestSingleInstanceLock();
