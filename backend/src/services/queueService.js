@@ -63,6 +63,7 @@ function cancelJob(jobId) {
     clearTimeout(handle);
     _pending.delete(String(jobId));
   }
+  return Promise.resolve();
 }
 
 // Compatibilidade com adminController.getQueueStatus (métodos BullMQ não existem mais)
