@@ -169,10 +169,27 @@ class WAManager extends EventEmitter {
     return s.phone ? 'connected' : 'connecting';
   }
 
+  async _resolveJid(session, phone) {
+    const clean = String(phone).replace(/\D/g, '');
+    const candidate = `${clean}@s.whatsapp.net`;
+    try {
+      const [info] = await session.socket.onWhatsApp(candidate);
+      if (info?.exists && info.jid) return info.jid;
+      // Número não está no WhatsApp
+      if (info && !info.exists) throw new Error(`Número ${clean} não está registrado no WhatsApp`);
+    } catch (e) {
+      if (e.message.includes('não está registrado')) throw e;
+      // Falha na verificação — tenta enviar assim mesmo com JID padrão
+      console.warn(`[WA] onWhatsApp falhou para ${clean}, usando JID padrão: ${e.message}`);
+    }
+    return candidate;
+  }
+
   async sendText(accountId, phone, text) {
     const session = this._sessions.get(accountId);
     if (!session?.phone) throw new Error('Conta não conectada');
-    const jid = `${String(phone).replace(/\D/g, '')}@s.whatsapp.net`;
+    if (!text) throw new Error('Conteúdo da mensagem vazio');
+    const jid = await this._resolveJid(session, phone);
     const result = await session.socket.sendMessage(jid, { text });
     return result?.key?.id ?? null;
   }
@@ -180,7 +197,7 @@ class WAManager extends EventEmitter {
   async sendMedia(accountId, phone, mediaUrl, mediaType, fileName, caption = '') {
     const session = this._sessions.get(accountId);
     if (!session?.phone) throw new Error('Conta não conectada');
-    const jid = `${String(phone).replace(/\D/g, '')}@s.whatsapp.net`;
+    const jid = await this._resolveJid(session, phone);
 
     const resp = await fetch(mediaUrl);
     if (!resp.ok) throw new Error(`Falha ao baixar mídia: HTTP ${resp.status}`);
