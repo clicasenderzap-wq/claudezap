@@ -145,8 +145,17 @@ async function processMessage(job) {
 }
 
 async function start() {
-  await boss.start();
+  try {
+    console.log('[Worker] iniciando pg-boss...');
+    await boss.start();
+    console.log('[Worker] pg-boss started — registrando handler...');
+  } catch (e) {
+    console.error('[Worker] FALHA ao iniciar pg-boss:', e.message, e.stack);
+    throw e;
+  }
+
   await boss.work(QUEUE, { teamSize: 5, teamConcurrency: 1 }, async (job) => {
+    console.log(`[Worker] job recebido: ${job.id} msg=${job.data?.messageId}`);
     try {
       await processMessage(job);
     } catch (err) {
@@ -158,12 +167,12 @@ async function start() {
       } else {
         console.warn(`[Worker] ↺ msg ${messageId} → ${phone} | tentativa ${made}/${retryLimit + 1}: ${err.message}`);
       }
-      throw err; // pg-boss reprocessa se throw
+      throw err;
     }
   });
-  console.log('[Worker] message worker started (pg-boss)');
+  console.log('[Worker] message worker started (pg-boss) ✓');
 }
 
-start().catch((e) => console.error('[Worker] falha ao iniciar:', e.message));
+start().catch((e) => console.error('[Worker] ERRO FATAL ao iniciar:', e.message));
 
 module.exports = { start };
