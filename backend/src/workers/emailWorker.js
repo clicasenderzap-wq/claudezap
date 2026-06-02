@@ -1,8 +1,6 @@
-const boss = require('../config/pgboss');
 const { EmailMessage, EmailCampaign, Contact } = require('../models');
 const { sendCampaignEmail } = require('../services/emailService');
 
-const QUEUE = 'emails';
 const API_URL = process.env.API_URL || 'https://claudezap-api.onrender.com';
 
 function buildHtml(rawHtml, vars, unsubscribeToken, trackingId) {
@@ -26,16 +24,23 @@ function buildHtml(rawHtml, vars, unsubscribeToken, trackingId) {
     : html + footer;
 }
 
-async function processEmail(job) {
-  const { emailMessageId } = job.data;
-  const retryLimit = job.retryLimit ?? 2;
-  const isLastAttempt = job.retryCount >= retryLimit;
-
+async function processEmailJob(emailMessageId) {
   const msg = await EmailMessage.findByPk(emailMessageId);
-  if (!msg) throw new Error(`EmailMessage ${emailMessageId} não encontrado`);
+  if (!msg) {
+    console.warn(`[EmailWorker] EmailMessage ${emailMessageId} não encontrado`);
+    return;
+  }
+
+  if (msg.status === 'sent' || msg.status === 'opened') {
+    console.log(`[EmailWorker] msg ${emailMessageId} já enviada — ignorando`);
+    return;
+  }
 
   const campaign = await EmailCampaign.findByPk(msg.campaign_id);
-  if (!campaign) throw new Error('Campanha não encontrada');
+  if (!campaign) {
+    console.warn(`[EmailWorker] campanha ${msg.campaign_id} não encontrada`);
+    return;
+  }
 
   try {
     const contact = msg.contact_id
@@ -65,40 +70,18 @@ async function processEmail(job) {
       await EmailCampaign.update({ status: 'completed' }, { where: { id: campaign.id } });
     }
 
-    console.log(`[EmailWorker] ✓ msg ${emailMessageId} → ${msg.to_email}`);
+    console.log(`[EmailWorker] ✓ ${emailMessageId} → ${msg.to_email}`);
   } catch (err) {
-    if (isLastAttempt) {
-      await msg.update({ status: 'failed', error_message: err.message });
-      await EmailCampaign.increment('failed_count', { where: { id: campaign.id } });
+    console.error(`[EmailWorker] ✗ ${emailMessageId}: ${err.message}`);
+    await msg.update({ status: 'failed', error_message: err.message });
+    await EmailCampaign.increment('failed_count', { where: { id: campaign.id } });
 
-      const fresh = await EmailCampaign.findByPk(campaign.id, { attributes: ['total_contacts', 'sent_count', 'failed_count'] });
-      if (fresh && fresh.sent_count + fresh.failed_count >= fresh.total_contacts) {
-        await EmailCampaign.update({ status: 'completed' }, { where: { id: campaign.id } });
-      }
+    const fresh = await EmailCampaign.findByPk(campaign.id, { attributes: ['total_contacts', 'sent_count', 'failed_count'] });
+    if (fresh && fresh.sent_count + fresh.failed_count >= fresh.total_contacts) {
+      await EmailCampaign.update({ status: 'completed' }, { where: { id: campaign.id } });
     }
-    throw err;
   }
 }
 
-async function start() {
-  await boss.start();
-  await boss.work(QUEUE, { teamSize: 3, teamConcurrency: 1 }, async (job) => {
-    try {
-      await processEmail(job);
-    } catch (err) {
-      const retryLimit = job.retryLimit ?? 2;
-      const made = job.retryCount + 1;
-      if (made > retryLimit) {
-        console.error(`[EmailWorker] ✗ job ${job.id} falhou definitivamente: ${err.message}`);
-      } else {
-        console.log(`[EmailWorker] ↺ job ${job.id} tentativa ${made}/${retryLimit + 1}: ${err.message}`);
-      }
-      throw err;
-    }
-  });
-  console.log('[EmailWorker] iniciado (pg-boss)');
-}
-
-start().catch((e) => console.error('[EmailWorker] falha ao iniciar:', e.message));
-
-module.exports = { start };
+console.log('[EmailWorker] email worker carregado (setTimeout queue)');
+module.exports = { processEmailJob };

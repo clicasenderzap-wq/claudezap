@@ -1,11 +1,8 @@
-const boss = require('../config/pgboss');
-const { Message, Campaign, Contact } = require('../models');
+const { Message, Campaign, Contact, WhatsappAccount } = require('../models');
 const { Op } = require('sequelize');
 const whatsapp = require('../services/whatsappService');
 
-const QUEUE = 'messages';
-
-// Per-account send serializer: at most 1 concurrent send per WhatsApp account.
+// Per-account send serializer
 const _accountQueues = new Map();
 
 function withAccountLock(accountId, fn) {
@@ -16,18 +13,6 @@ function withAccountLock(accountId, fn) {
 }
 
 const isConnErr = (msg) => /conectad|connected|desktop|session/i.test(msg || '');
-
-async function trySend(accountId, message, phone) {
-  let waId;
-  await withAccountLock(accountId, async () => {
-    if (message.media_url) {
-      waId = await whatsapp.sendMedia(accountId, phone, message.media_url, message.media_type, message.media_filename, message.content);
-    } else {
-      waId = await whatsapp.sendText(accountId, phone, message.content);
-    }
-  });
-  return waId;
-}
 
 async function handleCampaignSuccess(message) {
   if (!message.campaign_id) return;
@@ -61,66 +46,88 @@ async function handleCampaignFailure(message) {
   }
 }
 
-async function processMessage(job) {
-  const { messageId, userId, accountId, phone } = job.data;
-
-  // Em pg-boss: job.retryCount = tentativas já feitas, job.retryLimit = máx retries
-  const retryLimit = job.retryLimit ?? 7;
-  const isLastAttempt = job.retryCount >= retryLimit;
-
+async function processJob({ messageId, userId, accountId: preferredAccountId, phone }) {
   const message = await Message.findByPk(messageId);
-  if (!message) throw new Error(`Message ${messageId} not found`);
-
-  if (message.status === 'sent' || message.status === 'delivered') {
-    console.log(`[Worker] msg ${messageId} já enviada (status=${message.status}) — job duplicado ignorado`);
+  if (!message) {
+    console.warn(`[Worker] msg ${messageId} não encontrada`);
     return;
   }
 
+  // Idempotência
+  if (message.status === 'sent' || message.status === 'delivered') {
+    console.log(`[Worker] msg ${messageId} já enviada — ignorando`);
+    return;
+  }
+
+  // Resolve telefone se não vier no job
+  let destPhone = phone;
+  if (!destPhone) {
+    if (message.to_phone) {
+      destPhone = message.to_phone;
+    } else if (message.contact_id) {
+      const contact = await Contact.findByPk(message.contact_id, { attributes: ['phone'] });
+      destPhone = contact?.phone ?? null;
+    }
+  }
+  if (!destPhone) {
+    await message.update({ status: 'failed', error_message: 'Número de destino não encontrado' });
+    await handleCampaignFailure(message);
+    return;
+  }
+
+  // Blocklist
   const { isGloballyBlocked } = require('../services/optoutService');
-  if (await isGloballyBlocked(userId, phone)) {
+  if (await isGloballyBlocked(userId, destPhone)) {
     await message.update({ status: 'failed', error_message: 'Número na lista negra permanente (enviou SAIR)' });
     await handleCampaignFailure(message);
-    console.log(`[Worker] msg ${messageId} bloqueada — ${phone} está na lista negra`);
+    console.log(`[Worker] msg ${messageId} bloqueada — ${destPhone} está na lista negra`);
     return;
   }
 
+  // Resolve conta WhatsApp conectada
   const isConnected = (id) => whatsapp.getStatus(id) === 'connected';
-  const { WhatsappAccount } = require('../models');
   const allAccounts = await WhatsappAccount.findAll({ where: { user_id: userId }, attributes: ['id', 'status'] });
 
-  let primaryId = accountId;
-  if (!primaryId || !isConnected(primaryId)) {
+  let accountId = preferredAccountId;
+  if (!accountId || !isConnected(accountId)) {
     const c = allAccounts.find((a) => isConnected(a.id)) || allAccounts.find((a) => a.status === 'connected');
-    if (c) primaryId = c.id;
+    if (c) accountId = c.id;
   }
 
-  if (!primaryId) {
-    const statusSummary = allAccounts.map((a) => `${a.id.slice(0,8)}:${a.status}:ws=${isConnected(a.id)}`).join(', ');
-    console.warn(`[Worker] msg ${messageId} — sem conta conectada. Contas: [${statusSummary}]`);
-    if (isLastAttempt) {
-      await message.update({ status: 'failed', error_message: 'Nenhuma conta WhatsApp conectada' });
-      await handleCampaignFailure(message);
-    }
-    throw new Error('Nenhuma conta WhatsApp conectada');
+  if (!accountId) {
+    console.warn(`[Worker] msg ${messageId} — sem conta WhatsApp conectada`);
+    await message.update({ status: 'failed', error_message: 'Nenhuma conta WhatsApp conectada' });
+    await handleCampaignFailure(message);
+    return;
   }
 
-  console.log(`[Worker] msg ${messageId} → conta ${primaryId.slice(0,8)} (tentativa ${job.retryCount + 1}/${retryLimit + 1})`);
+  console.log(`[Worker] enviando msg ${messageId} → ${destPhone} via ${accountId.slice(0, 8)}`);
 
   let waId;
-  let usedAccountId = primaryId;
+  let usedAccountId = accountId;
   let lastErr;
 
   try {
-    waId = await trySend(primaryId, message, phone);
+    await withAccountLock(accountId, async () => {
+      if (message.media_url) {
+        waId = await whatsapp.sendMedia(accountId, destPhone, message.media_url, message.media_type, message.media_filename, message.content);
+      } else {
+        waId = await whatsapp.sendText(accountId, destPhone, message.content);
+      }
+    });
   } catch (err) {
     lastErr = err;
     if (isConnErr(err.message)) {
-      const fallbacks = allAccounts.filter(
-        (a) => a.id !== primaryId && (isConnected(a.id) || a.status === 'connected')
-      );
+      const fallbacks = allAccounts.filter((a) => a.id !== accountId && (isConnected(a.id) || a.status === 'connected'));
       for (const fb of fallbacks) {
         try {
-          waId = await trySend(fb.id, message, phone);
+          await withAccountLock(fb.id, async () => {
+            if (message.media_url) {
+              waId = await whatsapp.sendMedia(fb.id, destPhone, message.media_url, message.media_type, message.media_filename, message.content);
+            } else {
+              waId = await whatsapp.sendText(fb.id, destPhone, message.content);
+            }
+          });
           usedAccountId = fb.id;
           lastErr = null;
           break;
@@ -132,47 +139,16 @@ async function processMessage(job) {
   }
 
   if (lastErr) {
-    if (isLastAttempt) {
-      await message.update({ status: 'failed', error_message: lastErr.message });
-      await handleCampaignFailure(message);
-    }
-    throw lastErr;
+    console.error(`[Worker] ✗ msg ${messageId} → ${destPhone}: ${lastErr.message}`);
+    await message.update({ status: 'failed', error_message: lastErr.message });
+    await handleCampaignFailure(message);
+    return;
   }
 
   await message.update({ status: 'sent', wa_message_id: waId, sent_at: new Date(), account_id: usedAccountId });
   await handleCampaignSuccess(message);
-  console.log(`[Worker] ✓ msg ${messageId} → ${phone}`);
+  console.log(`[Worker] ✓ msg ${messageId} → ${destPhone}`);
 }
 
-async function start() {
-  try {
-    console.log('[Worker] iniciando pg-boss...');
-    await boss.start();
-    console.log('[Worker] pg-boss started — registrando handler...');
-  } catch (e) {
-    console.error('[Worker] FALHA ao iniciar pg-boss:', e.message, e.stack);
-    throw e;
-  }
-
-  await boss.work(QUEUE, { teamSize: 5, teamConcurrency: 1 }, async (job) => {
-    console.log(`[Worker] job recebido: ${job.id} msg=${job.data?.messageId}`);
-    try {
-      await processMessage(job);
-    } catch (err) {
-      const retryLimit = job.retryLimit ?? 7;
-      const made = job.retryCount + 1;
-      const { messageId, phone } = job.data ?? {};
-      if (made > retryLimit) {
-        console.error(`[Worker] ✗ msg ${messageId} → ${phone} | FALHOU após ${made} tentativas: ${err.message}`);
-      } else {
-        console.warn(`[Worker] ↺ msg ${messageId} → ${phone} | tentativa ${made}/${retryLimit + 1}: ${err.message}`);
-      }
-      throw err;
-    }
-  });
-  console.log('[Worker] message worker started (pg-boss) ✓');
-}
-
-start().catch((e) => console.error('[Worker] ERRO FATAL ao iniciar:', e.message));
-
-module.exports = { start };
+console.log('[Worker] message worker carregado (setTimeout queue)');
+module.exports = { processJob };

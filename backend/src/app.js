@@ -144,6 +144,40 @@ setupDesktopWS(server);
     console.log('[Warmup] iniciado');
   } catch (e) { console.error('[Warmup] falha ao iniciar:', e.message); }
 
+  // Reenfileira mensagens WhatsApp que ficaram com status=queued após restart
+  try {
+    const { Message } = require('./models');
+    const { enqueueMessage } = require('./services/queueService');
+    const stuckMsgs = await Message.findAll({
+      where: { status: 'queued' },
+      attributes: ['id', 'user_id', 'to_phone', 'content'],
+      limit: 500,
+    });
+    if (stuckMsgs.length > 0) {
+      console.log(`[Startup] reenfileirando ${stuckMsgs.length} mensagens pendentes`);
+      for (const msg of stuckMsgs) {
+        await enqueueMessage(msg.id, msg.user_id, msg.to_phone, msg.content, 0);
+      }
+    }
+  } catch (e) { console.error('[Startup] falha ao reenviar pendentes:', e.message); }
+
+  // Reenfileira emails que ficaram com status=queued após restart
+  try {
+    const { EmailMessage } = require('./models');
+    const { enqueueEmail } = require('./services/emailQueueService');
+    const stuckEmails = await EmailMessage.findAll({
+      where: { status: 'queued' },
+      attributes: ['id'],
+      limit: 500,
+    });
+    if (stuckEmails.length > 0) {
+      console.log(`[Startup] reenfileirando ${stuckEmails.length} emails pendentes`);
+      for (const em of stuckEmails) {
+        await enqueueEmail(em.id, 0);
+      }
+    }
+  } catch (e) { console.error('[Startup] falha ao reenviar emails pendentes:', e.message); }
+
   // Reconecta contas WhatsApp que estavam conectadas antes do restart
   try {
     const whatsapp = require('./services/whatsappService');
