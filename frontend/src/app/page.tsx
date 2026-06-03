@@ -6,7 +6,7 @@ import {
   Send, Flame, Bot, Smartphone, BarChart2, Check, ChevronDown, ChevronUp,
   Zap, Shield, Users, Star, ArrowRight, Menu, X, Sparkles, Mail,
   AlertTriangle, Lock, ShieldCheck, FileText, Link2, ClipboardCheck,
-  Layers, Paperclip, UserCheck, Monitor,
+  Layers, Paperclip, UserCheck, Monitor, Eye, RotateCcw, PenLine, Tag,
 } from 'lucide-react';
 
 // ─── Contato WhatsApp ─────────────────────────────────────────────────────────
@@ -89,6 +89,27 @@ const FEATURES = [
     color: 'bg-pink-100 text-pink-600',
     badge: null,
   },
+  {
+    icon: Mail,
+    title: 'Campanhas de E-mail Marketing',
+    desc: 'Crie e dispare campanhas de email profissionais para toda sua base — com templates prontos, editor visual e agendamento.',
+    color: 'bg-blue-100 text-blue-600',
+    badge: 'Novo',
+  },
+  {
+    icon: Eye,
+    title: 'Rastreamento de Abertura',
+    desc: 'Saiba exatamente quem abriu seu email, quando e quantas vezes. Taxa de abertura em tempo real por campanha.',
+    color: 'bg-cyan-100 text-cyan-600',
+    badge: 'Novo',
+  },
+  {
+    icon: RotateCcw,
+    title: 'Reenvio para Não-Abertos',
+    desc: 'Com um clique, reenvie automaticamente a campanha apenas para quem ainda não abriu — sem duplicar para quem já leu.',
+    color: 'bg-violet-100 text-violet-600',
+    badge: 'Novo',
+  },
 ];
 
 const STEPS = [
@@ -122,6 +143,7 @@ const PLANS_DEFAULT = [
       'Disparos em massa ilimitados',
       'Aquecimento de números',
       'Até 5.000 contatos',
+      'E-mail marketing incluso',
       'Dashboard e relatórios completos',
       'Suporte via WhatsApp 08h–18h',
       '7 dias grátis para testar',
@@ -141,6 +163,7 @@ const PLANS_DEFAULT = [
       'Aquecimento de números',
       'Bot com IA incluído (até 500 conv/mês)',
       'Contatos ilimitados',
+      'E-mail marketing ilimitado + rastreamento',
       'Dashboard e relatórios completos',
       'Suporte prioritário via WhatsApp 08h–18h',
       '7 dias grátis para testar',
@@ -173,6 +196,18 @@ const FAQS = [
   {
     q: 'Que tipos de arquivo posso enviar em uma campanha?',
     a: 'Você pode anexar imagens (JPG, PNG, WebP), PDFs, documentos Word (.docx), planilhas Excel (.xlsx), apresentações PowerPoint, vídeos (MP4, AVI) e áudios (MP3, OGG). Os arquivos são hospedados em nuvem e entregues via WhatsApp para todos os destinatários da campanha.',
+  },
+  {
+    q: 'O e-mail marketing está incluso no plano?',
+    a: 'Sim, o módulo de e-mail marketing está incluso em todos os planos sem custo adicional. Você acessa pelo subdomínio email.clicaai.ia.br com o mesmo login e senha da plataforma WhatsApp.',
+  },
+  {
+    q: 'Como funciona o rastreamento de abertura de e-mail?',
+    a: 'Cada email enviado contém um pixel de rastreamento invisível. Quando o destinatário abre o email, o sistema registra a abertura com data e hora. Você acompanha a taxa de abertura de cada campanha em tempo real no dashboard de email.',
+  },
+  {
+    q: 'Posso reenviar apenas para quem não abriu o e-mail?',
+    a: 'Sim! Com um clique você cria uma nova campanha automaticamente segmentada apenas para quem ainda não abriu o email anterior — sem precisar filtrar a lista manualmente. Isso aumenta significativamente o alcance das suas campanhas.',
   },
   {
     q: 'Posso cancelar a qualquer momento?',
@@ -281,6 +316,101 @@ function PhoneMockup() {
       </div>
       <div className="absolute -right-6 bottom-10 bg-white rounded-xl shadow-lg px-3 py-2 flex items-center gap-1.5 text-xs font-bold text-orange-600 border border-orange-100 whitespace-nowrap">
         <Flame size={11} className="text-orange-500" /> Aquecido
+      </div>
+    </div>
+  );
+}
+
+// ─── Email Mockup ─────────────────────────────────────────────────────────────
+
+function EmailMockup() {
+  return (
+    <div className="relative w-full max-w-sm mx-auto select-none">
+      <div className="absolute inset-0 bg-blue-400/20 blur-3xl rounded-full scale-110" />
+      <div className="relative bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
+        {/* Header do cliente de email */}
+        <div className="bg-gradient-to-r from-blue-600 to-indigo-600 px-5 py-4 flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center text-white text-xs font-bold">CA</div>
+          <div className="flex-1">
+            <p className="text-white text-xs font-bold">Clica Aí · E-mail Marketing</p>
+            <p className="text-blue-200 text-[10px]">Campanha enviada com sucesso</p>
+          </div>
+          <div className="flex gap-1.5">
+            {['bg-red-400','bg-yellow-400','bg-green-400'].map((c) => (
+              <div key={c} className={`w-2.5 h-2.5 rounded-full ${c}`} />
+            ))}
+          </div>
+        </div>
+
+        {/* Stats rápidas */}
+        <div className="grid grid-cols-3 gap-0 border-b border-gray-100">
+          {[
+            { label: 'Enviados', value: '1.840', color: 'text-gray-800' },
+            { label: 'Abertos', value: '634', color: 'text-blue-600' },
+            { label: 'Taxa', value: '34%', color: 'text-green-600' },
+          ].map((s) => (
+            <div key={s.label} className="py-3 text-center border-r last:border-r-0 border-gray-100">
+              <p className={`text-lg font-black ${s.color}`}>{s.value}</p>
+              <p className="text-[10px] text-gray-400 font-medium">{s.label}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Preview do email */}
+        <div className="p-4 space-y-2">
+          <div className="flex items-center gap-2 mb-3">
+            <div className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center shrink-0">
+              <Mail size={11} className="text-blue-600" />
+            </div>
+            <div className="flex-1">
+              <p className="text-[11px] font-bold text-gray-800">🎉 Oferta exclusiva para você!</p>
+              <p className="text-[10px] text-gray-400">De: Sua Empresa · Para: 1.840 contatos</p>
+            </div>
+          </div>
+          <div className="bg-gradient-to-b from-blue-50 to-white border border-blue-100 rounded-xl p-3 space-y-1.5">
+            <div className="h-1.5 bg-blue-200 rounded-full w-4/5" />
+            <div className="h-1.5 bg-gray-200 rounded-full w-full" />
+            <div className="h-1.5 bg-gray-200 rounded-full w-3/4" />
+            <div className="h-8 bg-blue-600 rounded-lg w-2/3 mx-auto mt-2 flex items-center justify-center">
+              <p className="text-white text-[9px] font-black">VER OFERTA AGORA →</p>
+            </div>
+          </div>
+          {/* Linha de contato abriu */}
+          {[
+            { name: 'Ana Paula Silva', opened: true, time: '09:14' },
+            { name: 'Carlos Mendes', opened: true, time: '09:31' },
+            { name: 'Roberto Lima', opened: false, time: '' },
+          ].map((c) => (
+            <div key={c.name} className="flex items-center gap-2 py-1 border-b border-gray-50 last:border-0">
+              <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${c.opened ? 'bg-green-100' : 'bg-gray-100'}`}>
+                {c.opened ? <Eye size={9} className="text-green-600" /> : <Mail size={9} className="text-gray-400" />}
+              </div>
+              <p className="text-[10px] text-gray-700 flex-1 truncate">{c.name}</p>
+              <p className={`text-[9px] font-medium ${c.opened ? 'text-green-600' : 'text-gray-300'}`}>
+                {c.opened ? `Aberto ${c.time}` : 'Não abriu'}
+              </p>
+            </div>
+          ))}
+        </div>
+
+        {/* Barra inferior */}
+        <div className="bg-gray-50 border-t border-gray-100 px-4 py-2.5 flex items-center justify-between">
+          <p className="text-[10px] text-gray-400">Próximo envio: 14:00</p>
+          <button className="text-[10px] font-bold text-blue-600 flex items-center gap-1">
+            <RotateCcw size={9} /> Reenviar p/ não-abertos
+          </button>
+        </div>
+      </div>
+
+      {/* Floating badges */}
+      <div className="absolute -right-6 top-6 bg-white rounded-xl shadow-lg px-3 py-2 flex items-center gap-1.5 text-xs font-bold text-blue-700 border border-blue-100 whitespace-nowrap">
+        <Eye size={11} className="text-blue-500" /> 34% de abertura
+      </div>
+      <div className="absolute -left-8 bottom-16 bg-white rounded-xl shadow-lg px-3 py-2 flex items-center gap-1.5 text-xs font-bold text-green-700 border border-green-100 whitespace-nowrap">
+        <Zap size={11} className="text-green-500" /> 1.840 enviados
+      </div>
+      <div className="absolute -right-4 bottom-6 bg-white rounded-xl shadow-lg px-3 py-2 flex items-center gap-1.5 text-xs font-bold text-violet-700 border border-violet-100 whitespace-nowrap">
+        <RotateCcw size={10} className="text-violet-500" /> Reenvio automático
       </div>
     </div>
   );
@@ -480,7 +610,7 @@ export default function LandingPage() {
             <div>
               <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 text-xs font-bold px-4 py-1.5 rounded-full mb-7 border border-green-200">
                 <Sparkles size={11} />
-                7 dias grátis · App Desktop · Suporte 08h–18h
+                7 dias grátis · WhatsApp + E-mail · Suporte 08h–18h
               </div>
 
               {/* BAB: BEFORE */}
@@ -503,7 +633,7 @@ export default function LandingPage() {
                   'Envios em lotes anti-bloqueio — até 50 por vez com intervalo configurável',
                   'Envie fotos, PDFs, planilhas e documentos Word para toda a lista',
                   'Bot de IA que vende e atende enquanto você dorme',
-                  'Rastreamento de quem já recebeu — nunca reenvie acidentalmente',
+                  'E-mail marketing com rastreamento de abertura incluso',
                 ].map((b) => (
                   <li key={b} className="flex items-start gap-3 text-sm text-gray-700">
                     <span className="mt-0.5 w-5 h-5 bg-green-600 rounded-full flex items-center justify-center shrink-0">
@@ -583,9 +713,9 @@ export default function LandingPage() {
             <div className="text-center mb-16">
               <span className="text-green-600 font-bold text-sm uppercase tracking-widest">Funcionalidades</span>
               <h2 className="text-4xl font-black tracking-tight mt-3 mb-4">
-                Tudo que você precisa para vender<br className="hidden sm:block" /> pelo WhatsApp
+                Tudo que você precisa para vender<br className="hidden sm:block" /> pelo WhatsApp e E-mail
               </h2>
-              <p className="text-gray-500 text-lg max-w-2xl mx-auto">Uma plataforma completa. Sem precisar de 5 ferramentas diferentes.</p>
+              <p className="text-gray-500 text-lg max-w-2xl mx-auto">Uma plataforma completa com WhatsApp e E-mail. Sem precisar de 5 ferramentas diferentes.</p>
             </div>
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {FEATURES.map((f) => (
@@ -602,6 +732,117 @@ export default function LandingPage() {
                   <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
                 </div>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* ── EMAIL MARKETING ── */}
+        <section className="py-24 bg-gradient-to-br from-indigo-950 via-blue-950 to-gray-950 text-white overflow-hidden relative">
+          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-blue-500/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-[400px] h-[400px] bg-indigo-500/10 rounded-full blur-3xl" />
+          <div className="relative max-w-6xl mx-auto px-4">
+            <div className="text-center mb-16">
+              <span className="inline-flex items-center gap-2 bg-blue-500/20 text-blue-300 text-xs font-bold px-4 py-1.5 rounded-full mb-4 border border-blue-500/30">
+                <Mail size={11} /> Novidade — E-mail Marketing incluso em todos os planos
+              </span>
+              <h2 className="text-4xl font-black tracking-tight mt-3 mb-4">
+                Alcance mais pessoas<br className="hidden sm:block" /> com e-mail profissional
+              </h2>
+              <p className="text-blue-200 text-lg max-w-2xl mx-auto">
+                Além do WhatsApp, dispare campanhas de email com rastreamento de abertura, templates prontos
+                e reenvio automático para quem não abriu — tudo no mesmo plano, sem custo extra.
+              </p>
+            </div>
+
+            <div className="grid lg:grid-cols-2 gap-16 items-center">
+              {/* Features list */}
+              <div className="space-y-6">
+                {[
+                  {
+                    icon: PenLine,
+                    color: 'bg-blue-500/20 text-blue-300',
+                    title: 'Editor visual + templates prontos',
+                    desc: 'Crie emails bonitos com nosso editor visual ou parta de um dos 6 templates profissionais — newsletter, promoção, boas-vindas, evento e mais. Sem precisar de designer.',
+                  },
+                  {
+                    icon: Eye,
+                    color: 'bg-cyan-500/20 text-cyan-300',
+                    title: 'Rastreamento de abertura em tempo real',
+                    desc: 'Saiba exatamente quem abriu seu email, quando e quantas vezes. Acompanhe a taxa de abertura por campanha direto no dashboard.',
+                  },
+                  {
+                    icon: RotateCcw,
+                    color: 'bg-violet-500/20 text-violet-300',
+                    title: 'Reenvio com 1 clique para não-abertos',
+                    desc: 'Campanha terminou? Reenvie automaticamente só para quem não abriu. Aumente seu alcance sem duplicar para quem já leu.',
+                  },
+                  {
+                    icon: Tag,
+                    color: 'bg-green-500/20 text-green-300',
+                    title: 'Segmentação por tags e agendamento',
+                    desc: 'Filtre destinatários por tags, agende o envio para o horário ideal e acompanhe enviados, abertos e falhas em tempo real.',
+                  },
+                ].map((f) => (
+                  <div key={f.title} className="flex gap-4">
+                    <div className={`w-11 h-11 rounded-2xl ${f.color} flex items-center justify-center shrink-0`}>
+                      <f.icon size={20} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-white mb-1">{f.title}</h3>
+                      <p className="text-blue-200 text-sm leading-relaxed">{f.desc}</p>
+                    </div>
+                  </div>
+                ))}
+
+                <div className="pt-4 flex flex-col sm:flex-row gap-3">
+                  <Link href="/register"
+                    className="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-500 text-white font-black px-7 py-3.5 rounded-2xl transition-all shadow-lg shadow-blue-900/40 hover:scale-[1.02]">
+                    Criar conta e testar grátis <ArrowRight size={16} />
+                  </Link>
+                  <a href="#precos"
+                    className="inline-flex items-center justify-center gap-2 border border-blue-500/40 text-blue-200 hover:text-white hover:border-blue-400 font-semibold px-7 py-3.5 rounded-2xl transition-colors">
+                    Ver planos
+                  </a>
+                </div>
+              </div>
+
+              {/* Email Mockup */}
+              <div className="flex justify-center lg:justify-end">
+                <EmailMockup />
+              </div>
+            </div>
+
+            {/* Comparativo WhatsApp + Email */}
+            <div className="mt-20 bg-white/5 border border-white/10 rounded-3xl p-8">
+              <p className="text-center text-sm font-bold text-blue-300 mb-8 uppercase tracking-widest">
+                WhatsApp + E-mail = alcance máximo
+              </p>
+              <div className="grid md:grid-cols-3 gap-6 text-center">
+                <div className="space-y-2">
+                  <div className="w-14 h-14 bg-green-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <Smartphone size={26} className="text-green-400" />
+                  </div>
+                  <h4 className="font-bold text-white">WhatsApp</h4>
+                  <p className="text-gray-400 text-sm leading-relaxed">Alta taxa de resposta · Engajamento imediato · Ideal para promoções relâmpago e atendimento</p>
+                </div>
+                <div className="flex items-center justify-center">
+                  <div className="bg-gradient-to-r from-green-600 to-blue-600 text-white font-black px-5 py-3 rounded-2xl text-lg">
+                    +
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="w-14 h-14 bg-blue-500/20 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                    <Mail size={26} className="text-blue-400" />
+                  </div>
+                  <h4 className="font-bold text-white">E-mail</h4>
+                  <p className="text-gray-400 text-sm leading-relaxed">Conteúdo rico · Rastreamento de abertura · Ideal para newsletters e campanhas longas</p>
+                </div>
+              </div>
+              <div className="mt-8 text-center">
+                <p className="text-blue-200 text-sm">
+                  Quem usa os dois canais tem em média <strong className="text-white">3x mais conversões</strong> do que quem usa apenas um.
+                </p>
+              </div>
             </div>
           </div>
         </section>
@@ -909,7 +1150,7 @@ export default function LandingPage() {
           <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-white/5 rounded-full blur-3xl" />
           <div className="relative max-w-3xl mx-auto px-4 text-center">
             <h2 className="text-5xl font-black text-white tracking-tight mb-5">
-              Comece a vender mais<br />pelo WhatsApp hoje
+              WhatsApp + E-mail:<br />venda mais por todos os canais
             </h2>
             <p className="text-green-100 text-xl mb-10 leading-relaxed">
               7 dias grátis. Sem cartão de crédito. Cancele quando quiser.<br />
@@ -943,7 +1184,7 @@ export default function LandingPage() {
                   <span className="text-xl font-black text-white">Clica <span className="text-green-500">Aí</span></span>
                 </div>
                 <p className="text-sm leading-relaxed text-gray-500">
-                  Plataforma de automação para WhatsApp — disparos inteligentes, aquecimento de números e atendimento com IA.
+                  Plataforma completa de automação — WhatsApp com disparos inteligentes, aquecimento de números, bot de IA e e-mail marketing com rastreamento.
                 </p>
               </div>
 
