@@ -5,7 +5,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Send, RefreshCw, Search, X, User, Phone, WifiOff } from 'lucide-react';
+import { Send, RefreshCw, Search, X, User, Phone, WifiOff, Smartphone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '@/lib/api';
 import { formatDate, statusColor, statusLabel } from '@/lib/utils';
@@ -123,6 +123,15 @@ export default function MessagesPage() {
   const [histPage, setHistPage] = useState(1);
   const [retryingId, setRetryingId] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>('contact');
+  const [selectedAccountId, setSelectedAccountId] = useState<string>('');
+
+  const { data: waAccounts = [] } = useQuery<any[]>({
+    queryKey: ['wa-accounts'],
+    queryFn: () => api.get('/whatsapp/accounts').then((r) => r.data),
+    refetchInterval: 8000,
+  });
+
+  const connectedAccounts = (waAccounts as any[]).filter((a) => a.status === 'connected');
 
   const { data: contacts = [] } = useQuery({
     queryKey: ['contacts-all'],
@@ -173,12 +182,13 @@ export default function MessagesPage() {
   });
 
   function onSubmit(data: FormData) {
+    const accountPayload = selectedAccountId ? { account_id: selectedAccountId } : {};
     if (mode === 'contact') {
       if (!data.contact_id) {
         setError('contact_id', { message: 'Selecione um contato' });
         return;
       }
-      sendMutation.mutate({ contact_id: data.contact_id, content: data.content });
+      sendMutation.mutate({ contact_id: data.contact_id, content: data.content, ...accountPayload });
     } else {
       const raw = data.phone || '';
       const parts = raw.split(';').map((p) => p.trim()).filter(Boolean);
@@ -187,7 +197,7 @@ export default function MessagesPage() {
         setError('phone', { message: 'Informe o número com DDD (ex: 11999990000)' });
         return;
       }
-      sendMutation.mutate({ phone: raw, content: data.content });
+      sendMutation.mutate({ phone: raw, content: data.content, ...accountPayload });
     }
   }
 
@@ -265,6 +275,47 @@ export default function MessagesPage() {
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+
+          {/* Seletor de número remetente — só aparece quando há 2+ números conectados */}
+          {connectedAccounts.length >= 2 && (
+            <div>
+              <label className="label">Enviar de qual número</label>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSelectedAccountId('')}
+                  className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-colors ${
+                    selectedAccountId === ''
+                      ? 'bg-primary-600 border-primary-600 text-white shadow-sm'
+                      : 'bg-white border-gray-200 text-gray-600 hover:border-primary-300 hover:text-gray-900'
+                  }`}
+                >
+                  <Smartphone size={13} />
+                  Qualquer conectado
+                </button>
+                {connectedAccounts.map((acc: any) => (
+                  <button
+                    key={acc.id}
+                    type="button"
+                    onClick={() => setSelectedAccountId(acc.id)}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-xl border text-sm font-medium transition-colors ${
+                      selectedAccountId === acc.id
+                        ? 'bg-primary-600 border-primary-600 text-white shadow-sm'
+                        : 'bg-white border-gray-200 text-gray-600 hover:border-primary-300 hover:text-gray-900'
+                    }`}
+                  >
+                    <Smartphone size={13} />
+                    <span>{acc.label}</span>
+                    {acc.phone && <span className={`text-xs ${selectedAccountId === acc.id ? 'text-primary-100' : 'text-gray-400'}`}>+{acc.phone}</span>}
+                  </button>
+                ))}
+              </div>
+              {selectedAccountId === '' && (
+                <p className="text-xs text-gray-400 mt-1">O sistema vai escolher automaticamente um número disponível.</p>
+              )}
+            </div>
+          )}
+
           {mode === 'contact' ? (
             <div>
               <label className="label">Contato</label>

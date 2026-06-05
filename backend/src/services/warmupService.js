@@ -120,8 +120,8 @@ class WarmupService {
   }
 
   _scheduleNext() {
-    // Intervalo aleatório entre 4 e 9 minutos para não parecer automático
-    const delay = (4 + Math.random() * 5) * 60 * 1000;
+    // Intervalo aleatório entre 2 e 4 minutos — mais frequente para aquecer mais rápido
+    const delay = (2 + Math.random() * 2) * 60 * 1000;
     this.timer = setTimeout(() => this._tick(), delay);
   }
 
@@ -170,11 +170,49 @@ class WarmupService {
       return;
     }
 
-    // Escolhe remetente e destinatário aleatórios
-    const shuffled = [...connected].sort(() => Math.random() - 0.5);
-    const sender = shuffled[0];
-    const receiver = shuffled[1];
+    // Com 3+ contas: envia 2 pares de conversa por ciclo (escalona com delay)
+    // Com 2 contas: envia 1 par (como antes)
+    const numConvs = connected.length >= 3 ? 2 : 1;
 
+    const usedPairKeys = new Set();
+    let staggerMs = 0;
+
+    for (let i = 0; i < numConvs; i++) {
+      // Embaralha e escolhe um par ainda não usado neste ciclo
+      const shuffled = [...connected].sort(() => Math.random() - 0.5);
+      let sender = shuffled[0];
+      let receiver = shuffled[1];
+
+      if (i > 0) {
+        // Tenta achar um par diferente do primeiro
+        for (let j = 0; j < shuffled.length - 1; j++) {
+          const k = `${shuffled[j].id}|${shuffled[j + 1].id}`;
+          const kr = `${shuffled[j + 1].id}|${shuffled[j].id}`;
+          if (!usedPairKeys.has(k) && !usedPairKeys.has(kr)) {
+            sender = shuffled[j];
+            receiver = shuffled[j + 1];
+            break;
+          }
+        }
+      }
+
+      usedPairKeys.add(`${sender.id}|${receiver.id}`);
+      const capturedSender = sender;
+      const capturedReceiver = receiver;
+
+      // Escalonamento: segunda conversa começa 45-90s depois da primeira
+      const delay = staggerMs;
+      staggerMs += Math.floor((45 + Math.random() * 45) * 1000);
+
+      setTimeout(() => {
+        this._sendConversation(config, capturedSender, capturedReceiver).catch((e) =>
+          console.error('[Warmup] erro na conversa:', e.message)
+        );
+      }, delay);
+    }
+  }
+
+  async _sendConversation(config, sender, receiver) {
     const conv = pick(CONVERSATIONS);
     const initMsg = conv.opener;
     await whatsapp.sendText(sender.id, receiver.phone, initMsg);
@@ -186,11 +224,10 @@ class WarmupService {
       to_label: receiver.label,
       message: initMsg,
     });
-
     console.log(`[Warmup] ${sender.label} → ${receiver.label}: "${initMsg}"`);
 
-    // Resposta após 15–90 segundos (sem limite diário)
-    const replyDelay = (15 + Math.random() * 75) * 1000;
+    // Resposta após 10–50 segundos (mais rápido que antes: era 15–90s)
+    const replyDelay = Math.floor((10 + Math.random() * 40) * 1000);
     setTimeout(async () => {
       try {
         const replyMsg = conv.reply;
