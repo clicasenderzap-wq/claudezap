@@ -42,6 +42,13 @@ class DesktopService extends EventEmitter {
           where: { user_id: userId, status: { [Op.in]: ['connected', 'connecting'] } },
           attributes: ['id'],
         });
+        // Pré-popula _accountToUser IMEDIATAMENTE — assim getStatus() já retorna 'connected'
+        // sem precisar esperar os eventos 'ready' chegarem do Electron app (que levam segundos).
+        // Isso evita o erro "App desktop não conectado" durante a janela de reconexão.
+        for (const acc of accounts) {
+          this._accountToUser.set(acc.id, userId);
+        }
+        // Envia 'connect' para cada conta — o Electron re-emite 'ready' se já estiver conectada
         for (const acc of accounts) {
           await this._sendToUser(userId, { type: 'connect', accountId: acc.id }).catch(() => {});
         }

@@ -83,14 +83,14 @@ export default function CampaignsPage() {
   const { data: waAccounts = [] } = useQuery<any[]>({
     queryKey: ['wa-accounts'],
     queryFn: () => api.get('/whatsapp/accounts').then((r) => r.data),
-    refetchInterval: 30000,
+    refetchInterval: 8000,
   });
   const connectedAccounts = waAccounts.filter((a: any) => a.status === 'connected');
 
   const { data: desktopStatus } = useQuery<{ desktop_connected: boolean; active_account_ids: string[] }>({
     queryKey: ['desktop-status'],
     queryFn: () => api.get('/whatsapp/desktop-status').then((r) => r.data),
-    refetchInterval: 30000,
+    refetchInterval: 8000,
   });
 
   const { data: contacts } = useQuery({
