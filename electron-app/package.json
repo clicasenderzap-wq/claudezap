@@ -1,6 +1,6 @@
 {
   "name": "clica-ai-desktop",
-  "version": "1.0.18",
+  "version": "1.0.19",
   "description": "Clica Aí — Agente WhatsApp Desktop",
   "productName": "Clica Aí",
   "main": "src/main.js",
