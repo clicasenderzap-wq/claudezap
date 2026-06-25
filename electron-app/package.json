@@ -1,7 +1,8 @@
 {
-  "name": "claudezap-desktop",
+  "name": "clica-ai-desktop",
   "version": "1.0.18",
   "description": "Clica Aí — Agente WhatsApp Desktop",
+  "productName": "Clica Aí",
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",

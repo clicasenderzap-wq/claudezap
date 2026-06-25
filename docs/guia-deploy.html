@@ -1,9 +1,9 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ClaudeZap — Guia de Implementação</title>
+<title>Clica Aí â€” Guia de ImplementaÃ§Ã£o</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 
@@ -38,7 +38,7 @@
     font-size: 14px;
   }
 
-  /* ── CAPA ── */
+  /* â”€â”€ CAPA â”€â”€ */
   .cover {
     min-height: 100vh;
     display: flex;
@@ -97,7 +97,7 @@
     opacity: 0.7;
   }
 
-  /* ── ÍNDICE ── */
+  /* â”€â”€ ÃNDICE â”€â”€ */
   .toc-page {
     padding: 60px 80px;
     page-break-after: always;
@@ -156,7 +156,7 @@
   .toc-prereqs ul { padding-left: 20px; }
   .toc-prereqs li { padding: 4px 0; color: var(--gray-700); }
 
-  /* ── CONTEÚDO ── */
+  /* â”€â”€ CONTEÃšDO â”€â”€ */
   .page {
     padding: 50px 80px;
     page-break-after: always;
@@ -327,7 +327,7 @@
     align-items: center;
     gap: 8px;
   }
-  .url-box::before { content: "🔗"; font-size: 14px; }
+  .url-box::before { content: "ðŸ”—"; font-size: 14px; }
 
   /* Screen mockup */
   .screen {
@@ -451,21 +451,21 @@
 </head>
 <body>
 
-<!-- ═══════════════════════════════════ CAPA ═══════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• CAPA â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="cover">
   <div class="cover-logo">Claude<span>Zap</span></div>
   <div class="cover-tagline">Sistema de Envio de Mensagens via WhatsApp</div>
 
-  <div class="cover-title">Guia Completo de<br>Implementação Online</div>
-  <div class="cover-subtitle">Do zero ao ar — sem precisar de conhecimento técnico</div>
+  <div class="cover-title">Guia Completo de<br>ImplementaÃ§Ã£o Online</div>
+  <div class="cover-subtitle">Do zero ao ar â€” sem precisar de conhecimento tÃ©cnico</div>
 
   <div class="cover-badges">
-    <span class="cover-badge">✅ 100% Gratuito</span>
-    <span class="cover-badge">⏱ Tempo estimado: ~55 min</span>
-    <span class="cover-badge">🟢 Nível: Iniciante</span>
-    <span class="cover-badge">🌐 Domínio próprio</span>
-    <span class="cover-badge">📎 Envio de Arquivos</span>
-    <span class="cover-badge">🔒 Segurança Reforçada</span>
+    <span class="cover-badge">âœ… 100% Gratuito</span>
+    <span class="cover-badge">â± Tempo estimado: ~55 min</span>
+    <span class="cover-badge">ðŸŸ¢ NÃ­vel: Iniciante</span>
+    <span class="cover-badge">ðŸŒ DomÃ­nio prÃ³prio</span>
+    <span class="cover-badge">ðŸ“Ž Envio de Arquivos</span>
+    <span class="cover-badge">ðŸ”’ SeguranÃ§a ReforÃ§ada</span>
   </div>
 
   <div style="display:flex; gap:24px; flex-wrap:wrap; justify-content:center; margin-bottom:48px;">
@@ -491,12 +491,12 @@
     </div>
   </div>
 
-  <div class="cover-footer">Versão 2.0 &nbsp;·&nbsp; ClaudeZap 2026</div>
+  <div class="cover-footer">VersÃ£o 2.0 &nbsp;Â·&nbsp; Clica Aí 2026</div>
 </div>
 
-<!-- ═══════════════════════════════════ ÍNDICE ═══════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• ÃNDICE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="toc-page">
-  <div class="toc-title">📋 Índice</div>
+  <div class="toc-title">ðŸ“‹ Ãndice</div>
 
   <ul class="toc-list">
     <li class="toc-item">
@@ -506,32 +506,32 @@
     </li>
     <li class="toc-item">
       <div class="toc-num">2</div>
-      <div class="toc-item-title">Banco de dados — Neon (PostgreSQL)</div>
+      <div class="toc-item-title">Banco de dados â€” Neon (PostgreSQL)</div>
       <div class="toc-item-time">~5 min</div>
     </li>
     <li class="toc-item">
       <div class="toc-num">3</div>
-      <div class="toc-item-title">Cache — Upstash (Redis)</div>
+      <div class="toc-item-title">Cache â€” Upstash (Redis)</div>
       <div class="toc-item-time">~5 min</div>
     </li>
     <li class="toc-item">
       <div class="toc-num">4</div>
-      <div class="toc-item-title">Armazenamento de arquivos — Cloudflare R2 <span style="background:#ea580c;color:white;font-size:10px;padding:1px 8px;border-radius:999px;margin-left:6px;">NOVO</span></div>
+      <div class="toc-item-title">Armazenamento de arquivos â€” Cloudflare R2 <span style="background:#ea580c;color:white;font-size:10px;padding:1px 8px;border-radius:999px;margin-left:6px;">NOVO</span></div>
       <div class="toc-item-time">~8 min</div>
     </li>
     <li class="toc-item">
       <div class="toc-num">5</div>
-      <div class="toc-item-title">Backend — Render</div>
+      <div class="toc-item-title">Backend â€” Render</div>
       <div class="toc-item-time">~10 min</div>
     </li>
     <li class="toc-item">
       <div class="toc-num">6</div>
-      <div class="toc-item-title">Frontend — Vercel</div>
+      <div class="toc-item-title">Frontend â€” Vercel</div>
       <div class="toc-item-time">~8 min</div>
     </li>
     <li class="toc-item">
       <div class="toc-num">7</div>
-      <div class="toc-item-title">Conectar domínio clicaai.ai.br (Hostinger)</div>
+      <div class="toc-item-title">Conectar domÃ­nio clicaai.ai.br (Hostinger)</div>
       <div class="toc-item-time">~10 min</div>
     </li>
     <li class="toc-item">
@@ -541,51 +541,51 @@
     </li>
     <li class="toc-item">
       <div class="toc-num">9</div>
-      <div class="toc-item-title">Teste final e validação</div>
+      <div class="toc-item-title">Teste final e validaÃ§Ã£o</div>
       <div class="toc-item-time">~5 min</div>
     </li>
     <li class="toc-item" style="border-bottom:none;">
-      <div class="toc-num" style="background:#ea580c;">✦</div>
+      <div class="toc-num" style="background:#ea580c;">âœ¦</div>
       <div class="toc-item-title">Como usar as novas funcionalidades <span style="background:#ea580c;color:white;font-size:10px;padding:1px 8px;border-radius:999px;margin-left:6px;">NOVO</span></div>
-      <div class="toc-item-time">referência</div>
+      <div class="toc-item-time">referÃªncia</div>
     </li>
   </ul>
 
   <div class="toc-prereqs">
-    <h3>🎒 O que você vai precisar antes de começar</h3>
+    <h3>ðŸŽ’ O que vocÃª vai precisar antes de comeÃ§ar</h3>
     <ul>
-      <li>Um endereço de e-mail válido (pode ser Gmail)</li>
-      <li>Acesso ao painel da Hostinger (onde seu domínio está)</li>
+      <li>Um endereÃ§o de e-mail vÃ¡lido (pode ser Gmail)</li>
+      <li>Acesso ao painel da Hostinger (onde seu domÃ­nio estÃ¡)</li>
       <li>Um celular com WhatsApp instalado para escanear o QR Code</li>
-      <li>Conexão com a internet</li>
-      <li>Aproximadamente 55 minutos disponíveis</li>
+      <li>ConexÃ£o com a internet</li>
+      <li>Aproximadamente 55 minutos disponÃ­veis</li>
     </ul>
   </div>
 
   <div class="callout info" style="margin-top:24px;">
-    <div class="callout-icon">💡</div>
+    <div class="callout-icon">ðŸ’¡</div>
     <div class="callout-body">
-      <div class="callout-title">Dica importante antes de começar</div>
-      <div class="callout-text">Abra um bloco de notas (ou um arquivo Word) para ir anotando as informações que você vai copiar ao longo do processo — como senhas, URLs e chaves. Isso vai facilitar muito o processo.</div>
+      <div class="callout-title">Dica importante antes de comeÃ§ar</div>
+      <div class="callout-text">Abra um bloco de notas (ou um arquivo Word) para ir anotando as informaÃ§Ãµes que vocÃª vai copiar ao longo do processo â€” como senhas, URLs e chaves. Isso vai facilitar muito o processo.</div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ PASSO 1 ═══════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PASSO 1 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="page">
   <div class="section-header">
     <div class="section-num">1</div>
     <div class="section-info">
       <div class="section-title">Criar conta no GitHub</div>
-      <div class="section-meta">Onde o código do sistema fica armazenado &nbsp;·&nbsp; ⏱ ~3 min</div>
+      <div class="section-meta">Onde o cÃ³digo do sistema fica armazenado &nbsp;Â·&nbsp; â± ~3 min</div>
     </div>
   </div>
 
   <div class="callout info">
-    <div class="callout-icon">ℹ️</div>
+    <div class="callout-icon">â„¹ï¸</div>
     <div class="callout-body">
-      <div class="callout-title">O que é o GitHub?</div>
-      <div class="callout-text">O GitHub é uma plataforma onde o código do ClaudeZap está armazenado. Você vai conectar sua conta do GitHub nas outras plataformas (Vercel, Render) para que elas possam buscar o código e colocar no ar automaticamente.</div>
+      <div class="callout-title">O que Ã© o GitHub?</div>
+      <div class="callout-text">O GitHub Ã© uma plataforma onde o cÃ³digo do Clica Aí estÃ¡ armazenado. VocÃª vai conectar sua conta do GitHub nas outras plataformas (Vercel, Render) para que elas possam buscar o cÃ³digo e colocar no ar automaticamente.</div>
     </div>
   </div>
 
@@ -605,12 +605,12 @@
         <div class="step-title">Crie sua conta</div>
         <div class="step-desc">Clique em <strong>"Sign up"</strong> (canto superior direito) e preencha os dados solicitados.</div>
         <div class="substeps">
-          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Digite seu endereço de e-mail</div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Crie uma senha (mínimo 8 caracteres, com letras e números)</div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Escolha um nome de usuário (ex: <code>clicamkt</code>)</div></div>
-          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Complete a verificação "I'm not a robot"</div></div>
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Digite seu endereÃ§o de e-mail</div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Crie uma senha (mÃ­nimo 8 caracteres, com letras e nÃºmeros)</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Escolha um nome de usuÃ¡rio (ex: <code>clicamkt</code>)</div></div>
+          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Complete a verificaÃ§Ã£o "I'm not a robot"</div></div>
           <div class="substep"><div class="substep-letter">e)</div><div class="substep-text">Clique em <strong>"Create account"</strong></div></div>
-          <div class="substep"><div class="substep-letter">f)</div><div class="substep-text">Verifique seu e-mail e clique no link de confirmação</div></div>
+          <div class="substep"><div class="substep-letter">f)</div><div class="substep-text">Verifique seu e-mail e clique no link de confirmaÃ§Ã£o</div></div>
         </div>
       </div>
     </div>
@@ -618,46 +618,46 @@
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
-        <div class="step-title">Acesse o repositório do ClaudeZap</div>
-        <div class="step-desc">Com a conta criada e logada, acesse o repositório do sistema:</div>
-        <div class="url-box">https://github.com/clicasenderzap-wq/claudezap</div>
-        <div class="step-desc" style="margin-top:8px;">Clique no botão <strong>"Fork"</strong> (canto superior direito da página) para copiar o projeto para a sua conta. Confirme clicando em <strong>"Create fork"</strong>.</div>
+        <div class="step-title">Acesse o repositÃ³rio do Clica Aí</div>
+        <div class="step-desc">Com a conta criada e logada, acesse o repositÃ³rio do sistema:</div>
+        <div class="url-box">https://github.com/clicasenderzap-wq/Clica Aí</div>
+        <div class="step-desc" style="margin-top:8px;">Clique no botÃ£o <strong>"Fork"</strong> (canto superior direito da pÃ¡gina) para copiar o projeto para a sua conta. Confirme clicando em <strong>"Create fork"</strong>.</div>
       </div>
     </div>
   </div>
 
   <div class="callout tip">
-    <div class="callout-icon">✅</div>
+    <div class="callout-icon">âœ…</div>
     <div class="callout-body">
       <div class="callout-title">Como saber que deu certo?</div>
-      <div class="callout-text">Após o fork, você será redirecionado para uma cópia do repositório na <strong>sua</strong> conta, com o endereço: <code>https://github.com/SEU-USUARIO/claudezap</code></div>
+      <div class="callout-text">ApÃ³s o fork, vocÃª serÃ¡ redirecionado para uma cÃ³pia do repositÃ³rio na <strong>sua</strong> conta, com o endereÃ§o: <code>https://github.com/SEU-USUARIO/Clica Aí</code></div>
     </div>
   </div>
 
   <div class="callout warn" style="margin-top: 8px;">
-    <div class="callout-icon">⚠️</div>
+    <div class="callout-icon">âš ï¸</div>
     <div class="callout-body">
       <div class="callout-title">Anote no seu bloco de notas</div>
-      <div class="callout-text">Guarde a URL do <strong>seu</strong> repositório fork. Ex: <code>https://github.com/clicamkt/claudezap</code></div>
+      <div class="callout-text">Guarde a URL do <strong>seu</strong> repositÃ³rio fork. Ex: <code>https://github.com/clicamkt/Clica Aí</code></div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ PASSO 2 ═══════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PASSO 2 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="page">
   <div class="section-header">
     <div class="section-num">2</div>
     <div class="section-info">
-      <div class="section-title">Banco de Dados — Neon</div>
-      <div class="section-meta">Onde os contatos e mensagens ficam armazenados &nbsp;·&nbsp; ⏱ ~5 min</div>
+      <div class="section-title">Banco de Dados â€” Neon</div>
+      <div class="section-meta">Onde os contatos e mensagens ficam armazenados &nbsp;Â·&nbsp; â± ~5 min</div>
     </div>
   </div>
 
   <div class="callout info">
-    <div class="callout-icon">ℹ️</div>
+    <div class="callout-icon">â„¹ï¸</div>
     <div class="callout-body">
-      <div class="callout-title">O que é o Neon?</div>
-      <div class="callout-text">O Neon é um serviço de banco de dados gratuito baseado em PostgreSQL. É onde o ClaudeZap vai salvar seus contatos, histórico de mensagens e informações de usuário. O plano gratuito oferece 0.5 GB de armazenamento — suficiente para milhares de contatos.</div>
+      <div class="callout-title">O que Ã© o Neon?</div>
+      <div class="callout-text">O Neon Ã© um serviÃ§o de banco de dados gratuito baseado em PostgreSQL. Ã‰ onde o Clica Aí vai salvar seus contatos, histÃ³rico de mensagens e informaÃ§Ãµes de usuÃ¡rio. O plano gratuito oferece 0.5 GB de armazenamento â€” suficiente para milhares de contatos.</div>
     </div>
   </div>
 
@@ -674,11 +674,11 @@
       <div class="step-num">2</div>
       <div class="step-body">
         <div class="step-title">Crie sua conta</div>
-        <div class="step-desc">Clique em <strong>"Sign up"</strong> e escolha entrar com o GitHub (mais rápido — já tem conta!).</div>
+        <div class="step-desc">Clique em <strong>"Sign up"</strong> e escolha entrar com o GitHub (mais rÃ¡pido â€” jÃ¡ tem conta!).</div>
         <div class="substeps">
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Clique em <strong>"Continue with GitHub"</strong></div></div>
           <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Autorize o Neon a acessar sua conta GitHub</div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Preencha as perguntas iniciais (pode pular ou escolher qualquer opção)</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Preencha as perguntas iniciais (pode pular ou escolher qualquer opÃ§Ã£o)</div></div>
         </div>
       </div>
     </div>
@@ -689,9 +689,9 @@
         <div class="step-title">Crie um novo projeto</div>
         <div class="substeps">
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Clique em <strong>"Create a project"</strong></div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Nome do projeto: <code>claudezap</code></div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Database name: <code>claudezap</code></div></div>
-          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Region: escolha <strong>"AWS / São Paulo"</strong> se disponível, senão <strong>"AWS / US East"</strong></div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Nome do projeto: <code>Clica Aí</code></div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Database name: <code>Clica Aí</code></div></div>
+          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Region: escolha <strong>"AWS / SÃ£o Paulo"</strong> se disponÃ­vel, senÃ£o <strong>"AWS / US East"</strong></div></div>
           <div class="substep"><div class="substep-letter">e)</div><div class="substep-text">Clique em <strong>"Create project"</strong></div></div>
         </div>
       </div>
@@ -701,42 +701,42 @@
       <div class="step-num">4</div>
       <div class="step-body">
         <div class="step-title">Copie a Connection String (DATABASE_URL)</div>
-        <div class="step-desc">Após criar o projeto, o Neon vai mostrar uma tela de conexão. Procure o campo chamado <strong>"Connection string"</strong>.</div>
+        <div class="step-desc">ApÃ³s criar o projeto, o Neon vai mostrar uma tela de conexÃ£o. Procure o campo chamado <strong>"Connection string"</strong>.</div>
         <div class="substeps">
-          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Certifique-se que a opção <strong>"Pooled connection"</strong> está marcada</div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Clique no ícone de copiar ao lado da connection string</div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Cole no seu bloco de notas com o rótulo <strong>DATABASE_URL</strong></div></div>
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Certifique-se que a opÃ§Ã£o <strong>"Pooled connection"</strong> estÃ¡ marcada</div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Clique no Ã­cone de copiar ao lado da connection string</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Cole no seu bloco de notas com o rÃ³tulo <strong>DATABASE_URL</strong></div></div>
         </div>
-        <div class="code-block"><span class="comment"># Exemplo de como vai parecer (seus dados serão diferentes):</span>
-<span class="key">DATABASE_URL</span>=<span class="val">postgresql://claudezap_owner:AbCdEfGh@ep-cold-rain-a5b1c2d3-pooler.us-east-2.aws.neon.tech/claudezap?sslmode=require</span></div>
+        <div class="code-block"><span class="comment"># Exemplo de como vai parecer (seus dados serÃ£o diferentes):</span>
+<span class="key">DATABASE_URL</span>=<span class="val">postgresql://Clica Aí_owner:AbCdEfGh@ep-cold-rain-a5b1c2d3-pooler.us-east-2.aws.neon.tech/Clica Aí?sslmode=require</span></div>
       </div>
     </div>
   </div>
 
   <div class="callout tip">
-    <div class="callout-icon">✅</div>
+    <div class="callout-icon">âœ…</div>
     <div class="callout-body">
       <div class="callout-title">Como saber que deu certo?</div>
-      <div class="callout-text">Você verá o painel do Neon com o banco <code>claudezap</code> criado e a connection string disponível. Guarde essa string — ela é a "senha de acesso" ao banco de dados.</div>
+      <div class="callout-text">VocÃª verÃ¡ o painel do Neon com o banco <code>Clica Aí</code> criado e a connection string disponÃ­vel. Guarde essa string â€” ela Ã© a "senha de acesso" ao banco de dados.</div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ PASSO 3 ═══════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PASSO 3 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="page">
   <div class="section-header">
     <div class="section-num">3</div>
     <div class="section-info">
-      <div class="section-title">Cache — Upstash (Redis)</div>
-      <div class="section-meta">Gerencia a fila de envio de mensagens &nbsp;·&nbsp; ⏱ ~5 min</div>
+      <div class="section-title">Cache â€” Upstash (Redis)</div>
+      <div class="section-meta">Gerencia a fila de envio de mensagens &nbsp;Â·&nbsp; â± ~5 min</div>
     </div>
   </div>
 
   <div class="callout info">
-    <div class="callout-icon">ℹ️</div>
+    <div class="callout-icon">â„¹ï¸</div>
     <div class="callout-body">
-      <div class="callout-title">O que é o Upstash?</div>
-      <div class="callout-text">O Upstash fornece um serviço de Redis gratuito. O Redis é usado pelo ClaudeZap para controlar a fila de mensagens — garantindo que as mensagens sejam enviadas com o delay certo (respeitando os limites do WhatsApp). O plano gratuito oferece 10.000 operações por dia.</div>
+      <div class="callout-title">O que Ã© o Upstash?</div>
+      <div class="callout-text">O Upstash fornece um serviÃ§o de Redis gratuito. O Redis Ã© usado pelo Clica Aí para controlar a fila de mensagens â€” garantindo que as mensagens sejam enviadas com o delay certo (respeitando os limites do WhatsApp). O plano gratuito oferece 10.000 operaÃ§Ãµes por dia.</div>
     </div>
   </div>
 
@@ -768,8 +768,8 @@
         <div class="substeps">
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">No painel, clique em <strong>"Create database"</strong></div></div>
           <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Escolha o tipo <strong>"Redis"</strong></div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Nome: <code>claudezap</code></div></div>
-          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Region: <strong>"São Paulo, Brazil"</strong> se disponível</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Nome: <code>Clica Aí</code></div></div>
+          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Region: <strong>"SÃ£o Paulo, Brazil"</strong> se disponÃ­vel</div></div>
           <div class="substep"><div class="substep-letter">e)</div><div class="substep-text">Plano: <strong>"Free"</strong></div></div>
           <div class="substep"><div class="substep-letter">f)</div><div class="substep-text">Clique em <strong>"Create"</strong></div></div>
         </div>
@@ -782,9 +782,9 @@
         <div class="step-title">Copie a Redis URL</div>
         <div class="substeps">
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Clique no banco criado para abrir os detalhes</div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Role até a seção <strong>"Connect to your database"</strong></div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Na seção <strong>"Connect your client"</strong>, selecione <strong>"ioredis"</strong> ou copie a URL no campo <code>REDIS_URL</code> (começa com <code>rediss://</code>)</div></div>
-          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Cole no bloco de notas com o rótulo <strong>REDIS_URL</strong></div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Role atÃ© a seÃ§Ã£o <strong>"Connect to your database"</strong></div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Na seÃ§Ã£o <strong>"Connect your client"</strong>, selecione <strong>"ioredis"</strong> ou copie a URL no campo <code>REDIS_URL</code> (comeÃ§a com <code>rediss://</code>)</div></div>
+          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Cole no bloco de notas com o rÃ³tulo <strong>REDIS_URL</strong></div></div>
         </div>
         <div class="code-block"><span class="comment"># Exemplo de como vai parecer:</span>
 <span class="key">REDIS_URL</span>=<span class="val">rediss://default:AaBbCcDd@us1-warm-robin-12345.upstash.io:6380</span></div>
@@ -793,37 +793,37 @@
   </div>
 
   <div class="callout warn">
-    <div class="callout-icon">⚠️</div>
+    <div class="callout-icon">âš ï¸</div>
     <div class="callout-body">
-      <div class="callout-title">Atenção com a URL do Redis</div>
-      <div class="callout-text">A URL correta começa com <code>rediss://</code> (com dois "s" no final). Esse "s" extra indica que a conexão é segura (criptografada). Se começar com apenas <code>redis://</code>, busque outra opção de conexão no painel.</div>
+      <div class="callout-title">AtenÃ§Ã£o com a URL do Redis</div>
+      <div class="callout-text">A URL correta comeÃ§a com <code>rediss://</code> (com dois "s" no final). Esse "s" extra indica que a conexÃ£o Ã© segura (criptografada). Se comeÃ§ar com apenas <code>redis://</code>, busque outra opÃ§Ã£o de conexÃ£o no painel.</div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ PASSO 4 (NOVO) ═══════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PASSO 4 (NOVO) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="page">
   <div class="section-header">
     <div class="section-num">4</div>
     <div class="section-info">
-      <div class="section-title">Armazenamento de Arquivos — Cloudflare R2</div>
-      <div class="section-meta">Onde as imagens, PDFs e documentos das campanhas ficam guardados &nbsp;·&nbsp; ⏱ ~8 min</div>
+      <div class="section-title">Armazenamento de Arquivos â€” Cloudflare R2</div>
+      <div class="section-meta">Onde as imagens, PDFs e documentos das campanhas ficam guardados &nbsp;Â·&nbsp; â± ~8 min</div>
     </div>
   </div>
 
   <div class="callout new">
-    <div class="callout-icon">🆕</div>
+    <div class="callout-icon">ðŸ†•</div>
     <div class="callout-body">
-      <div class="callout-title">Novidade na versão 2.0</div>
-      <div class="callout-text">O ClaudeZap agora permite enviar imagens, PDFs, documentos Word, planilhas e muito mais nas campanhas. Para isso, os arquivos precisam de um lugar na internet para ficarem guardados. O Cloudflare R2 é esse lugar — gratuito para os nossos volumes de uso.</div>
+      <div class="callout-title">Novidade na versÃ£o 2.0</div>
+      <div class="callout-text">O Clica Aí agora permite enviar imagens, PDFs, documentos Word, planilhas e muito mais nas campanhas. Para isso, os arquivos precisam de um lugar na internet para ficarem guardados. O Cloudflare R2 Ã© esse lugar â€” gratuito para os nossos volumes de uso.</div>
     </div>
   </div>
 
   <div class="callout info">
-    <div class="callout-icon">ℹ️</div>
+    <div class="callout-icon">â„¹ï¸</div>
     <div class="callout-body">
-      <div class="callout-title">O que é o Cloudflare R2?</div>
-      <div class="callout-text">O R2 é um serviço de armazenamento de arquivos em nuvem da Cloudflare. Pense nele como um "Google Drive" que o sistema usa para guardar os arquivos antes de enviá-los pelo WhatsApp. O plano gratuito inclui <strong>10 GB de espaço</strong> e <strong>1 milhão de operações por mês</strong> — mais que suficiente para uso normal. E o melhor: <strong>sem custo de transferência de dados</strong>.</div>
+      <div class="callout-title">O que Ã© o Cloudflare R2?</div>
+      <div class="callout-text">O R2 Ã© um serviÃ§o de armazenamento de arquivos em nuvem da Cloudflare. Pense nele como um "Google Drive" que o sistema usa para guardar os arquivos antes de enviÃ¡-los pelo WhatsApp. O plano gratuito inclui <strong>10 GB de espaÃ§o</strong> e <strong>1 milhÃ£o de operaÃ§Ãµes por mÃªs</strong> â€” mais que suficiente para uso normal. E o melhor: <strong>sem custo de transferÃªncia de dados</strong>.</div>
     </div>
   </div>
 
@@ -837,7 +837,7 @@
         <div class="substeps" style="margin-top:8px;">
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Preencha e-mail e senha e clique em <strong>"Create Account"</strong></div></div>
           <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Confirme o e-mail clicando no link que a Cloudflare enviar</div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Faça login no painel em <strong>dash.cloudflare.com</strong></div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">FaÃ§a login no painel em <strong>dash.cloudflare.com</strong></div></div>
         </div>
       </div>
     </div>
@@ -848,8 +848,8 @@
         <div class="step-title">Ative o R2 Object Storage</div>
         <div class="substeps">
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">No painel da Cloudflare, clique em <strong>"R2 Object Storage"</strong> no menu lateral esquerdo</div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Se aparecer uma tela de ativação, clique em <strong>"Purchase R2 Plan"</strong> — não se preocupe, o plano gratuito é selecionado automaticamente, sem custo</div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Pode ser necessário adicionar um cartão de crédito como garantia (a Cloudflare não cobra nada enquanto você estiver dentro do plano gratuito)</div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Se aparecer uma tela de ativaÃ§Ã£o, clique em <strong>"Purchase R2 Plan"</strong> â€” nÃ£o se preocupe, o plano gratuito Ã© selecionado automaticamente, sem custo</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Pode ser necessÃ¡rio adicionar um cartÃ£o de crÃ©dito como garantia (a Cloudflare nÃ£o cobra nada enquanto vocÃª estiver dentro do plano gratuito)</div></div>
         </div>
       </div>
     </div>
@@ -860,7 +860,7 @@
         <div class="step-title">Crie o bucket (pasta de armazenamento)</div>
         <div class="substeps">
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Na tela do R2, clique em <strong>"Create bucket"</strong></div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Nome do bucket: <code>claudezap-media</code> (exatamente assim, em minúsculas com hífen)</div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Nome do bucket: <code>Clica Aí-media</code> (exatamente assim, em minÃºsculas com hÃ­fen)</div></div>
           <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Location: deixe em <strong>"Automatic"</strong></div></div>
           <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Clique em <strong>"Create bucket"</strong></div></div>
         </div>
@@ -870,13 +870,13 @@
     <div class="step">
       <div class="step-num">4</div>
       <div class="step-body">
-        <div class="step-title">Ative o acesso público ao bucket</div>
-        <div class="step-desc">Para que as mensagens do WhatsApp consigam exibir os arquivos, o bucket precisa ser público.</div>
+        <div class="step-title">Ative o acesso pÃºblico ao bucket</div>
+        <div class="step-desc">Para que as mensagens do WhatsApp consigam exibir os arquivos, o bucket precisa ser pÃºblico.</div>
         <div class="substeps">
-          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Clique no bucket <strong>claudezap-media</strong> para abri-lo</div></div>
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Clique no bucket <strong>Clica Aí-media</strong> para abri-lo</div></div>
           <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Clique na aba <strong>"Settings"</strong></div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Role até a seção <strong>"Public access"</strong></div></div>
-          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Clique em <strong>"Allow Access"</strong> e confirme. Isso vai gerar uma URL pública no formato <code>pub-XXXXX.r2.dev</code> — anote essa URL com o rótulo <strong>R2_PUBLIC_URL</strong></div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Role atÃ© a seÃ§Ã£o <strong>"Public access"</strong></div></div>
+          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Clique em <strong>"Allow Access"</strong> e confirme. Isso vai gerar uma URL pÃºblica no formato <code>pub-XXXXX.r2.dev</code> â€” anote essa URL com o rÃ³tulo <strong>R2_PUBLIC_URL</strong></div></div>
         </div>
       </div>
     </div>
@@ -885,11 +885,11 @@
       <div class="step-num">5</div>
       <div class="step-body">
         <div class="step-title">Anote o Account ID da Cloudflare</div>
-        <div class="step-desc">Você vai precisar do ID da sua conta Cloudflare. Ele fica visível na URL do painel e também na página inicial do R2.</div>
+        <div class="step-desc">VocÃª vai precisar do ID da sua conta Cloudflare. Ele fica visÃ­vel na URL do painel e tambÃ©m na pÃ¡gina inicial do R2.</div>
         <div class="substeps">
-          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Olhe a URL do navegador enquanto está no painel. Ela tem o formato: <code>dash.cloudflare.com/<strong>SEU_ACCOUNT_ID</strong>/r2/...</code></div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Copie essa sequência de letras e números (é um código hexadecimal de 32 caracteres, como: <code>a1b2c3d4e5f6...</code>)</div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Anote no bloco de notas com o rótulo <strong>R2_ACCOUNT_ID</strong></div></div>
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Olhe a URL do navegador enquanto estÃ¡ no painel. Ela tem o formato: <code>dash.cloudflare.com/<strong>SEU_ACCOUNT_ID</strong>/r2/...</code></div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Copie essa sequÃªncia de letras e nÃºmeros (Ã© um cÃ³digo hexadecimal de 32 caracteres, como: <code>a1b2c3d4e5f6...</code>)</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Anote no bloco de notas com o rÃ³tulo <strong>R2_ACCOUNT_ID</strong></div></div>
         </div>
       </div>
     </div>
@@ -902,9 +902,9 @@
         <div class="substeps">
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Na tela principal do R2, clique em <strong>"Manage R2 API Tokens"</strong> (canto superior direito)</div></div>
           <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Clique em <strong>"Create API token"</strong></div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Nome do token: <code>claudezap-token</code></div></div>
-          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Permissões: selecione <strong>"Object Read &amp; Write"</strong></div></div>
-          <div class="substep"><div class="substep-letter">e)</div><div class="substep-text">Specify bucket (opcional): selecione <strong>claudezap-media</strong> para restringir apenas a este bucket</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Nome do token: <code>Clica Aí-token</code></div></div>
+          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">PermissÃµes: selecione <strong>"Object Read &amp; Write"</strong></div></div>
+          <div class="substep"><div class="substep-letter">e)</div><div class="substep-text">Specify bucket (opcional): selecione <strong>Clica Aí-media</strong> para restringir apenas a este bucket</div></div>
           <div class="substep"><div class="substep-letter">f)</div><div class="substep-text">Clique em <strong>"Create API Token"</strong></div></div>
         </div>
       </div>
@@ -914,17 +914,17 @@
       <div class="step-num">7</div>
       <div class="step-body">
         <div class="step-title">Copie o Access Key ID e o Secret Access Key</div>
-        <div class="step-desc">Após criar o token, a Cloudflare vai mostrar <strong>uma única vez</strong> as duas chaves. Copie <strong>agora</strong> — depois não será possível ver o Secret novamente.</div>
+        <div class="step-desc">ApÃ³s criar o token, a Cloudflare vai mostrar <strong>uma Ãºnica vez</strong> as duas chaves. Copie <strong>agora</strong> â€” depois nÃ£o serÃ¡ possÃ­vel ver o Secret novamente.</div>
         <div class="substeps">
-          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Copie o <strong>Access Key ID</strong> (uma sequência de 32 letras e números) — anote com o rótulo <strong>R2_ACCESS_KEY_ID</strong></div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Copie o <strong>Secret Access Key</strong> — anote com o rótulo <strong>R2_SECRET_ACCESS_KEY</strong></div></div>
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Copie o <strong>Access Key ID</strong> (uma sequÃªncia de 32 letras e nÃºmeros) â€” anote com o rÃ³tulo <strong>R2_ACCESS_KEY_ID</strong></div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Copie o <strong>Secret Access Key</strong> â€” anote com o rÃ³tulo <strong>R2_SECRET_ACCESS_KEY</strong></div></div>
           <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Clique em <strong>"Finish"</strong> apenas depois de ter copiado os dois valores</div></div>
         </div>
         <div class="callout warn" style="margin-top:12px;">
-          <div class="callout-icon">⚠️</div>
+          <div class="callout-icon">âš ï¸</div>
           <div class="callout-body">
-            <div class="callout-title">ATENÇÃO: o Secret Access Key aparece só uma vez!</div>
-            <div class="callout-text">Depois de fechar essa tela, a Cloudflare não mostra mais o Secret Access Key. Se perder, será necessário deletar o token e criar um novo. Não feche a página antes de copiar os dois valores.</div>
+            <div class="callout-title">ATENÃ‡ÃƒO: o Secret Access Key aparece sÃ³ uma vez!</div>
+            <div class="callout-text">Depois de fechar essa tela, a Cloudflare nÃ£o mostra mais o Secret Access Key. Se perder, serÃ¡ necessÃ¡rio deletar o token e criar um novo. NÃ£o feche a pÃ¡gina antes de copiar os dois valores.</div>
           </div>
         </div>
       </div>
@@ -932,35 +932,35 @@
   </div>
 
   <div class="callout tip">
-    <div class="callout-icon">✅</div>
+    <div class="callout-icon">âœ…</div>
     <div class="callout-body">
-      <div class="callout-title">Resumo: você deve ter anotado 5 valores do R2</div>
+      <div class="callout-title">Resumo: vocÃª deve ter anotado 5 valores do R2</div>
       <div class="callout-text">
-        <strong>R2_ACCOUNT_ID</strong> — ID da conta Cloudflare (32 chars hex)<br>
-        <strong>R2_ACCESS_KEY_ID</strong> — Chave de acesso do token (32 chars)<br>
-        <strong>R2_SECRET_ACCESS_KEY</strong> — Senha secreta do token<br>
-        <strong>R2_BUCKET</strong> — nome do bucket: <code>claudezap-media</code><br>
-        <strong>R2_PUBLIC_URL</strong> — URL pública do bucket (ex: <code>https://pub-abc123.r2.dev</code>)
+        <strong>R2_ACCOUNT_ID</strong> â€” ID da conta Cloudflare (32 chars hex)<br>
+        <strong>R2_ACCESS_KEY_ID</strong> â€” Chave de acesso do token (32 chars)<br>
+        <strong>R2_SECRET_ACCESS_KEY</strong> â€” Senha secreta do token<br>
+        <strong>R2_BUCKET</strong> â€” nome do bucket: <code>Clica Aí-media</code><br>
+        <strong>R2_PUBLIC_URL</strong> â€” URL pÃºblica do bucket (ex: <code>https://pub-abc123.r2.dev</code>)
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ PASSO 5 ═══════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PASSO 5 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="page">
   <div class="section-header">
     <div class="section-num">5</div>
     <div class="section-info">
-      <div class="section-title">Backend — Render</div>
-      <div class="section-meta">Servidor que processa os envios e a lógica do sistema &nbsp;·&nbsp; ⏱ ~10 min</div>
+      <div class="section-title">Backend â€” Render</div>
+      <div class="section-meta">Servidor que processa os envios e a lÃ³gica do sistema &nbsp;Â·&nbsp; â± ~10 min</div>
     </div>
   </div>
 
   <div class="callout info">
-    <div class="callout-icon">ℹ️</div>
+    <div class="callout-icon">â„¹ï¸</div>
     <div class="callout-body">
-      <div class="callout-title">O que é o Render?</div>
-      <div class="callout-text">O Render hospeda o servidor (backend) do ClaudeZap — a parte que processa os envios, autentica usuários e se comunica com o WhatsApp. O plano gratuito suporta até 750 horas de uso por mês. <strong>Atenção:</strong> no plano gratuito, o servidor fica inativo após 15 minutos sem uso e demora ~30 segundos para "acordar" na primeira requisição.</div>
+      <div class="callout-title">O que Ã© o Render?</div>
+      <div class="callout-text">O Render hospeda o servidor (backend) do Clica Aí â€” a parte que processa os envios, autentica usuÃ¡rios e se comunica com o WhatsApp. O plano gratuito suporta atÃ© 750 horas de uso por mÃªs. <strong>AtenÃ§Ã£o:</strong> no plano gratuito, o servidor fica inativo apÃ³s 15 minutos sem uso e demora ~30 segundos para "acordar" na primeira requisiÃ§Ã£o.</div>
     </div>
   </div>
 
@@ -990,10 +990,10 @@
       <div class="step-body">
         <div class="step-title">Crie um novo Web Service</div>
         <div class="substeps">
-          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">No painel, clique em <strong>"New +"</strong> → <strong>"Web Service"</strong></div></div>
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">No painel, clique em <strong>"New +"</strong> â†’ <strong>"Web Service"</strong></div></div>
           <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Selecione <strong>"Build and deploy from a Git repository"</strong></div></div>
           <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Clique em <strong>"Connect GitHub"</strong> e autorize o acesso</div></div>
-          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Procure e selecione o repositório <code>claudezap</code></div></div>
+          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Procure e selecione o repositÃ³rio <code>Clica Aí</code></div></div>
         </div>
       </div>
     </div>
@@ -1001,12 +1001,12 @@
     <div class="step">
       <div class="step-num">4</div>
       <div class="step-body">
-        <div class="step-title">Configure o serviço</div>
+        <div class="step-title">Configure o serviÃ§o</div>
         <div class="step-desc">Preencha os campos conforme abaixo:</div>
         <table>
           <tr><th>Campo</th><th>Valor a preencher</th></tr>
-          <tr><td><strong>Name</strong></td><td><code>claudezap-api</code></td></tr>
-          <tr><td><strong>Region</strong></td><td>Oregon (US West) — padrão</td></tr>
+          <tr><td><strong>Name</strong></td><td><code>Clica Aí-api</code></td></tr>
+          <tr><td><strong>Region</strong></td><td>Oregon (US West) â€” padrÃ£o</td></tr>
           <tr><td><strong>Branch</strong></td><td><code>main</code></td></tr>
           <tr><td><strong>Root Directory</strong></td><td><code>backend</code></td></tr>
           <tr><td><strong>Runtime</strong></td><td>Node</td></tr>
@@ -1020,10 +1020,10 @@
     <div class="step">
       <div class="step-num">5</div>
       <div class="step-body">
-        <div class="step-title">Adicione as variáveis de ambiente</div>
-        <div class="step-desc">Role a página até a seção <strong>"Environment Variables"</strong> e adicione cada linha clicando em <strong>"Add Environment Variable"</strong>:</div>
+        <div class="step-title">Adicione as variÃ¡veis de ambiente</div>
+        <div class="step-desc">Role a pÃ¡gina atÃ© a seÃ§Ã£o <strong>"Environment Variables"</strong> e adicione cada linha clicando em <strong>"Add Environment Variable"</strong>:</div>
         <table>
-          <tr><th>Nome da variável</th><th>Valor</th></tr>
+          <tr><th>Nome da variÃ¡vel</th><th>Valor</th></tr>
           <tr><td><code>NODE_ENV</code></td><td><code>production</code></td></tr>
           <tr><td><code>JWT_EXPIRES_IN</code></td><td><code>7d</code></td></tr>
           <tr><td><code>MSG_DELAY_MS</code></td><td><code>3000</code></td></tr>
@@ -1034,23 +1034,23 @@
           <tr><td><code>R2_ACCOUNT_ID</code></td><td>Cole o Account ID da Cloudflare (passo 4)</td></tr>
           <tr><td><code>R2_ACCESS_KEY_ID</code></td><td>Cole o Access Key ID do token R2 (passo 4)</td></tr>
           <tr><td><code>R2_SECRET_ACCESS_KEY</code></td><td>Cole o Secret Access Key do token R2 (passo 4)</td></tr>
-          <tr><td><code>R2_BUCKET</code></td><td><code>claudezap-media</code></td></tr>
-          <tr><td><code>R2_PUBLIC_URL</code></td><td>Cole a URL pública do bucket (ex: <code>https://pub-abc123.r2.dev</code>)</td></tr>
-          <tr><td><code>OPENAI_API_KEY</code></td><td>Cole sua chave da OpenAI (ex: <code>sk-proj-...</code>) — necessária para o Bot de Atendimento (plano Pro)</td></tr>
-          <tr><td><code>CORS_ORIGIN</code></td><td><em>Deixe vazio por enquanto — preencher no passo 6</em></td></tr>
+          <tr><td><code>R2_BUCKET</code></td><td><code>Clica Aí-media</code></td></tr>
+          <tr><td><code>R2_PUBLIC_URL</code></td><td>Cole a URL pÃºblica do bucket (ex: <code>https://pub-abc123.r2.dev</code>)</td></tr>
+          <tr><td><code>OPENAI_API_KEY</code></td><td>Cole sua chave da OpenAI (ex: <code>sk-proj-...</code>) â€” necessÃ¡ria para o Bot de Atendimento (plano Pro)</td></tr>
+          <tr><td><code>CORS_ORIGIN</code></td><td><em>Deixe vazio por enquanto â€” preencher no passo 6</em></td></tr>
         </table>
         <div class="callout tip" style="margin-top:12px;">
-          <div class="callout-icon">💡</div>
+          <div class="callout-icon">ðŸ’¡</div>
           <div class="callout-body">
             <div class="callout-title">Onde obter a OPENAI_API_KEY</div>
-            <div class="callout-text">Acesse <strong>platform.openai.com</strong> → menu lateral → <strong>API Keys</strong> → <strong>Create new secret key</strong>. A chave começa com <code>sk-proj-</code> ou <code>sk-</code>. Sem créditos na conta OpenAI o bot retornará erro — adicione pelo menos US$5 de crédito em <strong>platform.openai.com/settings/billing</strong>.</div>
+            <div class="callout-text">Acesse <strong>platform.openai.com</strong> â†’ menu lateral â†’ <strong>API Keys</strong> â†’ <strong>Create new secret key</strong>. A chave comeÃ§a com <code>sk-proj-</code> ou <code>sk-</code>. Sem crÃ©ditos na conta OpenAI o bot retornarÃ¡ erro â€” adicione pelo menos US$5 de crÃ©dito em <strong>platform.openai.com/settings/billing</strong>.</div>
           </div>
         </div>
         <div class="callout warn" style="margin-top:12px;">
-          <div class="callout-icon">⚠️</div>
+          <div class="callout-icon">âš ï¸</div>
           <div class="callout-body">
             <div class="callout-title">Sobre o JWT_SECRET</div>
-            <div class="callout-text">O Render vai gerar o <code>JWT_SECRET</code> automaticamente por conta do <code>render.yaml</code>. Você não precisa criar esse manualmente.</div>
+            <div class="callout-text">O Render vai gerar o <code>JWT_SECRET</code> automaticamente por conta do <code>render.yaml</code>. VocÃª nÃ£o precisa criar esse manualmente.</div>
           </div>
         </div>
       </div>
@@ -1062,8 +1062,8 @@
         <div class="step-title">Inicie o deploy</div>
         <div class="substeps">
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Clique em <strong>"Create Web Service"</strong></div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Aguarde o build finalizar (3–5 minutos). Você verá logs em tempo real na tela</div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Quando aparecer <code>Live</code> verde no topo, o servidor está no ar</div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Aguarde o build finalizar (3â€“5 minutos). VocÃª verÃ¡ logs em tempo real na tela</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Quando aparecer <code>Live</code> verde no topo, o servidor estÃ¡ no ar</div></div>
         </div>
       </div>
     </div>
@@ -1072,39 +1072,39 @@
       <div class="step-num">7</div>
       <div class="step-body">
         <div class="step-title">Anote a URL do backend</div>
-        <div class="step-desc">No topo da página, você verá a URL do seu servidor. Ela será algo como:</div>
-        <div class="code-block">https://claudezap-api.onrender.com</div>
-        <div class="step-desc">Anote essa URL no bloco de notas com o rótulo <strong>URL_BACKEND</strong>. Você vai precisar dela no próximo passo.</div>
+        <div class="step-desc">No topo da pÃ¡gina, vocÃª verÃ¡ a URL do seu servidor. Ela serÃ¡ algo como:</div>
+        <div class="code-block">https://Clica Aí-api.onrender.com</div>
+        <div class="step-desc">Anote essa URL no bloco de notas com o rÃ³tulo <strong>URL_BACKEND</strong>. VocÃª vai precisar dela no prÃ³ximo passo.</div>
       </div>
     </div>
 
     <div class="step">
       <div class="step-num">8</div>
       <div class="step-body">
-        <div class="step-title">Teste se o servidor está funcionando</div>
+        <div class="step-title">Teste se o servidor estÃ¡ funcionando</div>
         <div class="step-desc">Abra uma nova aba no navegador e acesse:</div>
-        <div class="code-block">https://claudezap-api.onrender.com/health</div>
+        <div class="code-block">https://Clica Aí-api.onrender.com/health</div>
         <div class="step-desc">Deve aparecer na tela: <code>{"status":"ok","timestamp":"..."}</code></div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ PASSO 6 ═══════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PASSO 6 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="page">
   <div class="section-header">
     <div class="section-num">6</div>
     <div class="section-info">
-      <div class="section-title">Frontend — Vercel</div>
-      <div class="section-meta">A tela visual que você vai usar no dia a dia &nbsp;·&nbsp; ⏱ ~8 min</div>
+      <div class="section-title">Frontend â€” Vercel</div>
+      <div class="section-meta">A tela visual que vocÃª vai usar no dia a dia &nbsp;Â·&nbsp; â± ~8 min</div>
     </div>
   </div>
 
   <div class="callout info">
-    <div class="callout-icon">ℹ️</div>
+    <div class="callout-icon">â„¹ï¸</div>
     <div class="callout-body">
-      <div class="callout-title">O que é o Vercel?</div>
-      <div class="callout-text">O Vercel hospeda o frontend (a interface visual) do ClaudeZap. É a tela que você vai acessar pelo navegador para enviar mensagens, gerenciar contatos e ver o dashboard. O plano gratuito é generoso e mais que suficiente.</div>
+      <div class="callout-title">O que Ã© o Vercel?</div>
+      <div class="callout-text">O Vercel hospeda o frontend (a interface visual) do Clica Aí. Ã‰ a tela que vocÃª vai acessar pelo navegador para enviar mensagens, gerenciar contatos e ver o dashboard. O plano gratuito Ã© generoso e mais que suficiente.</div>
     </div>
   </div>
 
@@ -1135,8 +1135,8 @@
       <div class="step-body">
         <div class="step-title">Importe o projeto</div>
         <div class="substeps">
-          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">No painel, clique em <strong>"Add New → Project"</strong></div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Selecione o repositório <code>claudezap</code> da lista</div></div>
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">No painel, clique em <strong>"Add New â†’ Project"</strong></div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Selecione o repositÃ³rio <code>Clica Aí</code> da lista</div></div>
           <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Clique em <strong>"Import"</strong></div></div>
         </div>
       </div>
@@ -1146,7 +1146,7 @@
       <div class="step-num">4</div>
       <div class="step-body">
         <div class="step-title">Configure o projeto</div>
-        <div class="step-desc">O Vercel vai detectar automaticamente o arquivo <code>vercel.json</code> e já vai saber que o frontend está na pasta <code>frontend/</code>. Verifique se está correto:</div>
+        <div class="step-desc">O Vercel vai detectar automaticamente o arquivo <code>vercel.json</code> e jÃ¡ vai saber que o frontend estÃ¡ na pasta <code>frontend/</code>. Verifique se estÃ¡ correto:</div>
         <table>
           <tr><th>Campo</th><th>Valor esperado</th></tr>
           <tr><td><strong>Framework Preset</strong></td><td>Next.js</td></tr>
@@ -1160,11 +1160,11 @@
     <div class="step">
       <div class="step-num">5</div>
       <div class="step-body">
-        <div class="step-title">Adicione a variável de ambiente</div>
-        <div class="step-desc">Ainda na tela de configuração, abra a seção <strong>"Environment Variables"</strong> e adicione:</div>
+        <div class="step-title">Adicione a variÃ¡vel de ambiente</div>
+        <div class="step-desc">Ainda na tela de configuraÃ§Ã£o, abra a seÃ§Ã£o <strong>"Environment Variables"</strong> e adicione:</div>
         <table>
           <tr><th>Nome</th><th>Valor</th></tr>
-          <tr><td><code>NEXT_PUBLIC_API_URL</code></td><td>URL do Render + <code>/api</code><br><small>Ex: <code>https://claudezap-api.onrender.com/api</code></small></td></tr>
+          <tr><td><code>NEXT_PUBLIC_API_URL</code></td><td>URL do Render + <code>/api</code><br><small>Ex: <code>https://Clica Aí-api.onrender.com/api</code></small></td></tr>
         </table>
       </div>
     </div>
@@ -1172,11 +1172,11 @@
     <div class="step">
       <div class="step-num">6</div>
       <div class="step-body">
-        <div class="step-title">Faça o deploy</div>
+        <div class="step-title">FaÃ§a o deploy</div>
         <div class="substeps">
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Clique em <strong>"Deploy"</strong></div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Aguarde o build (2–4 minutos)</div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Quando aparecer <strong>"Congratulations!"</strong> com confetes, o frontend está no ar</div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Aguarde o build (2â€“4 minutos)</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Quando aparecer <strong>"Congratulations!"</strong> com confetes, o frontend estÃ¡ no ar</div></div>
         </div>
       </div>
     </div>
@@ -1185,9 +1185,9 @@
       <div class="step-num">7</div>
       <div class="step-body">
         <div class="step-title">Anote a URL do frontend</div>
-        <div class="step-desc">Clique em <strong>"Continue to Dashboard"</strong>. A URL do seu site será algo como:</div>
-        <div class="code-block">https://claudezap.vercel.app</div>
-        <div class="step-desc">Anote com o rótulo <strong>URL_FRONTEND</strong>.</div>
+        <div class="step-desc">Clique em <strong>"Continue to Dashboard"</strong>. A URL do seu site serÃ¡ algo como:</div>
+        <div class="code-block">https://Clica Aí.vercel.app</div>
+        <div class="step-desc">Anote com o rÃ³tulo <strong>URL_FRONTEND</strong>.</div>
       </div>
     </div>
 
@@ -1195,48 +1195,48 @@
       <div class="step-num">8</div>
       <div class="step-body">
         <div class="step-title">Atualize o CORS no Render</div>
-        <div class="step-desc">Agora você já tem a URL do frontend. Volte ao painel do Render e atualize a variável <code>CORS_ORIGIN</code>:</div>
+        <div class="step-desc">Agora vocÃª jÃ¡ tem a URL do frontend. Volte ao painel do Render e atualize a variÃ¡vel <code>CORS_ORIGIN</code>:</div>
         <div class="substeps">
-          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">No painel do Render, clique no serviço <strong>claudezap-api</strong></div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Vá em <strong>"Environment"</strong> no menu lateral</div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Encontre <code>CORS_ORIGIN</code> e preencha com a URL do Vercel (ex: <code>https://claudezap.vercel.app</code>)</div></div>
-          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Clique em <strong>"Save Changes"</strong> — o servidor vai reiniciar automaticamente</div></div>
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">No painel do Render, clique no serviÃ§o <strong>Clica Aí-api</strong></div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">VÃ¡ em <strong>"Environment"</strong> no menu lateral</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Encontre <code>CORS_ORIGIN</code> e preencha com a URL do Vercel (ex: <code>https://Clica Aí.vercel.app</code>)</div></div>
+          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Clique em <strong>"Save Changes"</strong> â€” o servidor vai reiniciar automaticamente</div></div>
         </div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ PASSO 7 ═══════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PASSO 7 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="page">
   <div class="section-header">
     <div class="section-num">7</div>
     <div class="section-info">
-      <div class="section-title">Conectar Domínio — clicaai.ai.br</div>
-      <div class="section-meta">Apontar seu domínio para o Vercel e Render via Hostinger &nbsp;·&nbsp; ⏱ ~10 min</div>
+      <div class="section-title">Conectar DomÃ­nio â€” clicaai.ai.br</div>
+      <div class="section-meta">Apontar seu domÃ­nio para o Vercel e Render via Hostinger &nbsp;Â·&nbsp; â± ~10 min</div>
     </div>
   </div>
 
   <div class="callout info">
-    <div class="callout-icon">ℹ️</div>
+    <div class="callout-icon">â„¹ï¸</div>
     <div class="callout-body">
       <div class="callout-title">Como funciona?</div>
-      <div class="callout-text">Você vai configurar o DNS do seu domínio na Hostinger para que:
-        <br>• <strong>clicaai.ai.br</strong> (sem prefixo) aponte para o Vercel (frontend)
-        <br>• <strong>api.clicaai.ai.br</strong> aponte para o Render (backend)
+      <div class="callout-text">VocÃª vai configurar o DNS do seu domÃ­nio na Hostinger para que:
+        <br>â€¢ <strong>clicaai.ai.br</strong> (sem prefixo) aponte para o Vercel (frontend)
+        <br>â€¢ <strong>api.clicaai.ai.br</strong> aponte para o Render (backend)
       </div>
     </div>
   </div>
 
-  <div style="font-size:15px; font-weight:700; color:var(--green-dark); margin:24px 0 12px;">Parte A — Adicionar domínio no Vercel</div>
+  <div style="font-size:15px; font-weight:700; color:var(--green-dark); margin:24px 0 12px;">Parte A â€” Adicionar domÃ­nio no Vercel</div>
 
   <div class="steps">
     <div class="step">
       <div class="step-num">1</div>
       <div class="step-body">
-        <div class="step-title">Acesse as configurações do projeto no Vercel</div>
+        <div class="step-title">Acesse as configuraÃ§Ãµes do projeto no Vercel</div>
         <div class="substeps">
-          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">No painel do Vercel, clique no projeto <strong>claudezap</strong></div></div>
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">No painel do Vercel, clique no projeto <strong>Clica Aí</strong></div></div>
           <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Clique em <strong>"Settings"</strong> no menu superior</div></div>
           <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Clique em <strong>"Domains"</strong> no menu lateral</div></div>
         </div>
@@ -1246,11 +1246,11 @@
     <div class="step">
       <div class="step-num">2</div>
       <div class="step-body">
-        <div class="step-title">Adicione o domínio</div>
+        <div class="step-title">Adicione o domÃ­nio</div>
         <div class="substeps">
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Digite <code>clicaai.ai.br</code> no campo e clique em <strong>"Add"</strong></div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">O Vercel vai mostrar os registros DNS que você precisa configurar</div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Anote os valores — vão aparecer como na tabela abaixo</div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">O Vercel vai mostrar os registros DNS que vocÃª precisa configurar</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Anote os valores â€” vÃ£o aparecer como na tabela abaixo</div></div>
         </div>
         <table>
           <tr><th>Tipo</th><th>Nome</th><th>Valor (exemplo)</th></tr>
@@ -1261,25 +1261,25 @@
     </div>
   </div>
 
-  <div style="font-size:15px; font-weight:700; color:var(--green-dark); margin:24px 0 12px;">Parte B — Adicionar domínio no Render</div>
+  <div style="font-size:15px; font-weight:700; color:var(--green-dark); margin:24px 0 12px;">Parte B â€” Adicionar domÃ­nio no Render</div>
 
   <div class="steps">
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
-        <div class="step-title">Configure o domínio da API no Render</div>
+        <div class="step-title">Configure o domÃ­nio da API no Render</div>
         <div class="substeps">
-          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">No painel do Render, clique no serviço <strong>claudezap-api</strong></div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Vá em <strong>"Settings"</strong> → <strong>"Custom Domains"</strong></div></div>
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">No painel do Render, clique no serviÃ§o <strong>Clica Aí-api</strong></div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">VÃ¡ em <strong>"Settings"</strong> â†’ <strong>"Custom Domains"</strong></div></div>
           <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Clique em <strong>"Add Custom Domain"</strong></div></div>
           <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Digite: <code>api.clicaai.ai.br</code> e confirme</div></div>
-          <div class="substep"><div class="substep-letter">e)</div><div class="substep-text">Anote o valor CNAME que o Render mostrar (algo como <code>claudezap-api.onrender.com</code>)</div></div>
+          <div class="substep"><div class="substep-letter">e)</div><div class="substep-text">Anote o valor CNAME que o Render mostrar (algo como <code>Clica Aí-api.onrender.com</code>)</div></div>
         </div>
       </div>
     </div>
   </div>
 
-  <div style="font-size:15px; font-weight:700; color:var(--green-dark); margin:24px 0 12px;">Parte C — Configurar DNS na Hostinger</div>
+  <div style="font-size:15px; font-weight:700; color:var(--green-dark); margin:24px 0 12px;">Parte C â€” Configurar DNS na Hostinger</div>
 
   <div class="steps">
     <div class="step">
@@ -1288,8 +1288,8 @@
         <div class="step-title">Acesse o painel da Hostinger</div>
         <div class="url-box">https://hpanel.hostinger.com</div>
         <div class="substeps" style="margin-top:8px;">
-          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Faça login com suas credenciais da Hostinger</div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Clique em <strong>"Domínios"</strong> no menu</div></div>
+          <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">FaÃ§a login com suas credenciais da Hostinger</div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Clique em <strong>"DomÃ­nios"</strong> no menu</div></div>
           <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Encontre <strong>clicaai.ai.br</strong> e clique em <strong>"Gerenciar"</strong></div></div>
           <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Clique em <strong>"DNS / Nameservers"</strong></div></div>
         </div>
@@ -1305,7 +1305,7 @@
           <tr><th>Tipo</th><th>Nome / Host</th><th>Valor / Aponta para</th><th>TTL</th></tr>
           <tr><td>A</td><td><code>@</code></td><td>IP fornecido pelo Vercel<br><small>(ex: 76.76.21.21)</small></td><td>3600</td></tr>
           <tr><td>CNAME</td><td><code>www</code></td><td><code>cname.vercel-dns.com</code></td><td>3600</td></tr>
-          <tr><td>CNAME</td><td><code>api</code></td><td>URL do Render<br><small>(ex: claudezap-api.onrender.com)</small></td><td>3600</td></tr>
+          <tr><td>CNAME</td><td><code>api</code></td><td>URL do Render<br><small>(ex: Clica Aí-api.onrender.com)</small></td><td>3600</td></tr>
         </table>
       </div>
     </div>
@@ -1313,44 +1313,44 @@
     <div class="step">
       <div class="step-num">6</div>
       <div class="step-body">
-        <div class="step-title">Aguarde a propagação do DNS</div>
-        <div class="step-desc">Após salvar os registros, aguarde entre <strong>5 minutos e 24 horas</strong> para o DNS propagar. Na maioria dos casos acontece em menos de 30 minutos.</div>
+        <div class="step-title">Aguarde a propagaÃ§Ã£o do DNS</div>
+        <div class="step-desc">ApÃ³s salvar os registros, aguarde entre <strong>5 minutos e 24 horas</strong> para o DNS propagar. Na maioria dos casos acontece em menos de 30 minutos.</div>
       </div>
     </div>
   </div>
 
   <div class="callout tip">
-    <div class="callout-icon">✅</div>
+    <div class="callout-icon">âœ…</div>
     <div class="callout-body">
       <div class="callout-title">Como verificar se o DNS propagou?</div>
-      <div class="callout-text">Acesse <strong>https://dnschecker.org</strong> e pesquise por <code>clicaai.ai.br</code>. Quando aparecerem bolinhas verdes na maioria dos servidores, o DNS já propagou.</div>
+      <div class="callout-text">Acesse <strong>https://dnschecker.org</strong> e pesquise por <code>clicaai.ai.br</code>. Quando aparecerem bolinhas verdes na maioria dos servidores, o DNS jÃ¡ propagou.</div>
     </div>
   </div>
 
   <div class="callout warn" style="margin-top: 8px;">
-    <div class="callout-icon">⚠️</div>
+    <div class="callout-icon">âš ï¸</div>
     <div class="callout-body">
       <div class="callout-title">Atualize o CORS_ORIGIN no Render</div>
-      <div class="callout-text">Após o domínio funcionar, volte ao Render e atualize <code>CORS_ORIGIN</code> de <code>https://claudezap.vercel.app</code> para <code>https://clicaai.ai.br</code>.</div>
+      <div class="callout-text">ApÃ³s o domÃ­nio funcionar, volte ao Render e atualize <code>CORS_ORIGIN</code> de <code>https://Clica Aí.vercel.app</code> para <code>https://clicaai.ai.br</code>.</div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ PASSO 8 ═══════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PASSO 8 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="page">
   <div class="section-header">
     <div class="section-num">8</div>
     <div class="section-info">
       <div class="section-title">Conectar o WhatsApp via QR Code</div>
-      <div class="section-meta">Vincular seu número ao sistema &nbsp;·&nbsp; ⏱ ~3 min</div>
+      <div class="section-meta">Vincular seu nÃºmero ao sistema &nbsp;Â·&nbsp; â± ~3 min</div>
     </div>
   </div>
 
   <div class="callout warn">
-    <div class="callout-icon">⚠️</div>
+    <div class="callout-icon">âš ï¸</div>
     <div class="callout-body">
-      <div class="callout-title">Use um número exclusivo para disparos</div>
-      <div class="callout-text">Recomendamos fortemente usar um número de WhatsApp dedicado para os disparos — não o seu número pessoal. Isso evita que seu número principal seja bloqueado pelo WhatsApp.</div>
+      <div class="callout-title">Use um nÃºmero exclusivo para disparos</div>
+      <div class="callout-text">Recomendamos fortemente usar um nÃºmero de WhatsApp dedicado para os disparos â€” nÃ£o o seu nÃºmero pessoal. Isso evita que seu nÃºmero principal seja bloqueado pelo WhatsApp.</div>
     </div>
   </div>
 
@@ -1358,10 +1358,10 @@
     <div class="step">
       <div class="step-num">1</div>
       <div class="step-body">
-        <div class="step-title">Acesse o ClaudeZap</div>
+        <div class="step-title">Acesse o Clica Aí</div>
         <div class="step-desc">Abra o navegador e acesse seu site:</div>
         <div class="url-box">https://clicaai.ai.br</div>
-        <div class="step-desc" style="margin-top:8px;">(ou a URL do Vercel se ainda não configurou o domínio)</div>
+        <div class="step-desc" style="margin-top:8px;">(ou a URL do Vercel se ainda nÃ£o configurou o domÃ­nio)</div>
       </div>
     </div>
 
@@ -1373,7 +1373,7 @@
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Clique em <strong>"Cadastre-se"</strong></div></div>
           <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Preencha nome completo, e-mail e senha</div></div>
           <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Aceite os Termos de Uso e clique em <strong>"Criar conta"</strong></div></div>
-          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Verifique seu e-mail e clique no link de confirmação enviado pelo sistema</div></div>
+          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Verifique seu e-mail e clique no link de confirmaÃ§Ã£o enviado pelo sistema</div></div>
         </div>
       </div>
     </div>
@@ -1381,11 +1381,11 @@
     <div class="step">
       <div class="step-num">3</div>
       <div class="step-body">
-        <div class="step-title">Vá para a página WhatsApp</div>
+        <div class="step-title">VÃ¡ para a pÃ¡gina WhatsApp</div>
         <div class="substeps">
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">No menu lateral, clique em <strong>"WhatsApp"</strong></div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Clique no botão <strong>"Conectar WhatsApp"</strong></div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Um QR Code vai aparecer na tela — aguarde</div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Clique no botÃ£o <strong>"Conectar WhatsApp"</strong></div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Um QR Code vai aparecer na tela â€” aguarde</div></div>
         </div>
       </div>
     </div>
@@ -1396,10 +1396,10 @@
         <div class="step-title">Escaneie o QR Code com o celular</div>
         <div class="substeps">
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">No celular, abra o <strong>WhatsApp</strong></div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Toque nos <strong>três pontinhos</strong> (Android) ou <strong>"Configurações"</strong> (iPhone)</div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Toque nos <strong>trÃªs pontinhos</strong> (Android) ou <strong>"ConfiguraÃ§Ãµes"</strong> (iPhone)</div></div>
           <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Selecione <strong>"Dispositivos conectados"</strong></div></div>
           <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Toque em <strong>"Conectar um dispositivo"</strong></div></div>
-          <div class="substep"><div class="substep-letter">e)</div><div class="substep-text">Aponte a câmera para o QR Code na tela do computador</div></div>
+          <div class="substep"><div class="substep-letter">e)</div><div class="substep-text">Aponte a cÃ¢mera para o QR Code na tela do computador</div></div>
         </div>
       </div>
     </div>
@@ -1407,28 +1407,28 @@
     <div class="step">
       <div class="step-num">5</div>
       <div class="step-body">
-        <div class="step-title">Confirmação de conexão</div>
-        <div class="step-desc">Após escanear, a página vai atualizar e mostrar o status como <strong>"Conectado"</strong> com um ícone verde. Seu WhatsApp está vinculado ao sistema!</div>
+        <div class="step-title">ConfirmaÃ§Ã£o de conexÃ£o</div>
+        <div class="step-desc">ApÃ³s escanear, a pÃ¡gina vai atualizar e mostrar o status como <strong>"Conectado"</strong> com um Ã­cone verde. Seu WhatsApp estÃ¡ vinculado ao sistema!</div>
       </div>
     </div>
   </div>
 
   <div class="callout warn">
-    <div class="callout-icon">⚠️</div>
+    <div class="callout-icon">âš ï¸</div>
     <div class="callout-body">
-      <div class="callout-title">Lembrete importante — plano gratuito do Render</div>
-      <div class="callout-text">No plano gratuito do Render, o servidor "dorme" após 15 minutos sem uso. Quando isso acontece, a sessão do WhatsApp é perdida e você precisará escanear o QR Code novamente. Para uso em produção real, considere fazer o upgrade do Render ($7/mês) que mantém o servidor sempre ativo.</div>
+      <div class="callout-title">Lembrete importante â€” plano gratuito do Render</div>
+      <div class="callout-text">No plano gratuito do Render, o servidor "dorme" apÃ³s 15 minutos sem uso. Quando isso acontece, a sessÃ£o do WhatsApp Ã© perdida e vocÃª precisarÃ¡ escanear o QR Code novamente. Para uso em produÃ§Ã£o real, considere fazer o upgrade do Render ($7/mÃªs) que mantÃ©m o servidor sempre ativo.</div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ PASSO 9 ═══════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PASSO 9 â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="page">
   <div class="section-header">
     <div class="section-num">9</div>
     <div class="section-info">
-      <div class="section-title">Teste Final e Validação</div>
-      <div class="section-meta">Verificar se tudo está funcionando corretamente &nbsp;·&nbsp; ⏱ ~5 min</div>
+      <div class="section-title">Teste Final e ValidaÃ§Ã£o</div>
+      <div class="section-meta">Verificar se tudo estÃ¡ funcionando corretamente &nbsp;Â·&nbsp; â± ~5 min</div>
     </div>
   </div>
 
@@ -1440,8 +1440,8 @@
         <div class="substeps">
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">No menu lateral, clique em <strong>"Contatos"</strong></div></div>
           <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Clique em <strong>"Novo contato"</strong></div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Preencha com seus próprios dados (name + seu número de celular)</div></div>
-          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">O telefone deve ter o formato internacional: <code>5511999999999</code> (55 = Brasil, 11 = DDD, + número)</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Preencha com seus prÃ³prios dados (name + seu nÃºmero de celular)</div></div>
+          <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">O telefone deve ter o formato internacional: <code>5511999999999</code> (55 = Brasil, 11 = DDD, + nÃºmero)</div></div>
           <div class="substep"><div class="substep-letter">e)</div><div class="substep-text">Clique em <strong>"Salvar"</strong></div></div>
         </div>
       </div>
@@ -1453,8 +1453,8 @@
         <div class="step-title">Envie uma mensagem de teste</div>
         <div class="substeps">
           <div class="substep"><div class="substep-letter">a)</div><div class="substep-text">Clique em <strong>"Mensagens"</strong> no menu</div></div>
-          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Selecione o contato que você criou</div></div>
-          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Escreva uma mensagem: <code>Olá {{nome}}, este é um teste do ClaudeZap!</code></div></div>
+          <div class="substep"><div class="substep-letter">b)</div><div class="substep-text">Selecione o contato que vocÃª criou</div></div>
+          <div class="substep"><div class="substep-letter">c)</div><div class="substep-text">Escreva uma mensagem: <code>OlÃ¡ {{nome}}, este Ã© um teste do Clica Aí!</code></div></div>
           <div class="substep"><div class="substep-letter">d)</div><div class="substep-text">Clique em <strong>"Enviar"</strong></div></div>
         </div>
       </div>
@@ -1464,15 +1464,15 @@
       <div class="step-num">3</div>
       <div class="step-body">
         <div class="step-title">Verifique o recebimento</div>
-        <div class="step-desc">Em alguns segundos você deverá receber a mensagem no seu celular via WhatsApp. A mensagem vai aparecer com o nome substituído: <em>"Olá João, este é um teste do ClaudeZap!"</em></div>
+        <div class="step-desc">Em alguns segundos vocÃª deverÃ¡ receber a mensagem no seu celular via WhatsApp. A mensagem vai aparecer com o nome substituÃ­do: <em>"OlÃ¡ JoÃ£o, este Ã© um teste do Clica Aí!"</em></div>
       </div>
     </div>
 
     <div class="step">
       <div class="step-num">4</div>
       <div class="step-body">
-        <div class="step-title">Verifique o histórico</div>
-        <div class="step-desc">Na própria página de Mensagens, role a tela para baixo e veja o <strong>Histórico</strong>. A mensagem enviada deve aparecer com o status <strong>"Enviado"</strong> em verde.</div>
+        <div class="step-title">Verifique o histÃ³rico</div>
+        <div class="step-desc">Na prÃ³pria pÃ¡gina de Mensagens, role a tela para baixo e veja o <strong>HistÃ³rico</strong>. A mensagem enviada deve aparecer com o status <strong>"Enviado"</strong> em verde.</div>
       </div>
     </div>
 
@@ -1480,60 +1480,60 @@
       <div class="step-num">5</div>
       <div class="step-body">
         <div class="step-title">Verifique o Dashboard</div>
-        <div class="step-desc">Clique em <strong>"Dashboard"</strong> no menu. Você vai ver os contadores atualizados com os dados do envio de teste.</div>
+        <div class="step-desc">Clique em <strong>"Dashboard"</strong> no menu. VocÃª vai ver os contadores atualizados com os dados do envio de teste.</div>
       </div>
     </div>
   </div>
 
   <div class="callout tip">
-    <div class="callout-icon">🎉</div>
+    <div class="callout-icon">ðŸŽ‰</div>
     <div class="callout-body">
-      <div class="callout-title">Parabéns! O sistema está no ar!</div>
-      <div class="callout-text">Se a mensagem chegou e o histórico mostra "Enviado", seu ClaudeZap está funcionando perfeitamente. Agora você pode começar a importar seus contatos e criar campanhas de envio.</div>
+      <div class="callout-title">ParabÃ©ns! O sistema estÃ¡ no ar!</div>
+      <div class="callout-text">Se a mensagem chegou e o histÃ³rico mostra "Enviado", seu Clica Aí estÃ¡ funcionando perfeitamente. Agora vocÃª pode comeÃ§ar a importar seus contatos e criar campanhas de envio.</div>
     </div>
   </div>
 
   <div style="margin-top:32px;">
-    <div style="font-size:15px; font-weight:700; color:var(--gray-900); margin-bottom:16px;">📋 Checklist final</div>
+    <div style="font-size:15px; font-weight:700; color:var(--gray-900); margin-bottom:16px;">ðŸ“‹ Checklist final</div>
     <table>
       <tr><th>Item</th><th>Status</th></tr>
-      <tr><td>Conta GitHub criada e fork feito</td><td>☐</td></tr>
-      <tr><td>Banco de dados Neon criado e DATABASE_URL copiada</td><td>☐</td></tr>
-      <tr><td>Redis Upstash criado e REDIS_URL copiada</td><td>☐</td></tr>
-      <tr><td>Cloudflare R2 configurado e variáveis R2_* adicionadas no Render</td><td>☐</td></tr>
-      <tr><td>Backend no Render funcionando (<code>/health</code> retorna ok)</td><td>☐</td></tr>
-      <tr><td>Frontend no Vercel acessível pelo navegador</td><td>☐</td></tr>
-      <tr><td>CORS_ORIGIN atualizado no Render</td><td>☐</td></tr>
-      <tr><td>DNS da Hostinger configurado</td><td>☐</td></tr>
-      <tr><td>WhatsApp conectado via QR Code</td><td>☐</td></tr>
-      <tr><td>Mensagem de teste enviada e recebida</td><td>☐</td></tr>
+      <tr><td>Conta GitHub criada e fork feito</td><td>â˜</td></tr>
+      <tr><td>Banco de dados Neon criado e DATABASE_URL copiada</td><td>â˜</td></tr>
+      <tr><td>Redis Upstash criado e REDIS_URL copiada</td><td>â˜</td></tr>
+      <tr><td>Cloudflare R2 configurado e variÃ¡veis R2_* adicionadas no Render</td><td>â˜</td></tr>
+      <tr><td>Backend no Render funcionando (<code>/health</code> retorna ok)</td><td>â˜</td></tr>
+      <tr><td>Frontend no Vercel acessÃ­vel pelo navegador</td><td>â˜</td></tr>
+      <tr><td>CORS_ORIGIN atualizado no Render</td><td>â˜</td></tr>
+      <tr><td>DNS da Hostinger configurado</td><td>â˜</td></tr>
+      <tr><td>WhatsApp conectado via QR Code</td><td>â˜</td></tr>
+      <tr><td>Mensagem de teste enviada e recebida</td><td>â˜</td></tr>
     </table>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ COMO USAR AS NOVAS FUNCIONALIDADES ═══════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• COMO USAR AS NOVAS FUNCIONALIDADES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="page">
   <div class="section-header">
-    <div class="section-num" style="background:#ea580c; font-size:18px;">✦</div>
+    <div class="section-num" style="background:#ea580c; font-size:18px;">âœ¦</div>
     <div class="section-info">
       <div class="section-title" style="color:#9a3412;">Como usar as novas funcionalidades</div>
-      <div class="section-meta">Guia prático para aproveitar ao máximo o ClaudeZap v2.0</div>
+      <div class="section-meta">Guia prÃ¡tico para aproveitar ao mÃ¡ximo o Clica Aí v2.0</div>
     </div>
   </div>
 
   <!-- ENVIO EM LOTES -->
   <div class="feature-block">
     <div class="feature-block-title">
-      <div class="feature-block-icon">📦</div>
+      <div class="feature-block-icon">ðŸ“¦</div>
       Envio em Lotes Anti-Bloqueio
     </div>
     <p style="font-size:13px; color:var(--gray-700); margin-bottom:12px;">
-      O WhatsApp pode restringir números que enviam muitas mensagens de uma vez para contatos diferentes. O <strong>modo de envio em lotes</strong> divide sua campanha em grupos menores com um intervalo de horas entre cada grupo, imitando um comportamento mais natural e reduzindo drasticamente o risco de bloqueio.
+      O WhatsApp pode restringir nÃºmeros que enviam muitas mensagens de uma vez para contatos diferentes. O <strong>modo de envio em lotes</strong> divide sua campanha em grupos menores com um intervalo de horas entre cada grupo, imitando um comportamento mais natural e reduzindo drasticamente o risco de bloqueio.
     </p>
     <div class="feature-steps">
       <div class="feature-step">
         <div class="feature-step-num">1.</div>
-        <div class="feature-step-text">Na criação de uma campanha, role até a seção <strong>"Configurações de Envio"</strong></div>
+        <div class="feature-step-text">Na criaÃ§Ã£o de uma campanha, role atÃ© a seÃ§Ã£o <strong>"ConfiguraÃ§Ãµes de Envio"</strong></div>
       </div>
       <div class="feature-step">
         <div class="feature-step-num">2.</div>
@@ -1541,22 +1541,22 @@
       </div>
       <div class="feature-step">
         <div class="feature-step-num">3.</div>
-        <div class="feature-step-text">Defina o <strong>Tamanho do lote</strong> — recomendamos entre 30 e 50 mensagens por lote</div>
+        <div class="feature-step-text">Defina o <strong>Tamanho do lote</strong> â€” recomendamos entre 30 e 50 mensagens por lote</div>
       </div>
       <div class="feature-step">
         <div class="feature-step-num">4.</div>
-        <div class="feature-step-text">Defina o <strong>Intervalo entre lotes</strong> — recomendamos 8 horas para máxima segurança (mínimo 1 hora)</div>
+        <div class="feature-step-text">Defina o <strong>Intervalo entre lotes</strong> â€” recomendamos 8 horas para mÃ¡xima seguranÃ§a (mÃ­nimo 1 hora)</div>
       </div>
       <div class="feature-step">
         <div class="feature-step-num">5.</div>
-        <div class="feature-step-text">Crie a campanha. O sistema vai enviar o 1º lote imediatamente, depois aguardar o intervalo configurado antes do 2º lote, e assim por diante</div>
+        <div class="feature-step-text">Crie a campanha. O sistema vai enviar o 1Âº lote imediatamente, depois aguardar o intervalo configurado antes do 2Âº lote, e assim por diante</div>
       </div>
     </div>
     <div class="callout tip" style="margin-top:12px; margin-bottom:0;">
-      <div class="callout-icon">💡</div>
+      <div class="callout-icon">ðŸ’¡</div>
       <div class="callout-body">
-        <div class="callout-title">Exemplo prático</div>
-        <div class="callout-text">Para enviar para 200 contatos com lotes de 50 e intervalo de 8h: o sistema vai enviar 50 mensagens agora, mais 50 daqui a 8h, mais 50 daqui a 16h, e os últimos 50 daqui a 24h. Muito mais seguro do que enviar tudo de uma vez!</div>
+        <div class="callout-title">Exemplo prÃ¡tico</div>
+        <div class="callout-text">Para enviar para 200 contatos com lotes de 50 e intervalo de 8h: o sistema vai enviar 50 mensagens agora, mais 50 daqui a 8h, mais 50 daqui a 16h, e os Ãºltimos 50 daqui a 24h. Muito mais seguro do que enviar tudo de uma vez!</div>
       </div>
     </div>
   </div>
@@ -1564,11 +1564,11 @@
   <!-- ENVIO DE ARQUIVOS -->
   <div class="feature-block">
     <div class="feature-block-title">
-      <div class="feature-block-icon">📎</div>
+      <div class="feature-block-icon">ðŸ“Ž</div>
       Envio de Arquivos (Imagens, PDFs, Documentos)
     </div>
     <p style="font-size:13px; color:var(--gray-700); margin-bottom:12px;">
-      Agora você pode anexar imagens, PDFs, documentos Word, planilhas Excel e outros tipos de arquivo às suas mensagens e campanhas.
+      Agora vocÃª pode anexar imagens, PDFs, documentos Word, planilhas Excel e outros tipos de arquivo Ã s suas mensagens e campanhas.
     </p>
     <div style="font-size:13px; color:var(--gray-700); margin-bottom:10px;"><strong>Tipos de arquivo suportados:</strong></div>
     <div style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px;">
@@ -1577,13 +1577,13 @@
       <span style="background:#dcfce7; color:#14532d; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600;">Word (.docx)</span>
       <span style="background:#dcfce7; color:#14532d; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600;">Excel (.xlsx)</span>
       <span style="background:#dcfce7; color:#14532d; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600;">PowerPoint</span>
-      <span style="background:#dcfce7; color:#14532d; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600;">Vídeo (MP4)</span>
-      <span style="background:#dcfce7; color:#14532d; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600;">Áudio (MP3, OGG)</span>
+      <span style="background:#dcfce7; color:#14532d; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600;">VÃ­deo (MP4)</span>
+      <span style="background:#dcfce7; color:#14532d; padding:3px 10px; border-radius:999px; font-size:12px; font-weight:600;">Ãudio (MP3, OGG)</span>
     </div>
     <div class="feature-steps">
       <div class="feature-step">
         <div class="feature-step-num">1.</div>
-        <div class="feature-step-text">Ao criar uma mensagem individual ou campanha, procure o ícone de clipe 📎 na área de composição</div>
+        <div class="feature-step-text">Ao criar uma mensagem individual ou campanha, procure o Ã­cone de clipe ðŸ“Ž na Ã¡rea de composiÃ§Ã£o</div>
       </div>
       <div class="feature-step">
         <div class="feature-step-num">2.</div>
@@ -1591,56 +1591,56 @@
       </div>
       <div class="feature-step">
         <div class="feature-step-num">3.</div>
-        <div class="feature-step-text">Aguarde o upload. Quando aparecer uma confirmação, o arquivo está salvo na nuvem (Cloudflare R2)</div>
+        <div class="feature-step-text">Aguarde o upload. Quando aparecer uma confirmaÃ§Ã£o, o arquivo estÃ¡ salvo na nuvem (Cloudflare R2)</div>
       </div>
       <div class="feature-step">
         <div class="feature-step-num">4.</div>
-        <div class="feature-step-text">Escreva sua mensagem de texto normalmente (o arquivo será enviado junto com o texto)</div>
+        <div class="feature-step-text">Escreva sua mensagem de texto normalmente (o arquivo serÃ¡ enviado junto com o texto)</div>
       </div>
       <div class="feature-step">
         <div class="feature-step-num">5.</div>
-        <div class="feature-step-text">Envie. Todos os destinatários receberão o arquivo via WhatsApp</div>
+        <div class="feature-step-text">Envie. Todos os destinatÃ¡rios receberÃ£o o arquivo via WhatsApp</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ COMO USAR (continuação) ═══════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• COMO USAR (continuaÃ§Ã£o) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="page">
-  <div style="font-size:20px; font-weight:700; color:#9a3412; margin-bottom:28px; padding-bottom:14px; border-bottom:3px solid #ffedd5;">Como usar as novas funcionalidades (continuação)</div>
+  <div style="font-size:20px; font-weight:700; color:#9a3412; margin-bottom:28px; padding-bottom:14px; border-bottom:3px solid #ffedd5;">Como usar as novas funcionalidades (continuaÃ§Ã£o)</div>
 
   <!-- RASTREAMENTO DE CONTACTADOS -->
   <div class="feature-block">
     <div class="feature-block-title">
-      <div class="feature-block-icon">🎯</div>
+      <div class="feature-block-icon">ðŸŽ¯</div>
       Rastreamento de Contactados
     </div>
     <p style="font-size:13px; color:var(--gray-700); margin-bottom:12px;">
-      O sistema agora registra automaticamente quando um contato foi incluído em uma campanha. Isso permite filtrar e evitar enviar para as mesmas pessoas repetidamente, o que reduz reclamações e o risco de bloqueio.
+      O sistema agora registra automaticamente quando um contato foi incluÃ­do em uma campanha. Isso permite filtrar e evitar enviar para as mesmas pessoas repetidamente, o que reduz reclamaÃ§Ãµes e o risco de bloqueio.
     </p>
     <div class="feature-steps">
       <div class="feature-step">
         <div class="feature-step-num">1.</div>
-        <div class="feature-step-text">Na lista de contatos, contatos que já receberam uma campanha mostram um badge <strong>"Enviado"</strong> em verde ao lado do nome</div>
+        <div class="feature-step-text">Na lista de contatos, contatos que jÃ¡ receberam uma campanha mostram um badge <strong>"Enviado"</strong> em verde ao lado do nome</div>
       </div>
       <div class="feature-step">
         <div class="feature-step-num">2.</div>
-        <div class="feature-step-text">Use o filtro <strong>"Apenas não contactados"</strong> para ver somente quem ainda não recebeu nenhuma campanha</div>
+        <div class="feature-step-text">Use o filtro <strong>"Apenas nÃ£o contactados"</strong> para ver somente quem ainda nÃ£o recebeu nenhuma campanha</div>
       </div>
       <div class="feature-step">
         <div class="feature-step-num">3.</div>
-        <div class="feature-step-text">Ao criar uma nova campanha, ative a opção <strong>"Excluir já contactados"</strong> — o sistema vai automaticamente pular os contatos que já foram alcançados por campanhas anteriores</div>
+        <div class="feature-step-text">Ao criar uma nova campanha, ative a opÃ§Ã£o <strong>"Excluir jÃ¡ contactados"</strong> â€” o sistema vai automaticamente pular os contatos que jÃ¡ foram alcanÃ§ados por campanhas anteriores</div>
       </div>
       <div class="feature-step">
         <div class="feature-step-num">4.</div>
-        <div class="feature-step-text">Para reiniciar o rastreamento de um contato (quero enviar novamente para ele), acesse o contato e clique em <strong>"Limpar histórico de campanhas"</strong></div>
+        <div class="feature-step-text">Para reiniciar o rastreamento de um contato (quero enviar novamente para ele), acesse o contato e clique em <strong>"Limpar histÃ³rico de campanhas"</strong></div>
       </div>
     </div>
     <div class="callout tip" style="margin-top:12px; margin-bottom:0;">
-      <div class="callout-icon">💡</div>
+      <div class="callout-icon">ðŸ’¡</div>
       <div class="callout-body">
-        <div class="callout-title">Estratégia recomendada</div>
-        <div class="callout-text">Importe toda a sua lista de contatos e use <strong>"Excluir já contactados"</strong> em todas as campanhas. Assim cada pessoa recebe a mensagem uma única vez, o sistema vai gradualmente "consumindo" a lista sem repetições.</div>
+        <div class="callout-title">EstratÃ©gia recomendada</div>
+        <div class="callout-text">Importe toda a sua lista de contatos e use <strong>"Excluir jÃ¡ contactados"</strong> em todas as campanhas. Assim cada pessoa recebe a mensagem uma Ãºnica vez, o sistema vai gradualmente "consumindo" a lista sem repetiÃ§Ãµes.</div>
       </div>
     </div>
   </div>
@@ -1648,11 +1648,11 @@
   <!-- PLANOS CORTESIA -->
   <div class="feature-block">
     <div class="feature-block-title">
-      <div class="feature-block-icon">🎁</div>
+      <div class="feature-block-icon">ðŸŽ</div>
       Planos Cortesia
     </div>
     <p style="font-size:13px; color:var(--gray-700); margin-bottom:12px;">
-      Planos cortesia são planos especiais que o administrador do sistema pode ativar manualmente para usuários específicos. Eles têm os mesmos limites dos planos pagos (Starter ou Pro), mas sem cobrança.
+      Planos cortesia sÃ£o planos especiais que o administrador do sistema pode ativar manualmente para usuÃ¡rios especÃ­ficos. Eles tÃªm os mesmos limites dos planos pagos (Starter ou Pro), mas sem cobranÃ§a.
     </p>
     <div class="feature-steps">
       <div class="feature-step">
@@ -1661,7 +1661,7 @@
       </div>
       <div class="feature-step">
         <div class="feature-step-num">2.</div>
-        <div class="feature-step-text">Encontre o usuário que deseja beneficiar e clique em <strong>"Editar"</strong></div>
+        <div class="feature-step-text">Encontre o usuÃ¡rio que deseja beneficiar e clique em <strong>"Editar"</strong></div>
       </div>
       <div class="feature-step">
         <div class="feature-step-num">3.</div>
@@ -1669,68 +1669,69 @@
       </div>
       <div class="feature-step">
         <div class="feature-step-num">4.</div>
-        <div class="feature-step-text">Salve. O usuário agora tem acesso completo ao plano selecionado sem restrições de trial</div>
+        <div class="feature-step-text">Salve. O usuÃ¡rio agora tem acesso completo ao plano selecionado sem restriÃ§Ãµes de trial</div>
       </div>
     </div>
     <table style="margin-top:14px;">
-      <tr><th>Plano</th><th>Mensagens/dia</th><th>Números WhatsApp</th><th>Contatos</th></tr>
-      <tr><td><strong>Starter Cortesia</strong></td><td>500</td><td>3 números</td><td>Ilimitados</td></tr>
-      <tr><td><strong>Pro Cortesia</strong></td><td>2.000</td><td>6 números</td><td>Ilimitados</td></tr>
+      <tr><th>Plano</th><th>Mensagens/dia</th><th>NÃºmeros WhatsApp</th><th>Contatos</th></tr>
+      <tr><td><strong>Starter Cortesia</strong></td><td>500</td><td>3 nÃºmeros</td><td>Ilimitados</td></tr>
+      <tr><td><strong>Pro Cortesia</strong></td><td>2.000</td><td>6 nÃºmeros</td><td>Ilimitados</td></tr>
     </table>
   </div>
 
-  <!-- SEGURANÇA -->
+  <!-- SEGURANÃ‡A -->
   <div class="feature-block" style="border-color:#fca5a5; background:#fff5f5;">
     <div class="feature-block-title" style="color:#991b1b;">
-      <div class="feature-block-icon" style="background:#dc2626;">🔒</div>
-      Melhorias de Segurança (v2.0)
+      <div class="feature-block-icon" style="background:#dc2626;">ðŸ”’</div>
+      Melhorias de SeguranÃ§a (v2.0)
     </div>
     <p style="font-size:13px; color:var(--gray-700); margin-bottom:12px;">
-      A versão 2.0 inclui várias melhorias de segurança transparentes ao usuário. Você não precisa configurar nada — elas funcionam automaticamente.
+      A versÃ£o 2.0 inclui vÃ¡rias melhorias de seguranÃ§a transparentes ao usuÃ¡rio. VocÃª nÃ£o precisa configurar nada â€” elas funcionam automaticamente.
     </p>
     <div style="display:flex; flex-direction:column; gap:8px;">
       <div style="display:flex; gap:10px; align-items:flex-start; padding:8px 12px; background:white; border-radius:8px; border-left:3px solid #dc2626;">
-        <div style="font-size:13px; color:var(--gray-700); line-height:1.5;"><strong>Bloqueio por tentativas de login:</strong> Após 5 tentativas erradas de senha, a conta é bloqueada por 30 minutos automaticamente. Protege contra ataques de força bruta.</div>
+        <div style="font-size:13px; color:var(--gray-700); line-height:1.5;"><strong>Bloqueio por tentativas de login:</strong> ApÃ³s 5 tentativas erradas de senha, a conta Ã© bloqueada por 30 minutos automaticamente. Protege contra ataques de forÃ§a bruta.</div>
       </div>
       <div style="display:flex; gap:10px; align-items:flex-start; padding:8px 12px; background:white; border-radius:8px; border-left:3px solid #dc2626;">
-        <div style="font-size:13px; color:var(--gray-700); line-height:1.5;"><strong>Proteção de origem (CORS):</strong> O servidor só aceita requisições vindas do seu domínio. Nenhum outro site pode usar sua API.</div>
+        <div style="font-size:13px; color:var(--gray-700); line-height:1.5;"><strong>ProteÃ§Ã£o de origem (CORS):</strong> O servidor sÃ³ aceita requisiÃ§Ãµes vindas do seu domÃ­nio. Nenhum outro site pode usar sua API.</div>
       </div>
       <div style="display:flex; gap:10px; align-items:flex-start; padding:8px 12px; background:white; border-radius:8px; border-left:3px solid #dc2626;">
-        <div style="font-size:13px; color:var(--gray-700); line-height:1.5;"><strong>Planos verificados em cada requisição:</strong> Usuários com trial expirado ou conta inativa são bloqueados automaticamente em qualquer operação.</div>
+        <div style="font-size:13px; color:var(--gray-700); line-height:1.5;"><strong>Planos verificados em cada requisiÃ§Ã£o:</strong> UsuÃ¡rios com trial expirado ou conta inativa sÃ£o bloqueados automaticamente em qualquer operaÃ§Ã£o.</div>
       </div>
       <div style="display:flex; gap:10px; align-items:flex-start; padding:8px 12px; background:white; border-radius:8px; border-left:3px solid #dc2626;">
-        <div style="font-size:13px; color:var(--gray-700); line-height:1.5;"><strong>Limite de tamanho de requisições:</strong> Requests são limitados a 1 MB para evitar ataques de sobrecarga.</div>
+        <div style="font-size:13px; color:var(--gray-700); line-height:1.5;"><strong>Limite de tamanho de requisiÃ§Ãµes:</strong> Requests sÃ£o limitados a 1 MB para evitar ataques de sobrecarga.</div>
       </div>
       <div style="display:flex; gap:10px; align-items:flex-start; padding:8px 12px; background:white; border-radius:8px; border-left:3px solid #dc2626;">
-        <div style="font-size:13px; color:var(--gray-700); line-height:1.5;"><strong>Rate limiting no formulário de opt-in:</strong> O link de cadastro público é limitado a 20 submissões/hora por usuário, evitando spam na sua lista de contatos.</div>
+        <div style="font-size:13px; color:var(--gray-700); line-height:1.5;"><strong>Rate limiting no formulÃ¡rio de opt-in:</strong> O link de cadastro pÃºblico Ã© limitado a 20 submissÃµes/hora por usuÃ¡rio, evitando spam na sua lista de contatos.</div>
       </div>
     </div>
   </div>
 </div>
 
-<!-- ═══════════════════════════════════ PÁGINA FINAL ═══════════════════════════════════ -->
+<!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• PÃGINA FINAL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
 <div class="final-page">
-  <div class="final-check">🚀</div>
+  <div class="final-check">ðŸš€</div>
   <div class="final-title">Tudo pronto!</div>
-  <div class="final-sub">Seu ClaudeZap v2.0 está no ar e pronto para disparar mensagens, arquivos e campanhas em lote via WhatsApp.</div>
+  <div class="final-sub">Seu Clica Aí v2.0 estÃ¡ no ar e pronto para disparar mensagens, arquivos e campanhas em lote via WhatsApp.</div>
 
   <div style="margin-bottom:40px; text-align:left; background:rgba(255,255,255,0.1); border-radius:16px; padding:28px 36px; max-width:500px;">
     <div style="font-size:14px; font-weight:700; color:#86efac; margin-bottom:16px;">LINKS DO SEU SISTEMA</div>
     <div style="font-size:13px; color:#dcfce7; line-height:2.2;">
-      🌐 <strong>Frontend:</strong> https://clicaai.ai.br<br>
-      ⚙️ <strong>Backend:</strong> https://api.clicaai.ai.br<br>
-      🗄️ <strong>Banco:</strong> Neon Dashboard<br>
-      📦 <strong>Cache:</strong> Upstash Dashboard<br>
-      ☁️ <strong>Arquivos:</strong> Cloudflare R2 Dashboard<br>
-      📁 <strong>Código:</strong> github.com/clicasenderzap-wq/claudezap
+      ðŸŒ <strong>Frontend:</strong> https://clicaai.ai.br<br>
+      âš™ï¸ <strong>Backend:</strong> https://api.clicaai.ai.br<br>
+      ðŸ—„ï¸ <strong>Banco:</strong> Neon Dashboard<br>
+      ðŸ“¦ <strong>Cache:</strong> Upstash Dashboard<br>
+      â˜ï¸ <strong>Arquivos:</strong> Cloudflare R2 Dashboard<br>
+      ðŸ“ <strong>CÃ³digo:</strong> github.com/clicasenderzap-wq/Clica Aí
     </div>
   </div>
 
   <div class="final-links">
-    <div class="final-link">📧 Suporte: clicaclaude@gmail.com</div>
-    <div class="final-link">📄 ClaudeZap v2.0 — 2026</div>
+    <div class="final-link">ðŸ“§ Suporte: clicaclaude@gmail.com</div>
+    <div class="final-link">ðŸ“„ Clica Aí v2.0 â€” 2026</div>
   </div>
 </div>
 
 </body>
 </html>
+

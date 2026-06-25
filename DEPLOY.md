@@ -1,4 +1,4 @@
-# Guia de Deploy — ClaudeZap
+# Guia de Deploy — Clica Aí
 
 Stack gratuita: **Vercel** (frontend) + **Render** (backend) + **Neon** (PostgreSQL) + **Upstash** (Redis)
 
