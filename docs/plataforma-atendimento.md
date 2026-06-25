@@ -8,7 +8,7 @@
 
 ## 1. Contexto e Motivação
 
-O ClaudeZap é hoje uma plataforma de **disparo de mensagens WhatsApp** com suporte a campanhas em massa, bot com IA, e-mail marketing e gestão de contatos. O objetivo deste plano é evoluir o produto para uma **plataforma de atendimento ao cliente (SAC)**, onde agentes humanos podem receber, visualizar e responder mensagens de WhatsApp em tempo real — transformando o sistema em algo similar ao Chatwoot, Zendesk ou Trengo, porém com a infraestrutura já existente.
+O Clica Aí é hoje uma plataforma de **disparo de mensagens WhatsApp** com suporte a campanhas em massa, bot com IA, e-mail marketing e gestão de contatos. O objetivo deste plano é evoluir o produto para uma **plataforma de atendimento ao cliente (SAC)**, onde agentes humanos podem receber, visualizar e responder mensagens de WhatsApp em tempo real — transformando o sistema em algo similar ao Chatwoot, Zendesk ou Trengo, porém com a infraestrutura já existente.
 
 ---
 
@@ -68,6 +68,161 @@ O ClaudeZap é hoje uma plataforma de **disparo de mensagens WhatsApp** com supo
 | Fase 1 — MVP | Inbox com resposta + conversas em tempo real | 3–4 semanas |
 | Fase 2 — SAC | Equipe, SLA, handoff bot, tags | + 2–3 semanas |
 | Fase 3 — Avançado | Relatórios, CSAT, integrações | + 2–4 semanas |
+
+---
+
+### 2.5 Análise de Infraestrutura — O que Temos Hoje
+
+#### Serviços ativos e seus custos atuais
+
+| Serviço | Função atual | Plano | Custo mensal |
+|---|---|---|---|
+| **Render.com** | Backend Node.js (API + WebSocket Electron) | Free (dorme em 15 min) | R$ 0 |
+| **Vercel** | Frontend Next.js | Free (100 GB banda) | R$ 0 |
+| **Neon** | PostgreSQL (banco principal) | Free (0,5 GB) | R$ 0 |
+| **Cloudflare R2** | Armazenamento de mídia (imagens, PDFs) | Free até 10 GB | R$ 0 |
+| **Resend** | Envio de e-mails marketing | Pago por volume | Variável |
+| **OpenAI** | GPT-4o-mini para o bot de IA | Pago por token | Variável |
+| **GitHub Actions** | CI/CD + build do Electron | Free (2.000 min/mês) | R$ 0 |
+| **Total fixo atual** | | | **~R$ 0/mês** |
+
+> A fila de mensagens já roda sobre o PostgreSQL (PgBoss) — não há Redis, Upstash nem fila externa.
+
+#### Detalhes técnicos relevantes
+
+- **Backend em Render Free:** dorme após 15 minutos sem requisição. O primeiro acesso demora ~30s para "acordar". As conexões WebSocket com o Electron podem cair durante o sono.
+- **Neon Free (0,5 GB):** suficiente hoje porque armazena principalmente campanhas e contatos. O volume de dados é baixo no modelo de disparo.
+- **WhatsApp via Electron:** toda a sessão WhatsApp roda no computador do cliente. O servidor apenas recebe/roteia os eventos via WebSocket. Isso é o ponto de atenção mais importante para o SAC (detalhado abaixo).
+
+---
+
+### 2.6 O Que Muda na Infra ao Virar Plataforma de Atendimento
+
+#### Problema nº 1 — Render Free não serve para SAC (crítico)
+
+O SAC exige conexões **persistentes e contínuas**: o agente abre o painel e fica aguardando mensagens em tempo real via WebSocket. Com o Render em modo Free:
+
+- O servidor dorme → conexões WebSocket caem → o agente perde mensagens em tempo real
+- Mensagens que chegam enquanto o servidor dorme podem ser perdidas ou atrasadas
+
+**Solução obrigatória:** migrar para **Render Starter pago ($7/mês)**, que elimina o sleep e mantém o servidor sempre ativo.
+
+#### Problema nº 2 — O Electron como gateway único (crítico para equipe)
+
+Hoje a arquitetura é:
+```
+WhatsApp ←→ Electron (computador do cliente) ←→ Backend ←→ Agentes
+```
+
+Isso significa que **se o computador do cliente desligar ou o Electron fechar, nenhuma mensagem chega ao backend** — e portanto os agentes não recebem nada. Para um SAC com equipe, isso é um risco operacional sério.
+
+**Opções para resolver:**
+
+| Opção | Como funciona | Custo adicional | Confiabilidade |
+|---|---|---|---|
+| **A — Manter Electron (atual)** | Cliente mantém o computador ligado 24/7 | R$ 0 | Baixa — depende do cliente |
+| **B — VPS com Baileys headless** | Rodar o Baileys num servidor próprio (DigitalOcean, Railway, etc.) | ~$5–10/mês | Alta — servidor nunca desliga |
+| **C — WhatsApp Business Cloud API** | API oficial do Meta (sem Baileys) | $0 por mensagem recebida + custo por mensagem enviada | Muito alta — mas requer aprovação Meta |
+
+**Recomendação:** no MVP (Fase 1–2), manter o Electron e orientar o cliente a deixar um computador ligado 24/7 ou usar uma VM. Para a Fase 3, avaliar migração para a Opção B.
+
+#### Problema nº 3 — Banco de dados vai crescer muito mais rápido
+
+No modelo de disparo, cada mensagem enviada ocupa ~200–500 bytes no banco. Com SAC, **cada conversa armazena todas as mensagens trocadas** em ambas as direções.
+
+Estimativa de crescimento:
+- 10 conversas/dia × 15 mensagens cada × 30 dias = 4.500 mensagens/mês
+- Em texto puro: ~2–4 MB/mês
+- Com 10 clientes ativos: ~20–40 MB/mês
+
+O **Neon Free (0,5 GB)** aguenta entre 6 e 12 meses de crescimento moderado antes de precisar de upgrade.
+
+#### O que o socket.io adiciona ao servidor
+
+Para push em tempo real de mensagens aos agentes, vamos adicionar `socket.io` ao backend. Cada agente conectado mantém 1 conexão WebSocket aberta. Impacto:
+
+- 5 agentes simultâneos: ~5 MB RAM adicionais → sem problema
+- 50 agentes simultâneos: ~50 MB RAM → ainda dentro do limite do Render Starter (512 MB)
+- 200+ agentes: considerar Render Standard (2 GB RAM, $25/mês)
+
+---
+
+### 2.7 Comparativo de Custos: Antes vs. Depois
+
+#### Fase 1 — MVP de Atendimento
+
+| Serviço | Antes | Depois | Motivo da mudança |
+|---|---|---|---|
+| Render | R$ 0 (Free) | ~R$ 38/mês (Starter $7) | Sleep incompatível com WebSocket contínuo |
+| Neon | R$ 0 (Free) | R$ 0 (Free, ainda suporta) | Volume ainda pequeno |
+| Vercel | R$ 0 | R$ 0 | Sem mudança |
+| R2 | R$ 0 | R$ 0–5 | Leve aumento de mídia em conversas |
+| socket.io | R$ 0 | R$ 0 | É uma biblioteca, não um serviço |
+| **Total fixo** | **~R$ 0/mês** | **~R$ 38–45/mês** | |
+
+#### Fase 2 — SAC com Equipe (múltiplos agentes)
+
+| Serviço | Custo | Motivo |
+|---|---|---|
+| Render Starter | ~R$ 38/mês | Servidor persistente |
+| Neon Launch (se necessário) | ~R$ 105/mês | Mais armazenamento e conexões simultâneas |
+| VPS para Baileys headless (Opção B) | ~R$ 28–55/mês | Independência do computador do cliente |
+| **Total fixo estimado** | **~R$ 66–198/mês** | Depende do número de clientes e volume |
+
+> Taxas convertidas na cotação ~R$ 5,50/USD. Atualizar conforme câmbio.
+
+#### Fase 3 — SAC em Escala (Render Standard + crescimento)
+
+| Serviço | Custo |
+|---|---|
+| Render Standard | ~R$ 138/mês ($25) |
+| Neon Launch | ~R$ 105/mês ($19) |
+| VPS Baileys headless | ~R$ 28–55/mês |
+| **Total fixo estimado** | **~R$ 270–300/mês** |
+
+---
+
+### 2.8 Mudanças Necessárias no render.yaml
+
+O arquivo `render.yaml` atual não precisa de grandes mudanças para o MVP, mas deve ser atualizado para remover o plano free:
+
+```yaml
+# render.yaml — mudanças para SAC
+services:
+  - type: web
+    name: clica-ai-api
+    runtime: node
+    plan: starter        # ← MUDAR de free para starter ($7/mês)
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: node src/app.js
+    healthCheckPath: /health
+    # Adicionar variável de ambiente para socket.io
+    envVars:
+      - key: SOCKET_IO_ENABLED
+        value: "true"
+```
+
+---
+
+### 2.9 Sequência de Migração de Infra Recomendada
+
+**Antes de começar o desenvolvimento do SAC:**
+1. Migrar Render de Free → Starter ($7/mês) — elimina o problema de sleep
+2. Configurar domínio customizado no Render (se ainda não feito)
+
+**Durante a Fase 1 (desenvolvimento):**
+3. Adicionar `socket.io` ao backend (sem custo)
+4. Monitorar crescimento do banco Neon (painel gratuito do Neon mostra uso)
+
+**Ao lançar para primeiros clientes SAC:**
+5. Se banco ultrapassar 400 MB → migrar Neon para plano Launch ($19/mês)
+6. Avaliar necessidade de VPS para Baileys headless com base no feedback dos clientes
+
+**Escala futura:**
+7. Render Standard ($25/mês) se RAM do Starter (512 MB) ficar acima de 80% de uso
+8. WhatsApp Business Cloud API — avaliar custo-benefício vs. Baileys
 
 ---
 
