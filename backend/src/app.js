@@ -144,19 +144,24 @@ setupDesktopWS(server);
     console.log('[Warmup] iniciado');
   } catch (e) { console.error('[Warmup] falha ao iniciar:', e.message); }
 
-  // Reenfileira mensagens WhatsApp que ficaram com status=queued após restart
+  // Reenfileira mensagens WhatsApp que ficaram com status=queued após restart.
+  // Usa scheduled_for para recriar o delay original — evita colapso de lotes batch.
   try {
     const { Message } = require('./models');
     const { enqueueMessage } = require('./services/queueService');
     const stuckMsgs = await Message.findAll({
       where: { status: 'queued' },
-      attributes: ['id', 'user_id', 'to_phone', 'content'],
+      attributes: ['id', 'user_id', 'to_phone', 'content', 'scheduled_for'],
       limit: 500,
     });
     if (stuckMsgs.length > 0) {
       console.log(`[Startup] reenfileirando ${stuckMsgs.length} mensagens pendentes`);
+      const now = Date.now();
       for (const msg of stuckMsgs) {
-        await enqueueMessage(msg.id, msg.user_id, msg.to_phone, msg.content, 0);
+        const delay = msg.scheduled_for
+          ? Math.max(0, new Date(msg.scheduled_for).getTime() - now)
+          : 0;
+        await enqueueMessage(msg.id, msg.user_id, msg.to_phone, msg.content, delay);
       }
     }
   } catch (e) { console.error('[Startup] falha ao reenviar pendentes:', e.message); }

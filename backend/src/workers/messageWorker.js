@@ -2,6 +2,16 @@ const { Message, Campaign, Contact, WhatsappAccount } = require('../models');
 const { Op } = require('sequelize');
 const whatsapp = require('../services/whatsappService');
 
+const ACCOUNT_DAILY_LIMIT = parseInt(process.env.MAX_MSGS_PER_ACCOUNT_PER_DAY || '80', 10);
+
+async function countSentTodayByAccount(accountId) {
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  return Message.count({
+    where: { account_id: accountId, status: { [Op.in]: ['sent', 'delivered'] }, sent_at: { [Op.gte]: startOfDay } },
+  });
+}
+
 // Per-account send serializer
 const _accountQueues = new Map();
 
@@ -99,6 +109,29 @@ async function processJob({ messageId, userId, accountId: preferredAccountId, ph
     await message.update({ status: 'failed', error_message: 'Nenhuma conta WhatsApp conectada' });
     await handleCampaignFailure(message);
     return;
+  }
+
+  // Limite diário por chip: se a conta preferida atingiu o limite, tenta outra
+  const sentToday = await countSentTodayByAccount(accountId);
+  if (sentToday >= ACCOUNT_DAILY_LIMIT) {
+    const candidates = allAccounts.filter((a) => a.id !== accountId && (isConnected(a.id) || a.status === 'connected'));
+    let replaced = false;
+    for (const alt of candidates) {
+      const altCount = await countSentTodayByAccount(alt.id);
+      if (altCount < ACCOUNT_DAILY_LIMIT) {
+        console.log(`[Worker] msg ${messageId} — conta ${accountId.slice(0, 8)} no limite diário (${sentToday}), trocando para ${alt.id.slice(0, 8)}`);
+        accountId = alt.id;
+        replaced = true;
+        break;
+      }
+    }
+    if (!replaced) {
+      const errMsg = `Limite diário de ${ACCOUNT_DAILY_LIMIT} msgs/número atingido em todas as contas`;
+      console.warn(`[Worker] msg ${messageId} — ${errMsg}`);
+      await message.update({ status: 'failed', error_message: errMsg });
+      await handleCampaignFailure(message);
+      return;
+    }
   }
 
   console.log(`[Worker] enviando msg ${messageId} → ${destPhone} via ${accountId.slice(0, 8)}`);

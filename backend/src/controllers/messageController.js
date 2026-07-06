@@ -186,11 +186,15 @@ async function sendCampaign(req, res) {
     } else {
       queuedJobs = await enqueueBulk(jobs, delay_ms, startOffset);
     }
-    // Store BullMQ job IDs so pause/resume can cancel or re-enqueue specific jobs
+    // Salva job id e fireAt (horário real de disparo) para que o restart
+    // possa recriar o delay correto em vez de disparar tudo com delay=0
     if (queuedJobs?.length) {
-      await Promise.all(messages.map((m, i) =>
-        queuedJobs[i]?.id ? m.update({ queue_job_id: String(queuedJobs[i].id) }) : null
-      ));
+      await Promise.all(messages.map((m, i) => {
+        const updates = {};
+        if (queuedJobs[i]?.id) updates.queue_job_id = String(queuedJobs[i].id);
+        if (queuedJobs[i]?.fireAt) updates.scheduled_for = queuedJobs[i].fireAt;
+        return Object.keys(updates).length ? m.update(updates) : null;
+      }));
     }
     res.status(201).json({ campaign, queued: messages.length });
   } catch (err) {
