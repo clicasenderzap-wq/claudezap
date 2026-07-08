@@ -335,6 +335,78 @@ async function resendFailed(req, res) {
   }
 }
 
+async function retryUndelivered(req, res) {
+  try {
+    const original = await Campaign.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    if (!original) return res.status(404).json({ error: 'Campanha não encontrada' });
+
+    const undeliveredMsgs = await Message.findAll({
+      where: { campaign_id: original.id, status: 'sent' },
+      include: [{ model: Contact, attributes: ['id', 'phone', 'opt_out'] }],
+    });
+
+    if (!undeliveredMsgs.length) {
+      return res.status(400).json({ error: 'Nenhuma mensagem com status "enviado sem confirmação" nesta campanha' });
+    }
+
+    const toRetry = undeliveredMsgs.filter((m) => !m.Contact?.opt_out);
+    if (!toRetry.length) {
+      return res.status(400).json({ error: 'Todos os contatos estão na lista de opt-out' });
+    }
+
+    const { WhatsappAccount } = require('../models');
+    const whatsapp = require('../services/whatsappService');
+    const { account_id: overrideAccountId } = req.body;
+
+    const allAccounts = await WhatsappAccount.findAll({ where: { user_id: req.user.id } });
+    const connectedAccounts = allAccounts.filter((a) => whatsapp.getStatus(a.id) === 'connected');
+    if (!connectedAccounts.length) {
+      return res.status(400).json({ error: 'Nenhuma conta WhatsApp conectada' });
+    }
+
+    const accountToUse = overrideAccountId
+      ? (connectedAccounts.find((a) => a.id === overrideAccountId) ?? connectedAccounts[0])
+      : connectedAccounts[0];
+
+    const { enqueueBulk } = require('../services/queueService');
+
+    await Message.update(
+      { status: 'queued', error_message: null, account_id: accountToUse.id },
+      { where: { id: toRetry.map((m) => m.id) } }
+    );
+
+    const jobs = toRetry.map((m) => ({
+      messageId: m.id,
+      userId: req.user.id,
+      accountId: accountToUse.id,
+      phone: m.Contact?.phone ?? m.to_phone,
+      content: m.content,
+    }));
+
+    const queuedJobs = await enqueueBulk(jobs, original.delay_ms || 5000);
+
+    const CHUNK = 50;
+    for (let i = 0; i < toRetry.length; i += CHUNK) {
+      await Promise.all(
+        toRetry.slice(i, i + CHUNK).map((msg, j) => {
+          const job = queuedJobs[i + j];
+          if (!job?.id) return null;
+          return Message.update(
+            { queue_job_id: String(job.id), scheduled_for: job.fireAt },
+            { where: { id: msg.id } }
+          );
+        }).filter(Boolean)
+      );
+    }
+
+    await original.update({ status: 'running' });
+    res.json({ queued: toRetry.length, account: accountToUse.label });
+  } catch (err) {
+    console.error('[retryUndelivered]', err.message);
+    res.status(500).json({ error: err.message || 'Erro ao reenviar não entregues' });
+  }
+}
+
 async function remove(req, res) {
   const campaign = await Campaign.findOne({
     where: { id: req.params.id, user_id: req.user.id },
@@ -380,4 +452,4 @@ async function forceStatus(req, res) {
   }
 }
 
-module.exports = { list, messages, resend, pause, resume, resendFailed, remove, forceStatus };
+module.exports = { list, messages, resend, pause, resume, resendFailed, retryUndelivered, remove, forceStatus };

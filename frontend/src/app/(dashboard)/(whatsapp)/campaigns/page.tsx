@@ -79,6 +79,8 @@ export default function CampaignsPage() {
   const [mediaFile, setMediaFile] = useState<{ url: string; name: string; type: string; size: number; category: string } | null>(null);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const mediaInputRef = useRef<HTMLInputElement>(null);
+  const [retryUndeliveredPanel, setRetryUndeliveredPanel] = useState(false);
+  const [retryAccountId, setRetryAccountId] = useState('');
 
   const { data: waAccounts = [] } = useQuery<any[]>({
     queryKey: ['wa-accounts'],
@@ -185,6 +187,20 @@ export default function CampaignsPage() {
       toast.success(`Reenvio das falhas iniciado! ${res.data.queued} mensagens na fila.`);
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao reenviar falhas'),
+  });
+
+  const retryUndeliveredMutation = useMutation({
+    mutationFn: ({ id, accountId }: { id: string; accountId?: string }) =>
+      api.post(`/campaigns/${id}/retry-undelivered`, accountId ? { account_id: accountId } : {}),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['campaigns'] });
+      qc.invalidateQueries({ queryKey: ['campaign-detail', detailCampaign?.id] });
+      qc.invalidateQueries({ queryKey: ['running-campaigns-banner'] });
+      setDetailCampaign((prev: any) => prev ? { ...prev, status: 'running' } : prev);
+      setRetryUndeliveredPanel(false);
+      toast.success(`Reenvio iniciado! ${res.data.queued} mensagens na fila via ${res.data.account || 'chip disponível'}.`);
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao reenviar não entregues'),
   });
 
   const forceStatusMutation = useMutation({
@@ -412,7 +428,7 @@ export default function CampaignsPage() {
                 <tr key={c.id} className="hover:bg-gray-50">
                   <td className="px-4 py-3 overflow-hidden">
                     <button
-                      onClick={() => { setDetailCampaign(c); setMsgFilter('all'); }}
+                      onClick={() => { setDetailCampaign(c); setMsgFilter('all'); setRetryUndeliveredPanel(false); }}
                       className="font-medium text-brand-600 hover:text-brand-800 flex items-center gap-1 text-left w-full min-w-0"
                     >
                       <span className="truncate">{c.name}</span>
@@ -931,7 +947,15 @@ export default function CampaignsPage() {
                     <RotateCcw size={13} /> {detailCampaign.failed_count} falhas
                   </button>
                 )}
-                <button onClick={() => setDetailCampaign(null)} className="text-gray-400 hover:text-gray-600 ml-1"><X size={20} /></button>
+                {(detail?.stats?.sent ?? 0) > 0 && detailCampaign.status !== 'running' && (
+                  <button
+                    onClick={() => { setRetryUndeliveredPanel((v) => !v); setRetryAccountId(''); }}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${retryUndeliveredPanel ? 'bg-amber-600 text-white border-amber-600' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200'}`}
+                  >
+                    <AlertTriangle size={13} /> {detail.stats.sent} sem entrega
+                  </button>
+                )}
+                <button onClick={() => { setDetailCampaign(null); setRetryUndeliveredPanel(false); }} className="text-gray-400 hover:text-gray-600 ml-1"><X size={20} /></button>
               </div>
             </div>
 
@@ -992,6 +1016,58 @@ export default function CampaignsPage() {
                         className="bg-green-500 h-2 rounded-full transition-all"
                         style={{ width: `${Math.round(((detail.stats.sent + detail.stats.delivered) / detail.stats.total) * 100)}%` }}
                       />
+                    </div>
+                  </div>
+                )}
+
+                {/* Painel: reenviar mensagens sem confirmação de entrega */}
+                {retryUndeliveredPanel && (
+                  <div className="mx-6 my-3 p-4 bg-amber-50 border border-amber-200 rounded-xl space-y-3 shrink-0">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle size={15} className="text-amber-600 mt-0.5 shrink-0" />
+                      <div>
+                        <p className="text-sm font-semibold text-amber-800">Reenviar mensagens sem confirmação de entrega</p>
+                        <p className="text-xs text-amber-700 mt-0.5">
+                          {detail?.stats?.sent} mensagem{(detail?.stats?.sent ?? 0) !== 1 ? 's foram marcadas' : ' foi marcada'} como "Enviado" pelo sistema, mas o WhatsApp não confirmou a entrega — provavelmente porque o chip estava restringido naquele momento. Selecione um chip diferente abaixo para o reenvio.
+                        </p>
+                      </div>
+                    </div>
+                    {connectedAccounts.length > 1 && (
+                      <div>
+                        <label className="text-xs font-semibold text-amber-800 block mb-1">Chip para reenvio</label>
+                        <select
+                          value={retryAccountId}
+                          onChange={(e) => setRetryAccountId(e.target.value)}
+                          className="input text-sm py-1.5"
+                        >
+                          <option value="">Qualquer chip disponível</option>
+                          {connectedAccounts.map((a: any) => (
+                            <option key={a.id} value={a.id}>{a.label}{a.phone ? ` (+${a.phone})` : ''}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                    {connectedAccounts.length === 1 && (
+                      <p className="text-xs text-amber-700">Chip: <strong>{connectedAccounts[0].label}</strong></p>
+                    )}
+                    {connectedAccounts.length === 0 && (
+                      <p className="text-xs text-red-600 font-semibold">Nenhum chip conectado — conecte um número antes de reenviar.</p>
+                    )}
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => retryUndeliveredMutation.mutate({ id: detailCampaign.id, accountId: retryAccountId || undefined })}
+                        disabled={retryUndeliveredMutation.isPending || connectedAccounts.length === 0}
+                        className="flex items-center gap-1.5 px-4 py-2 text-xs font-semibold rounded-lg bg-amber-600 text-white hover:bg-amber-700 transition-colors disabled:opacity-50"
+                      >
+                        <RefreshCw size={13} className={retryUndeliveredMutation.isPending ? 'animate-spin' : ''} />
+                        {retryUndeliveredMutation.isPending ? 'Reenviando…' : `Confirmar reenvio de ${detail?.stats?.sent} msgs`}
+                      </button>
+                      <button
+                        onClick={() => setRetryUndeliveredPanel(false)}
+                        className="px-3 py-2 text-xs font-semibold rounded-lg bg-white text-gray-600 hover:bg-gray-50 border border-gray-200 transition-colors"
+                      >
+                        Cancelar
+                      </button>
                     </div>
                   </div>
                 )}
