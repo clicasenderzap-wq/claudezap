@@ -329,6 +329,7 @@ export default function CampaignsPage() {
   const filteredMessages = (detail?.messages ?? []).filter((m: any) => {
     if (msgFilter === 'all') return true;
     if (msgFilter === 'sent') return m.status === 'sent' || m.status === 'delivered';
+    if (msgFilter === 'unconfirmed') return m.status === 'sent';
     return m.status === msgFilter;
   });
 
@@ -1166,7 +1167,8 @@ export default function CampaignsPage() {
                 <div className="flex gap-2 px-6 py-3 pb-4 border-b border-gray-100 overflow-x-auto shrink-0">
                   {[
                     { key: 'all', label: `Todos (${detail?.stats?.total ?? 0})` },
-                    { key: 'sent', label: `Enviados (${(detail?.stats?.sent ?? 0) + (detail?.stats?.delivered ?? 0)})` },
+                    { key: 'delivered', label: `Entregues (${detail?.stats?.delivered ?? 0})` },
+                    { key: 'unconfirmed', label: `Sem confirmação (${detail?.stats?.sent ?? 0})` },
                     { key: 'failed', label: `Falhas (${detail?.stats?.failed ?? 0})` },
                     { key: 'queued', label: `Na fila (${detail?.stats?.queued ?? 0})` },
                   ].map((f) => (
