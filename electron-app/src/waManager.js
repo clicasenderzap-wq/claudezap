@@ -149,6 +149,19 @@ class WAManager extends EventEmitter {
         }
       }
     });
+
+    // Delivery receipts: status >= 3 means delivered to recipient's device
+    // Baileys MessageStatus: 1=PENDING, 2=SERVER_ACK, 3=DELIVERY_ACK, 4=READ, 5=PLAYED
+    socket.ev.on('messages.update', (updates) => {
+      for (const update of updates) {
+        if (!update.key?.fromMe) continue;
+        const msgId = update.key?.id;
+        const status = update.update?.status;
+        if (msgId && status !== undefined && status >= 3) {
+          this.emit('message_delivered', { accountId, msgId });
+        }
+      }
+    });
   }
 
   async disconnect(accountId) {

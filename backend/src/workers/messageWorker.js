@@ -29,6 +29,37 @@ async function handleCampaignSuccess(message) {
       { status: 'completed' },
       { where: { id: message.campaign_id, status: 'running' } }
     ).catch(() => {});
+    return;
+  }
+
+  // Auto-detect chip restriction: every 25 sends check delivery rate.
+  // If 0 delivered after 25+ sends, chip is likely restricted — pause to avoid waste.
+  try {
+    const campaign = await Campaign.findByPk(message.campaign_id, { attributes: ['id', 'sent_count', 'status'] });
+    if (campaign && campaign.status === 'running' && campaign.sent_count > 0 && campaign.sent_count % 25 === 0) {
+      const deliveredCount = await Message.count({ where: { campaign_id: campaign.id, status: 'delivered' } });
+      if (deliveredCount === 0) {
+        console.warn(`[Worker] Restrição detectada — campanha ${campaign.id}: ${campaign.sent_count} enviados, 0 entregues. Pausando.`);
+        const { cancelJob } = require('../services/queueService');
+        const queuedMsgs = await Message.findAll({
+          where: { campaign_id: campaign.id, status: 'queued' },
+          attributes: ['id', 'queue_job_id'],
+        });
+        await Promise.all(queuedMsgs.filter((m) => m.queue_job_id).map((m) => cancelJob(m.queue_job_id).catch(() => {})));
+        if (queuedMsgs.length) {
+          await Message.update(
+            { status: 'failed', error_message: `Pausado: chip possivelmente restringido (${campaign.sent_count} enviados, 0 entregas confirmadas pelo WhatsApp)` },
+            { where: { campaign_id: campaign.id, status: 'queued' } }
+          ).catch(() => {});
+        }
+        await Campaign.update(
+          { status: 'paused' },
+          { where: { id: campaign.id, status: 'running' } }
+        ).catch(() => {});
+      }
+    }
+  } catch (e) {
+    console.error('[Worker] erro na verificação de restrição:', e.message);
   }
 }
 

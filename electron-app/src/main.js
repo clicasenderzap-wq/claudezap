@@ -361,6 +361,10 @@ function initConnection() {
     wsClient.send({ type: 'message', accountId, from, text, isSync });
   });
 
+  waManager.on('message_delivered', ({ accountId, msgId }) => {
+    wsClient.send({ type: 'message_delivered', accountId, msgId });
+  });
+
   wsClient.connect();
 }
 

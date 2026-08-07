@@ -215,10 +215,26 @@ class DesktopService extends EventEmitter {
         });
         break;
 
-      case 'ping':
+      case 'message_delivered': {
+        const { Message } = require('../models');
+        Message.findOne({
+          where: { wa_message_id: msg.msgId, account_id: msg.accountId },
+          attributes: ['id', 'status'],
+        })
+          .then(async (m) => {
+            if (!m || m.status === 'delivered') return;
+            await m.update({ status: 'delivered' });
+            console.log(`[Desktop] entrega confirmada: wa_id=${msg.msgId}`);
+          })
+          .catch((e) => console.error('[Desktop] erro ao registrar entrega:', e.message));
+        break;
+      }
+
+      case 'ping': {
         const session = this._sessions.get(userId);
         if (session) session.ws.send(JSON.stringify({ type: 'pong' }));
         break;
+      }
     }
   }
 
