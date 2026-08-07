@@ -170,6 +170,18 @@ async function processJob({ messageId, userId, accountId: preferredAccountId, ph
   }
 
   if (lastErr) {
+    // Se o app Clica Aí está offline, não falhar permanentemente.
+    // Re-agenda para daqui a 3 minutos — quando o app reconectar, vai funcionar.
+    const desktopService = require('../services/desktopService');
+    const isDesktopDown = !desktopService.isUserConnected(userId);
+    if (isDesktopDown) {
+      console.warn(`[Worker] msg ${messageId} — app offline, retry automático em 3min`);
+      setTimeout(() => {
+        const { enqueueMessage } = require('../services/queueService');
+        enqueueMessage(messageId, userId, destPhone, message?.content || '', 0).catch(() => {});
+      }, 3 * 60 * 1000);
+      return; // deixa status='queued', vai tentar de novo quando o app ligar
+    }
     console.error(`[Worker] ✗ msg ${messageId} → ${destPhone}: ${lastErr.message}`);
     await message.update({ status: 'failed', error_message: lastErr.message });
     await handleCampaignFailure(message);

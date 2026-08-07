@@ -49,6 +49,8 @@ export default function MessagesPage() {
   const { data: history, isLoading } = useQuery({
     queryKey: ['messages', histPage],
     queryFn: () => api.get('/messages', { params: { page: histPage, limit: 20 } }).then((r) => r.data),
+    refetchInterval: (data: any) =>
+      data?.data?.some((m: any) => m.status === 'queued') ? 4000 : false,
   });
 
   const {

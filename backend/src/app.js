@@ -145,7 +145,8 @@ setupDesktopWS(server);
   } catch (e) { console.error('[Warmup] falha ao iniciar:', e.message); }
 
   // Reenfileira mensagens WhatsApp que ficaram com status=queued após restart.
-  // Usa scheduled_for para recriar o delay original — evita colapso de lotes batch.
+  // Usa 90s de grace period para que o app Clica Aí tenha tempo de reconectar via
+  // WebSocket antes dos jobs dispararem — evita falha imediata por "desktop offline".
   try {
     const { Message } = require('./models');
     const { enqueueMessage } = require('./services/queueService');
@@ -155,12 +156,13 @@ setupDesktopWS(server);
       limit: 500,
     });
     if (stuckMsgs.length > 0) {
-      console.log(`[Startup] reenfileirando ${stuckMsgs.length} mensagens pendentes`);
+      console.log(`[Startup] reenfileirando ${stuckMsgs.length} mensagens pendentes (grace 90s para reconexão do desktop)`);
+      const GRACE_MS = 90_000; // 90s — tempo para o Electron reconectar
       const now = Date.now();
       for (const msg of stuckMsgs) {
         const delay = msg.scheduled_for
-          ? Math.max(0, new Date(msg.scheduled_for).getTime() - now)
-          : 0;
+          ? Math.max(GRACE_MS, new Date(msg.scheduled_for).getTime() - now)
+          : GRACE_MS;
         await enqueueMessage(msg.id, msg.user_id, msg.to_phone, msg.content, delay);
       }
     }
