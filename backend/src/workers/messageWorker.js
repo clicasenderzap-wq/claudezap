@@ -32,12 +32,23 @@ async function handleCampaignSuccess(message) {
     return;
   }
 
-  // Auto-detect chip restriction: every 25 sends check delivery rate.
-  // If 0 delivered after 25+ sends, chip is likely restricted — pause to avoid waste.
+  // Auto-detect chip restriction: check every 50 sends (less aggressive) and only
+  // after at least 100 messages sent — early sends have no delivery receipts yet because
+  // WhatsApp delivery confirmations are asynchronous and can take minutes/hours.
+  // An early false-positive would incorrectly pause the campaign and mark all queued messages as failed.
   try {
-    const campaign = await Campaign.findByPk(message.campaign_id, { attributes: ['id', 'sent_count', 'status'] });
-    if (campaign && campaign.status === 'running' && campaign.sent_count > 0 && campaign.sent_count % 25 === 0) {
+    const campaign = await Campaign.findByPk(message.campaign_id, {
+      attributes: ['id', 'sent_count', 'status', 'created_at'],
+    });
+    const minSentToCheck = 100;
+    if (
+      campaign &&
+      campaign.status === 'running' &&
+      campaign.sent_count >= minSentToCheck &&
+      campaign.sent_count % 50 === 0
+    ) {
       const deliveredCount = await Message.count({ where: { campaign_id: campaign.id, status: 'delivered' } });
+      // Só pausa se NENHUMA entrega confirmada entre todas as mensagens enviadas até agora
       if (deliveredCount === 0) {
         console.warn(`[Worker] Restrição detectada — campanha ${campaign.id}: ${campaign.sent_count} enviados, 0 entregues. Pausando.`);
         const { cancelJob } = require('../services/queueService');
