@@ -90,6 +90,16 @@ async function processJob({ messageId, userId, accountId: preferredAccountId, ph
     return;
   }
 
+  // Respeita pausa/conclusão da campanha — cancelJob pode falhar após restart
+  // porque usa IDs velhos; esta verificação garante que jobs órfãos não disparem
+  if (message.campaign_id) {
+    const campaign = await Campaign.findByPk(message.campaign_id, { attributes: ['status'] });
+    if (campaign && (campaign.status === 'paused' || campaign.status === 'completed' || campaign.status === 'cancelled')) {
+      console.log(`[Worker] msg ${messageId} ignorada — campanha ${campaign.status}`);
+      return;
+    }
+  }
+
   // Resolve telefone se não vier no job
   let destPhone = phone;
   if (!destPhone) {
