@@ -71,14 +71,7 @@ function setupDesktopWS(httpServer) {
       else msgQueue.push(data);
     });
 
-    // Version check — block if not on latest release
-    const latestVersion = await getLatestVersion();
-    if (semverLt(appVersion, latestVersion)) {
-      ws.close(1008, `update_required:${latestVersion}`);
-      return;
-    }
-
-    // Authenticate
+    // Authenticate first — version notification comes after registration
     try {
       const payload = jwt.verify(token, process.env.JWT_SECRET);
       userId = payload.sub;
@@ -96,6 +89,11 @@ function setupDesktopWS(httpServer) {
       ws.close(1008, 'Token inválido');
       return;
     }
+
+    // Version check — notify instead of kicking to avoid interrupting active campaigns.
+    // The auto-updater already downloads and installs on next restart.
+    const latestVersion = await getLatestVersion();
+    const hasUpdate = semverLt(appVersion, latestVersion);
 
     // Check subscription — only active/trial users can connect desktop app
     try {
@@ -118,6 +116,12 @@ function setupDesktopWS(httpServer) {
     // Flush any messages that arrived during the auth window
     for (const data of msgQueue) desktopService.handleMessage(userId, data);
     msgQueue.length = 0;
+
+    // Notify about available update (non-disruptive — don't kick)
+    if (hasUpdate) {
+      console.log(`[Desktop WS] nova versão disponível: ${latestVersion} (atual: ${appVersion}) — notificando sem desconectar`);
+      try { ws.send(JSON.stringify({ type: 'update_available', version: latestVersion })); } catch {}
+    }
 
     // Heartbeat ping every 30s to keep connection alive through proxies
     const ping = setInterval(() => {

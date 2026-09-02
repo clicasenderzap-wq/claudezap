@@ -57,6 +57,9 @@ class WSClient extends EventEmitter {
       const reasonStr = reason?.toString() || '';
       console.log(`[WS] desconectado (${code}) ${reasonStr}`);
 
+      // Always emit disconnected so the UI shows correct status
+      this.emit('disconnected');
+
       if (reasonStr.startsWith('update_required:') || reasonStr.includes('update_required')) {
         const minVer = reasonStr.split(':')[1] || '';
         this.emit('update_required', minVer);
@@ -67,7 +70,6 @@ class WSClient extends EventEmitter {
         return; // don't reconnect
       }
 
-      this.emit('disconnected');
       if (!this._destroyed) this._scheduleReconnect();
     });
 

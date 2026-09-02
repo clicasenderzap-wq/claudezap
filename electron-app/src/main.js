@@ -229,6 +229,14 @@ function initConnection() {
       return;
     }
 
+    // Backend notifica que há nova versão disponível (não desconecta mais)
+    if (msg.type === 'update_available') {
+      console.log('[App] nova versão disponível:', msg.version, '— verificando download...');
+      autoUpdater.checkForUpdates().catch(() => {});
+      mainWindow?.webContents.send('update:downloading', { version: msg.version });
+      return;
+    }
+
     if (msg.type === 'account_list') {
       accounts = msg.accounts || [];
       updateTrayMenu();
