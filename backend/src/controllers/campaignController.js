@@ -452,4 +452,61 @@ async function forceStatus(req, res) {
   }
 }
 
-module.exports = { list, messages, resend, pause, resume, resendFailed, retryUndelivered, remove, forceStatus };
+// Remove uma conta WhatsApp de uma campanha ativa e reatribui suas mensagens pendentes
+// para outra conta disponível. Útil quando um chip é restrito pelo WhatsApp durante envio.
+async function removeAccount(req, res) {
+  try {
+    const { accountId: restrictedAccountId } = req.body;
+    if (!restrictedAccountId) return res.status(400).json({ error: 'accountId é obrigatório' });
+
+    const campaign = await Campaign.findOne({ where: { id: req.params.id, user_id: req.user.id } });
+    if (!campaign) return res.status(404).json({ error: 'Campanha não encontrada' });
+
+    const whatsapp = require('../services/whatsappService');
+    const { WhatsappAccount } = require('../models');
+    const allAccounts = await WhatsappAccount.findAll({ where: { user_id: req.user.id } });
+    const isConnected = (id) => whatsapp.getStatus(id) === 'connected';
+
+    // Escolhe a próxima conta disponível (preferindo conectada, das contas da campanha original)
+    const originalIds = (campaign.account_ids || []).filter((id) => id !== restrictedAccountId);
+    const fallbackAccount =
+      allAccounts.find((a) => originalIds.includes(a.id) && isConnected(a.id)) ||
+      allAccounts.find((a) => a.id !== restrictedAccountId && isConnected(a.id));
+
+    if (!fallbackAccount) {
+      return res.status(400).json({ error: 'Nenhuma outra conta WhatsApp disponível para assumir os envios' });
+    }
+
+    // Atualiza account_ids da campanha
+    const newAccountIds = originalIds.length ? originalIds : [fallbackAccount.id];
+    if (!newAccountIds.includes(fallbackAccount.id)) newAccountIds.push(fallbackAccount.id);
+    await campaign.update({ account_ids: newAccountIds });
+
+    // Re-atribui mensagens pendentes da conta restrita para a conta fallback
+    const { cancelJob, enqueueMessage } = require('../services/queueService');
+    const pendingMsgs = await Message.findAll({
+      where: { campaign_id: campaign.id, account_id: restrictedAccountId, status: 'queued' },
+      include: [{ model: Contact, attributes: ['phone'] }],
+    });
+
+    let reassigned = 0;
+    for (const msg of pendingMsgs) {
+      if (msg.queue_job_id) await cancelJob(msg.queue_job_id).catch(() => {});
+      await msg.update({ account_id: fallbackAccount.id, queue_job_id: null });
+      const destPhone = msg.to_phone || msg.Contact?.phone;
+      if (destPhone) {
+        const job = await enqueueMessage(msg.id, req.user.id, destPhone, msg.content, campaign.delay_ms || 5000);
+        if (job?.id) await msg.update({ queue_job_id: String(job.id) });
+        reassigned++;
+      }
+    }
+
+    console.log(`[Campaign] conta ${restrictedAccountId.slice(0, 8)} removida — ${reassigned} msgs reatribuídas para ${fallbackAccount.id.slice(0, 8)}`);
+    res.json({ ok: true, reassigned, fallbackAccountId: fallbackAccount.id });
+  } catch (err) {
+    console.error('[removeAccount]', err.message);
+    res.status(500).json({ error: err.message });
+  }
+}
+
+module.exports = { list, messages, resend, pause, resume, resendFailed, retryUndelivered, remove, forceStatus, removeAccount };

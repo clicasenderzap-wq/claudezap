@@ -12,7 +12,48 @@ function withAccountLock(accountId, fn) {
   return current;
 }
 
-const isConnErr = (msg) => /conectad|connected|desktop|session/i.test(msg || '');
+// Per-account restriction tracker (resets on server restart — intencionalmente em memória)
+// Quando uma conta acumula falhas consecutivas, ela é marcada como restrita e ignorada
+// ao escolher a conta para novos envios. Após 30min sem falhas, a restrição é removida.
+const _accountStats = new Map(); // accountId -> { consecutiveFails, lastFailAt }
+const RESTRICTION_THRESHOLD = 5;
+const RESTRICTION_LIFT_MS = 30 * 60 * 1000;
+
+function markAccountFail(accountId) {
+  const s = _accountStats.get(accountId) || { consecutiveFails: 0, lastFailAt: 0 };
+  s.consecutiveFails++;
+  s.lastFailAt = Date.now();
+  _accountStats.set(accountId, s);
+  if (s.consecutiveFails === RESTRICTION_THRESHOLD) {
+    console.warn(`[Worker] conta ${accountId.slice(0, 8)} com ${s.consecutiveFails} falhas consecutivas — marcada como possível restrição`);
+  }
+}
+
+function markAccountSuccess(accountId) {
+  _accountStats.delete(accountId);
+}
+
+function isAccountRestricted(accountId) {
+  const s = _accountStats.get(accountId);
+  if (!s || s.consecutiveFails < RESTRICTION_THRESHOLD) return false;
+  if (Date.now() - s.lastFailAt > RESTRICTION_LIFT_MS) {
+    _accountStats.delete(accountId);
+    return false;
+  }
+  return true;
+}
+
+// Expõe mapa de restrições para o controller de campanhas
+function getRestrictedAccounts() {
+  const now = Date.now();
+  const result = [];
+  for (const [id, s] of _accountStats.entries()) {
+    if (s.consecutiveFails >= RESTRICTION_THRESHOLD && now - s.lastFailAt <= RESTRICTION_LIFT_MS) {
+      result.push({ accountId: id, consecutiveFails: s.consecutiveFails, lastFailAt: s.lastFailAt });
+    }
+  }
+  return result;
+}
 
 async function handleCampaignSuccess(message) {
   if (!message.campaign_id) return;
@@ -35,7 +76,6 @@ async function handleCampaignSuccess(message) {
   // Auto-detect chip restriction: check every 50 sends (less aggressive) and only
   // after at least 100 messages sent — early sends have no delivery receipts yet because
   // WhatsApp delivery confirmations are asynchronous and can take minutes/hours.
-  // An early false-positive would incorrectly pause the campaign and mark all queued messages as failed.
   try {
     const campaign = await Campaign.findByPk(message.campaign_id, {
       attributes: ['id', 'sent_count', 'status', 'created_at'],
@@ -48,7 +88,6 @@ async function handleCampaignSuccess(message) {
       campaign.sent_count % 50 === 0
     ) {
       const deliveredCount = await Message.count({ where: { campaign_id: campaign.id, status: 'delivered' } });
-      // Só pausa se NENHUMA entrega confirmada entre todas as mensagens enviadas até agora
       if (deliveredCount === 0) {
         console.warn(`[Worker] Restrição detectada — campanha ${campaign.id}: ${campaign.sent_count} enviados, 0 entregues. Pausando.`);
         const { cancelJob } = require('../services/queueService');
@@ -88,6 +127,13 @@ async function handleCampaignFailure(message) {
   }
 }
 
+async function trySend(accountId, message, destPhone) {
+  if (message.media_url) {
+    return whatsapp.sendMedia(accountId, destPhone, message.media_url, message.media_type, message.media_filename, message.content);
+  }
+  return whatsapp.sendText(accountId, destPhone, message.content);
+}
+
 async function processJob({ messageId, userId, accountId: preferredAccountId, phone }) {
   const message = await Message.findByPk(messageId);
   if (!message) {
@@ -101,8 +147,7 @@ async function processJob({ messageId, userId, accountId: preferredAccountId, ph
     return;
   }
 
-  // Respeita pausa/conclusão da campanha — cancelJob pode falhar após restart
-  // porque usa IDs velhos; esta verificação garante que jobs órfãos não disparem
+  // Respeita pausa/conclusão da campanha
   if (message.campaign_id) {
     const campaign = await Campaign.findByPk(message.campaign_id, { attributes: ['status'] });
     if (campaign && (campaign.status === 'paused' || campaign.status === 'completed' || campaign.status === 'cancelled')) {
@@ -111,7 +156,7 @@ async function processJob({ messageId, userId, accountId: preferredAccountId, ph
     }
   }
 
-  // Resolve telefone se não vier no job
+  // Resolve telefone
   let destPhone = phone;
   if (!destPhone) {
     if (message.to_phone) {
@@ -136,15 +181,25 @@ async function processJob({ messageId, userId, accountId: preferredAccountId, ph
     return;
   }
 
-  // Resolve conta WhatsApp conectada
+  // Resolve conta WhatsApp — prefere a conta do job, mas pula restritas
   const isConnected = (id) => whatsapp.getStatus(id) === 'connected';
   const allAccounts = await WhatsappAccount.findAll({ where: { user_id: userId }, attributes: ['id', 'status'] });
 
-  let accountId = preferredAccountId;
-  if (!accountId || !isConnected(accountId)) {
-    const c = allAccounts.find((a) => isConnected(a.id)) || allAccounts.find((a) => a.status === 'connected');
-    if (c) accountId = c.id;
-  }
+  const pickBestAccount = () => {
+    // 1. Usa a conta preferida se conectada e não restrita
+    if (preferredAccountId && isConnected(preferredAccountId) && !isAccountRestricted(preferredAccountId)) {
+      return preferredAccountId;
+    }
+    // 2. Qualquer conta conectada e não restrita
+    const free = allAccounts.find((a) => isConnected(a.id) && !isAccountRestricted(a.id));
+    if (free) return free.id;
+    // 3. Qualquer conta conectada (mesmo que restrita — melhor do que não enviar)
+    const any = allAccounts.find((a) => isConnected(a.id));
+    if (any) return any.id;
+    return null;
+  };
+
+  let accountId = pickBestAccount();
 
   if (!accountId) {
     console.warn(`[Worker] msg ${messageId} — sem conta WhatsApp conectada`);
@@ -159,40 +214,39 @@ async function processJob({ messageId, userId, accountId: preferredAccountId, ph
   let usedAccountId = accountId;
   let lastErr;
 
+  // Tenta a conta escolhida
   try {
     await withAccountLock(accountId, async () => {
-      if (message.media_url) {
-        waId = await whatsapp.sendMedia(accountId, destPhone, message.media_url, message.media_type, message.media_filename, message.content);
-      } else {
-        waId = await whatsapp.sendText(accountId, destPhone, message.content);
-      }
+      waId = await trySend(accountId, message, destPhone);
     });
+    markAccountSuccess(accountId);
   } catch (err) {
     lastErr = err;
-    if (isConnErr(err.message)) {
-      const fallbacks = allAccounts.filter((a) => a.id !== accountId && (isConnected(a.id) || a.status === 'connected'));
-      for (const fb of fallbacks) {
-        try {
-          await withAccountLock(fb.id, async () => {
-            if (message.media_url) {
-              waId = await whatsapp.sendMedia(fb.id, destPhone, message.media_url, message.media_type, message.media_filename, message.content);
-            } else {
-              waId = await whatsapp.sendText(fb.id, destPhone, message.content);
-            }
-          });
-          usedAccountId = fb.id;
-          lastErr = null;
-          break;
-        } catch (fbErr) {
-          lastErr = fbErr;
-        }
+    markAccountFail(accountId);
+
+    // Fallback para qualquer outra conta disponível (independente do tipo de erro)
+    // Cobre tanto desconexão quanto restrição do WhatsApp
+    const fallbacks = allAccounts.filter(
+      (a) => a.id !== accountId && (isConnected(a.id) || a.status === 'connected')
+    );
+    for (const fb of fallbacks) {
+      try {
+        await withAccountLock(fb.id, async () => {
+          waId = await trySend(fb.id, message, destPhone);
+        });
+        usedAccountId = fb.id;
+        markAccountSuccess(fb.id);
+        lastErr = null;
+        console.log(`[Worker] msg ${messageId} enviada via fallback ${fb.id.slice(0, 8)} após falha na conta principal`);
+        break;
+      } catch (fbErr) {
+        markAccountFail(fb.id);
+        lastErr = fbErr;
       }
     }
   }
 
   if (lastErr) {
-    // Se o app Clica Aí está offline, não falhar permanentemente.
-    // Re-agenda para daqui a 3 minutos — quando o app reconectar, vai funcionar.
     const desktopService = require('../services/desktopService');
     const isDesktopDown = !desktopService.isUserConnected(userId);
     if (isDesktopDown) {
@@ -201,7 +255,7 @@ async function processJob({ messageId, userId, accountId: preferredAccountId, ph
         const { enqueueMessage } = require('../services/queueService');
         enqueueMessage(messageId, userId, destPhone, message?.content || '', 0).catch(() => {});
       }, 3 * 60 * 1000);
-      return; // deixa status='queued', vai tentar de novo quando o app ligar
+      return;
     }
     console.error(`[Worker] ✗ msg ${messageId} → ${destPhone}: ${lastErr.message}`);
     await message.update({ status: 'failed', error_message: lastErr.message });
@@ -215,4 +269,4 @@ async function processJob({ messageId, userId, accountId: preferredAccountId, ph
 }
 
 console.log('[Worker] message worker carregado (setTimeout queue)');
-module.exports = { processJob };
+module.exports = { processJob, getRestrictedAccounts, isAccountRestricted };

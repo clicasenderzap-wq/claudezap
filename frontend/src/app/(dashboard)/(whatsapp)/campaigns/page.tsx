@@ -216,6 +216,17 @@ export default function CampaignsPage() {
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao alterar status'),
   });
 
+  const removeAccountMutation = useMutation({
+    mutationFn: ({ id, accountId }: { id: string; accountId: string }) =>
+      api.post(`/campaigns/${id}/remove-account`, { accountId }),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ['campaigns'] });
+      qc.invalidateQueries({ queryKey: ['campaign-detail', detailCampaign?.id] });
+      toast.success(`Número removido. ${res.data.reassigned} mensagens reatribuídas para o número disponível.`);
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao remover número'),
+  });
+
   const clearQueueMutation = useMutation({
     mutationFn: () => api.delete('/messages/queue'),
     onSuccess: (res) => {
@@ -972,6 +983,45 @@ export default function CampaignsPage() {
                 </div>
               </div>
             )}
+            {/* Números em uso na campanha — permite remover um chip restrito */}
+            {detailCampaign.status === 'running' && (detailCampaign.account_ids?.length ?? 0) > 0 && (
+              <div className="mx-6 mt-3 p-3 bg-gray-50 border border-gray-200 rounded-xl">
+                <p className="text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1.5">
+                  <Smartphone size={12} /> Números enviando nesta campanha
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {detailCampaign.account_ids.map((accId: string) => {
+                    const acc = waAccounts.find((a: any) => a.id === accId);
+                    const connected = acc?.status === 'connected';
+                    return (
+                      <div key={accId} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${connected ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
+                        <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
+                        {acc?.label || acc?.phone || accId.slice(0, 8)}
+                        {!connected && (
+                          <button
+                            onClick={() => {
+                              if (confirm(`Remover o número "${acc?.label || acc?.phone || accId.slice(0, 8)}" da campanha?\n\nAs mensagens pendentes deste número serão redistribuídas para os outros números conectados.`))
+                                removeAccountMutation.mutate({ id: detailCampaign.id, accountId: accId });
+                            }}
+                            disabled={removeAccountMutation.isPending}
+                            className="ml-1 hover:text-red-600 transition-colors"
+                            title="Remover número restrito da campanha"
+                          >
+                            <X size={10} />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+                {detailCampaign.account_ids.some((id: string) => waAccounts.find((a: any) => a.id === id)?.status !== 'connected') && (
+                  <p className="text-xs text-red-600 mt-2">
+                    Um ou mais números estão desconectados. Clique no X para redistribuir as mensagens pendentes para os números ativos.
+                  </p>
+                )}
+              </div>
+            )}
+
             {detailCampaign.status === 'running' && (!desktopStatus || desktopStatus.desktop_connected) && connectedAccounts.length === 0 && (
               <div className="mx-6 mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
                 <WifiOff size={16} className="text-amber-600 mt-0.5 shrink-0" />

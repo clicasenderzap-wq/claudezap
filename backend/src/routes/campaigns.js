@@ -9,6 +9,7 @@ router.post('/:id/resume', ctrl.resume);
 router.post('/:id/resend-failed', ctrl.resendFailed);
 router.post('/:id/retry-undelivered', ctrl.retryUndelivered);
 router.post('/:id/force-status', ctrl.forceStatus);
+router.post('/:id/remove-account', ctrl.removeAccount);
 router.delete('/:id', ctrl.remove);
 
 module.exports = router;
