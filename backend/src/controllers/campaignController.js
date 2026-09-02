@@ -230,9 +230,9 @@ async function resume(req, res) {
     }
     const failedBeingRetried = toResend.filter((m) => m.status === 'failed').length;
 
-    // Bulk-update status + error_message in one SQL statement (avoids pool exhaustion)
+    // Bulk-update status; preserva error_message para auditoria histórica
     await Message.update(
-      { status: 'queued', error_message: null },
+      { status: 'queued' },
       { where: { id: toResend.map((m) => m.id) } }
     );
 

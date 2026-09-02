@@ -1222,6 +1222,9 @@ export default function CampaignsPage() {
                           {m.status === 'failed' && m.error_message && (
                             <p className="text-xs text-red-500 mt-0.5 max-w-[200px] text-right">{m.error_message}</p>
                           )}
+                          {m.status !== 'failed' && m.error_message && (
+                            <p className="text-xs text-amber-500 mt-0.5 max-w-[200px] text-right" title={m.error_message}>⚠ Reenviado</p>
+                          )}
                         </div>
                       </div>
                     ))}
