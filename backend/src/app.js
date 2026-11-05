@@ -112,6 +112,11 @@ setupDesktopWS(server);
       console.error('[DB] sync({ alter: true }) falhou (não bloqueia o worker):', syncErr.message);
     }
 
+    // Consultas de campanha filtram mensagens por campanha + status
+    try {
+      await sequelize.query('CREATE INDEX IF NOT EXISTS idx_messages_campaign_status ON messages (campaign_id, status)');
+    } catch (e) { console.error('[DB] índice de mensagens falhou:', e.message); }
+
     // Admin nunca conta como plano pago
     try {
       const { User } = require('./models');
@@ -152,6 +157,8 @@ setupDesktopWS(server);
   const GRACE_MS = 90_000;
   try {
     const scheduler = require('./services/campaignScheduler');
+    const done = await scheduler.completeFinishedCampaigns();
+    if (done.length) console.log(`[Startup] ${done.length} campanha(s) sem nada na fila marcadas como concluídas`);
     const r = await scheduler.rescheduleActiveCampaigns({ graceMs: GRACE_MS });
     if (r.messages) console.log(`[Startup] ${r.messages} mensagens de ${r.campaigns} campanha(s) reagendadas`);
   } catch (e) { console.error('[Startup] falha ao reagendar campanhas:', e.message); }

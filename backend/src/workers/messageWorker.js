@@ -1,5 +1,4 @@
 const { Message, Campaign, Contact, WhatsappAccount } = require('../models');
-const { Op } = require('sequelize');
 const whatsapp = require('../services/whatsappService');
 
 // Per-account send serializer
@@ -77,16 +76,12 @@ function scheduler() {
 }
 
 async function finishIfDone(campaignId) {
-  const remaining = await Message.count({
-    where: { campaign_id: campaignId, status: { [Op.in]: ['queued', 'pending'] } },
-  }).catch(() => 1);
-  if (remaining > 0) return false;
-  await Campaign.update(
-    { status: 'completed' },
-    { where: { id: campaignId, status: ['running', 'scheduled'] } }
-  ).catch(() => {});
-  scheduler().clearNotice(campaignId);
-  return true;
+  const done = await scheduler().completeFinishedCampaigns({ campaignId }).catch((e) => {
+    console.error(`[Worker] erro ao concluir campanha ${campaignId}:`, e.message);
+    return [];
+  });
+  if (done.length) console.log(`[Worker] campanha ${campaignId} concluída`);
+  return done.length > 0;
 }
 
 async function pauseCampaign(campaignId, notice) {

@@ -219,6 +219,25 @@ function getNotice(campaignId) {
   return _notices.get(campaignId) || null;
 }
 
+// Conclui campanhas ativas que não têm mais nada na fila. A conclusão normal acontece no envio
+// da última mensagem; isto cobre o que escapa dela (restart no meio do envio, confirmação de
+// entrega tardia de uma mensagem que estava para ser reenviada, disparo duplicado).
+async function completeFinishedCampaigns({ userId = null, campaignId = null } = {}) {
+  const { sequelize } = require('../models');
+  const [rows] = await sequelize.query(
+    `UPDATE campaigns AS c SET status = 'completed', updated_at = NOW()
+      WHERE c.status IN ('running', 'scheduled')
+        ${userId ? 'AND c.user_id = :userId' : ''}
+        ${campaignId ? 'AND c.id = :campaignId' : ''}
+        AND EXISTS (SELECT 1 FROM messages m WHERE m.campaign_id = c.id)
+        AND NOT EXISTS (SELECT 1 FROM messages m WHERE m.campaign_id = c.id AND m.status IN ('queued', 'pending'))
+      RETURNING c.id`,
+    { replacements: { userId, campaignId } }
+  );
+  for (const r of rows) clearNotice(r.id);
+  return rows.map((r) => r.id);
+}
+
 // Condição passageira (app fechado, chip reconectando): mantém tudo na fila e empurra o plano
 function deferCampaign(campaignId, delayMs, reason) {
   if (reason) setNotice(campaignId, reason);
@@ -279,6 +298,7 @@ module.exports = {
   planSchedule,
   rescheduleCampaign,
   rescheduleActiveCampaigns,
+  completeFinishedCampaigns,
   deferCampaign,
   redistributeAccounts,
   cancelMessages,

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -124,6 +124,31 @@ export default function CampaignsPage() {
   const batchIntervalHours = watch('batch_interval_hours', 8);
   const excludeContacted = watch('exclude_contacted', false);
 
+  // Atualiza a campanha aberta no modal na hora, sem esperar a próxima atualização automática
+  const patchCampaign = (id: string, changes: Record<string, any>) => {
+    setDetailCampaign((prev: any) => (prev?.id === id ? { ...prev, ...changes } : prev));
+    qc.setQueryData(['campaign-detail', id], (old: any) => (old?.campaign ? { ...old, campaign: { ...old.campaign, ...changes } } : old));
+    qc.invalidateQueries({ queryKey: ['campaign-detail', id] });
+  };
+
+  // Abre o detalhe de uma campanha vindo do aviso "Campanha concluída" (/campaigns?abrir=<id>)
+  useEffect(() => {
+    const open = (id: string) => {
+      setTab('history');
+      setMsgFilter('all');
+      setRetryUndeliveredPanel(false);
+      setDetailCampaign({ id });
+    };
+    const fromUrl = new URLSearchParams(window.location.search).get('abrir');
+    if (fromUrl) {
+      open(fromUrl);
+      window.history.replaceState(null, '', window.location.pathname);
+    }
+    const onOpen = (e: Event) => open((e as CustomEvent<string>).detail);
+    window.addEventListener('clicaai:abrir-campanha', onOpen);
+    return () => window.removeEventListener('clicaai:abrir-campanha', onOpen);
+  }, []);
+
   const sendMutation = useMutation({
     mutationFn: (d: FormData & { contact_ids?: string[]; tags?: string[]; account_ids: string[] }) =>
       api.post('/messages/campaign', d),
@@ -160,7 +185,7 @@ export default function CampaignsPage() {
     onSuccess: (_res, id) => {
       qc.invalidateQueries({ queryKey: ['campaigns'] });
       qc.invalidateQueries({ queryKey: ['running-campaigns-banner'] });
-      setDetailCampaign((prev: any) => prev?.id === id ? { ...prev, status: 'paused' } : prev);
+      patchCampaign(id, { status: 'paused' });
       toast.success('Campanha pausada. As mensagens na fila foram canceladas.');
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao pausar campanha'),
@@ -171,7 +196,7 @@ export default function CampaignsPage() {
     onSuccess: (res, id) => {
       qc.invalidateQueries({ queryKey: ['campaigns'] });
       qc.invalidateQueries({ queryKey: ['running-campaigns-banner'] });
-      setDetailCampaign((prev: any) => prev?.id === id ? { ...prev, status: 'running' } : prev);
+      patchCampaign(id, { status: res.data.resumed ? 'running' : 'completed' });
       toast.success(res.data.resumed
         ? `Campanha retomada! ${res.data.queued} mensagens na fila.`
         : (res.data.message || 'Campanha concluída.'));
@@ -192,11 +217,10 @@ export default function CampaignsPage() {
   const retryUndeliveredMutation = useMutation({
     mutationFn: ({ id, accountId }: { id: string; accountId?: string }) =>
       api.post(`/campaigns/${id}/retry-undelivered`, accountId ? { account_id: accountId } : {}),
-    onSuccess: (res) => {
+    onSuccess: (res, { id }) => {
       qc.invalidateQueries({ queryKey: ['campaigns'] });
-      qc.invalidateQueries({ queryKey: ['campaign-detail', detailCampaign?.id] });
       qc.invalidateQueries({ queryKey: ['running-campaigns-banner'] });
-      setDetailCampaign((prev: any) => prev ? { ...prev, status: 'running' } : prev);
+      patchCampaign(id, { status: 'running' });
       setRetryUndeliveredPanel(false);
       toast.success(`Reenvio iniciado! ${res.data.queued} mensagens na fila via ${res.data.account || 'chip disponível'}.`);
     },
@@ -210,7 +234,7 @@ export default function CampaignsPage() {
       qc.invalidateQueries({ queryKey: ['campaigns'] });
       qc.invalidateQueries({ queryKey: ['running-campaigns-banner'] });
       const label = status === 'completed' ? 'concluída' : status;
-      setDetailCampaign((prev: any) => prev?.id === id ? { ...prev, status } : prev);
+      patchCampaign(id, { status });
       toast.success(`Campanha marcada como ${label}.`);
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao alterar status'),
@@ -221,8 +245,7 @@ export default function CampaignsPage() {
       api.post(`/campaigns/${id}/remove-account`, { accountId }),
     onSuccess: (res, { id }) => {
       qc.invalidateQueries({ queryKey: ['campaigns'] });
-      qc.invalidateQueries({ queryKey: ['campaign-detail', id] });
-      setDetailCampaign((prev: any) => prev?.id === id ? { ...prev, account_ids: res.data.account_ids } : prev);
+      patchCampaign(id, { account_ids: res.data.account_ids });
       toast.success(`Número removido. ${res.data.reassigned} mensagens pendentes passaram para os outros números, nos mesmos horários.`);
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao remover número'),
@@ -233,8 +256,7 @@ export default function CampaignsPage() {
       api.post(`/campaigns/${id}/add-account`, { accountId }),
     onSuccess: (res, { id }) => {
       qc.invalidateQueries({ queryKey: ['campaigns'] });
-      qc.invalidateQueries({ queryKey: ['campaign-detail', id] });
-      setDetailCampaign((prev: any) => prev?.id === id ? { ...prev, account_ids: res.data.account_ids } : prev);
+      patchCampaign(id, { account_ids: res.data.account_ids });
       toast.success(`Número adicionado. ${res.data.reassigned} mensagens pendentes redistribuídas entre os números.`);
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao adicionar número'),
@@ -390,6 +412,9 @@ export default function CampaignsPage() {
   const liveCampaign = detailCampaign && detail?.campaign?.id === detailCampaign.id
     ? { ...detailCampaign, ...detail.campaign }
     : detailCampaign;
+  const failedNow = detail?.stats?.failed ?? liveCampaign?.failed_count ?? 0;
+  const finishedAt = (detail?.messages ?? []).reduce((max: string | null, m: any) =>
+    m.sent_at && (!max || m.sent_at > max) ? m.sent_at : max, null);
   const accountLabel = (id: string | null | undefined) => {
     if (!id) return null;
     const a = waAccounts.find((x: any) => x.id === id);
@@ -959,33 +984,38 @@ export default function CampaignsPage() {
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-xl shadow-xl w-full max-w-3xl max-h-[90vh] flex flex-col">
 
-            {/* Header */}
-            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center gap-3">
-                <BarChart2 size={20} className="text-brand-600" />
-                <div>
-                  <h2 className="font-semibold text-gray-900">{detailCampaign.name}</h2>
+            {/* Header — usa os dados atualizados da campanha (status muda enquanto o modal está aberto) */}
+            <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center gap-3 min-w-0">
+                <BarChart2 size={20} className="text-brand-600 shrink-0" />
+                <div className="min-w-0">
+                  <h2 className="font-semibold text-gray-900 break-words">{liveCampaign.name ?? 'Carregando…'}</h2>
                   <div className="flex items-center gap-3 text-xs text-gray-400 flex-wrap">
-                <span>{formatDate(detailCampaign.createdAt ?? detailCampaign.created_at)}</span>
-                {detailCampaign.delay_ms && <span className="flex items-center gap-1"><Timer size={11} /> {(detailCampaign.delay_ms / 1000).toFixed(0)}s entre msgs</span>}
-                {detailCampaign.rotate_every > 1 && <span className="flex items-center gap-1"><Repeat2 size={11} /> troca a cada {detailCampaign.rotate_every} msgs</span>}
-              </div>
+                    {(liveCampaign.createdAt ?? liveCampaign.created_at) && <span>{formatDate(liveCampaign.createdAt ?? liveCampaign.created_at)}</span>}
+                    {liveCampaign.delay_ms && <span className="flex items-center gap-1"><Timer size={11} /> {(liveCampaign.delay_ms / 1000).toFixed(0)}s entre msgs</span>}
+                    {liveCampaign.rotate_every > 1 && <span className="flex items-center gap-1"><Repeat2 size={11} /> troca a cada {liveCampaign.rotate_every} msgs</span>}
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center gap-2 shrink-0">
-                {detailCampaign.status === 'running' && (
+              <div className="flex flex-wrap items-center gap-2 ml-auto">
+                {liveCampaign.status === 'completed' && (
+                  <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-green-50 text-green-700 border border-green-200">
+                    <CheckCircle2 size={13} /> Concluída
+                  </span>
+                )}
+                {liveCampaign.status === 'running' && (
                   <button
-                    onClick={() => { if (confirm(`Pausar "${detailCampaign.name}"?\nAs mensagens na fila serão canceladas e poderão ser retomadas depois.`)) pauseMutation.mutate(detailCampaign.id); }}
+                    onClick={() => { if (confirm(`Pausar "${liveCampaign.name}"?\nAs mensagens na fila serão canceladas e poderão ser retomadas depois.`)) pauseMutation.mutate(liveCampaign.id); }}
                     disabled={pauseMutation.isPending}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-yellow-50 text-yellow-700 hover:bg-yellow-100 border border-yellow-200 transition-colors"
                   >
                     <Pause size={13} /> Pausar
                   </button>
                 )}
-                {detailCampaign.status === 'paused' && (
+                {liveCampaign.status === 'paused' && (
                   <>
                     <button
-                      onClick={() => { if (confirm(`Retomar campanha "${detailCampaign.name}"?`)) resumeMutation.mutate(detailCampaign.id); }}
+                      onClick={() => { if (confirm(`Retomar campanha "${liveCampaign.name}"?`)) resumeMutation.mutate(liveCampaign.id); }}
                       disabled={resumeMutation.isPending}
                       className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100 border border-brand-200 transition-colors"
                     >
@@ -993,8 +1023,8 @@ export default function CampaignsPage() {
                     </button>
                     <button
                       onClick={() => {
-                        if (confirm(`Marcar "${detailCampaign.name}" como concluída?\n\nAs mensagens ainda na fila serão canceladas. Use isso quando a campanha estiver travada e não puder ser retomada.`))
-                          forceStatusMutation.mutate({ id: detailCampaign.id, status: 'completed' });
+                        if (confirm(`Marcar "${liveCampaign.name}" como concluída?\n\nAs mensagens ainda na fila serão canceladas. Use isso quando a campanha estiver travada e não puder ser retomada.`))
+                          forceStatusMutation.mutate({ id: liveCampaign.id, status: 'completed' });
                       }}
                       disabled={forceStatusMutation.isPending}
                       title="Forçar encerramento da campanha"
@@ -1004,16 +1034,16 @@ export default function CampaignsPage() {
                     </button>
                   </>
                 )}
-                {(detailCampaign.failed_count ?? 0) > 0 && detailCampaign.status !== 'running' && (
+                {failedNow > 0 && liveCampaign.status !== 'running' && (
                   <button
-                    onClick={() => { if (confirm(`Reenviar ${detailCampaign.failed_count} mensagens com falha?`)) resendFailedMutation.mutate(detailCampaign.id); }}
+                    onClick={() => { if (confirm(`Reenviar ${failedNow} mensagens com falha?`)) resendFailedMutation.mutate(liveCampaign.id); }}
                     disabled={resendFailedMutation.isPending}
                     className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-orange-50 text-orange-700 hover:bg-orange-100 border border-orange-200 transition-colors"
                   >
-                    <RotateCcw size={13} /> {detailCampaign.failed_count} falhas
+                    <RotateCcw size={13} /> {failedNow} falhas
                   </button>
                 )}
-                {(detail?.stats?.sent ?? 0) > 0 && detailCampaign.status !== 'running' && (
+                {(detail?.stats?.sent ?? 0) > 0 && liveCampaign.status !== 'running' && (
                   <button
                     onClick={() => { setRetryUndeliveredPanel((v) => !v); setRetryAccountId(''); }}
                     className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${retryUndeliveredPanel ? 'bg-amber-600 text-white border-amber-600' : 'bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200'}`}
@@ -1025,8 +1055,18 @@ export default function CampaignsPage() {
               </div>
             </div>
 
+            {liveCampaign.status === 'completed' && detail?.stats && (
+              <div className="mx-6 mt-3 p-3 bg-green-50 border border-green-200 rounded-xl flex items-start gap-3">
+                <CheckCircle2 size={16} className="text-green-600 mt-0.5 shrink-0" />
+                <p className="text-sm text-green-800">
+                  <span className="font-semibold">Campanha concluída{finishedAt ? ` em ${formatDate(finishedAt)}` : ''}.</span>{' '}
+                  {detail.stats.delivered} entregue{detail.stats.delivered !== 1 ? 's' : ''}, {detail.stats.sent} sem confirmação, {detail.stats.failed} falha{detail.stats.failed !== 1 ? 's' : ''}.
+                </p>
+              </div>
+            )}
+
             {/* Status warnings */}
-            {detailCampaign.status === 'running' && desktopStatus && !desktopStatus.desktop_connected && (
+            {liveCampaign.status === 'running' && desktopStatus && !desktopStatus.desktop_connected && (
               <div className="mx-6 mt-3 p-3 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
                 <WifiOff size={16} className="text-red-600 mt-0.5 shrink-0" />
                 <div>
@@ -1130,7 +1170,7 @@ export default function CampaignsPage() {
               );
             })()}
 
-            {detailCampaign.status === 'running' && (!desktopStatus || desktopStatus.desktop_connected) && connectedAccounts.length === 0 && (
+            {liveCampaign.status === 'running' && (!desktopStatus || desktopStatus.desktop_connected) && connectedAccounts.length === 0 && (
               <div className="mx-6 mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
                 <WifiOff size={16} className="text-amber-600 mt-0.5 shrink-0" />
                 <div>

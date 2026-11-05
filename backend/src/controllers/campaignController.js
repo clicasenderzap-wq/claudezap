@@ -18,6 +18,8 @@ function isConnected(accountId) {
 
 async function list(req, res) {
   const { page = 1, limit = 20, status } = req.query;
+  await scheduler.completeFinishedCampaigns({ userId: req.user.id })
+    .catch((e) => console.error('[list] conclusão de campanhas:', e.message));
   const where = { user_id: req.user.id };
   if (status) where.status = status;
 
@@ -102,6 +104,8 @@ async function resend(req, res) {
 }
 
 async function messages(req, res) {
+  await scheduler.completeFinishedCampaigns({ userId: req.user.id, campaignId: req.params.id })
+    .catch((e) => console.error('[messages] conclusão de campanha:', e.message));
   const campaign = await Campaign.findOne({
     where: { id: req.params.id, user_id: req.user.id },
   });
@@ -151,6 +155,40 @@ async function messages(req, res) {
     restricted_account_ids: restricted,
     notice: scheduler.getNotice(campaign.id),
   });
+}
+
+// Resumo leve (sem a lista de mensagens) — usado pelo aviso de campanha concluída
+async function summary(req, res) {
+  const campaign = await Campaign.findOne({
+    where: { id: req.params.id, user_id: req.user.id },
+    attributes: ['id', 'name', 'status', 'total_contacts', 'createdAt', 'updatedAt'],
+  });
+  if (!campaign) return res.status(404).json({ error: 'Campanha não encontrada' });
+
+  const { fn, col } = require('sequelize');
+  const rows = await Message.findAll({
+    where: { campaign_id: campaign.id },
+    attributes: [
+      'status',
+      [fn('COUNT', col('id')), 'count'],
+      [fn('MIN', col('sent_at')), 'first_sent'],
+      [fn('MAX', col('sent_at')), 'last_sent'],
+    ],
+    group: ['status'],
+    raw: true,
+  });
+
+  const stats = { total: 0, sent: 0, delivered: 0, failed: 0, queued: 0 };
+  let startedAt = null;
+  let finishedAt = null;
+  for (const r of rows) {
+    const n = Number(r.count) || 0;
+    stats.total += n;
+    if (r.status in stats) stats[r.status] += n;
+    if (r.first_sent && (!startedAt || new Date(r.first_sent) < startedAt)) startedAt = new Date(r.first_sent);
+    if (r.last_sent && (!finishedAt || new Date(r.last_sent) > finishedAt)) finishedAt = new Date(r.last_sent);
+  }
+  res.json({ campaign, stats, started_at: startedAt, finished_at: finishedAt });
 }
 
 async function pause(req, res) {
@@ -478,6 +516,6 @@ async function sendBatchNow(req, res) {
 }
 
 module.exports = {
-  list, messages, resend, pause, resume, resendFailed, retryUndelivered, remove, forceStatus,
+  list, messages, summary, resend, pause, resume, resendFailed, retryUndelivered, remove, forceStatus,
   removeAccount, addAccount, sendBatchNow,
 };

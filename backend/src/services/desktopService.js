@@ -219,12 +219,18 @@ class DesktopService extends EventEmitter {
         const { Message } = require('../models');
         Message.findOne({
           where: { wa_message_id: msg.msgId, account_id: msg.accountId },
-          attributes: ['id', 'status'],
+          attributes: ['id', 'status', 'campaign_id'],
         })
           .then(async (m) => {
             if (!m || m.status === 'delivered') return;
+            const wasQueued = m.status === 'queued';
             await m.update({ status: 'delivered' });
             console.log(`[Desktop] entrega confirmada: wa_id=${msg.msgId}`);
+            // Confirmação atrasada de um envio anterior: a pessoa já recebeu — cancela o reenvio pendente
+            if (wasQueued) {
+              require('./queueService').cancelJob(m.id);
+              if (m.campaign_id) await require('./campaignScheduler').completeFinishedCampaigns({ campaignId: m.campaign_id });
+            }
           })
           .catch((e) => console.error('[Desktop] erro ao registrar entrega:', e.message));
         break;

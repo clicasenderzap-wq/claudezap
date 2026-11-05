@@ -3,6 +3,7 @@ const ctrl = require('../controllers/campaignController');
 
 router.get('/', ctrl.list);
 router.get('/:id/messages', ctrl.messages);
+router.get('/:id/summary', ctrl.summary);
 router.post('/:id/resend', ctrl.resend);
 router.post('/:id/pause', ctrl.pause);
 router.post('/:id/resume', ctrl.resume);
