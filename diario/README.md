@@ -18,4 +18,4 @@ Registro diário de todas as correções, melhorias e ações realizadas no sist
 **Commit:** hash do commit (se aplicável)
 ```
 
-Tipos: `CORREÇÃO` | `MELHORIA` | `NOVO RECURSO` | `INFRAESTRUTURA` | `DOCUMENTAÇÃO`
+Tipos: `CORREÇÃO` | `MELHORIA` | `NOVO RECURSO` | `INFRAESTRUTURA` | `DOCUMENTAÇÃO` | `DIAGNÓSTICO`
