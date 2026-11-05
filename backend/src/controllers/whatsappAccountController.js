@@ -83,16 +83,15 @@ whatsapp.on('disconnected', async ({ accountId }) => {
     });
     if (!runningCampaigns.length) return;
 
-    const { cancelJob } = require('../services/queueService');
+    const scheduler = require('../services/campaignScheduler');
     for (const campaign of runningCampaigns) {
       const pending = await Message.findAll({
         where: { campaign_id: campaign.id, status: 'queued' },
-        attributes: ['id', 'queue_job_id'],
+        attributes: ['id'],
       });
-      await Promise.all(
-        pending.filter((m) => m.queue_job_id).map((m) => cancelJob(m.queue_job_id).catch(() => {}))
-      );
+      scheduler.cancelMessages(pending);
       await campaign.update({ status: 'paused' }).catch(() => {});
+      scheduler.setNotice(campaign.id, 'Pausada automaticamente: todos os números WhatsApp desconectaram. Reconecte um chip e clique em Retomar.');
       console.log(`[AutoPause] campanha ${campaign.id} pausada — app desktop desconectou`);
     }
   } catch (e) {

@@ -92,6 +92,7 @@ setupDesktopWS(server);
       `ALTER TABLE messages ADD COLUMN IF NOT EXISTS scheduled_for TIMESTAMPTZ`,
       `ALTER TABLE messages ADD COLUMN IF NOT EXISTS queue_job_id VARCHAR(255)`,
       `ALTER TABLE messages ADD COLUMN IF NOT EXISTS account_id UUID`,
+      `ALTER TABLE messages ADD COLUMN IF NOT EXISTS batch_index INTEGER`,
       `ALTER TABLE messages ALTER COLUMN contact_id DROP NOT NULL`,
       `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS email VARCHAR(255)`,
       `ALTER TABLE contacts ADD COLUMN IF NOT EXISTS email_opt_out BOOLEAN NOT NULL DEFAULT FALSE`,
@@ -144,28 +145,34 @@ setupDesktopWS(server);
     console.log('[Warmup] iniciado');
   } catch (e) { console.error('[Warmup] falha ao iniciar:', e.message); }
 
-  // Reenfileira mensagens WhatsApp que ficaram com status=queued após restart.
-  // Usa 90s de grace period para que o app Clica Aí tenha tempo de reconectar via
-  // WebSocket antes dos jobs dispararem — evita falha imediata por "desktop offline".
+  // Reagenda mensagens WhatsApp que ficaram com status=queued após restart.
+  // Grace de 90s para o app Clica Aí reconectar via WebSocket antes dos disparos.
+  // Campanhas: o agendador refaz o plano — horários futuros são mantidos e as atrasadas
+  // saem espaçadas a partir de agora, respeitando intervalo e lotes (nunca todas juntas).
+  const GRACE_MS = 90_000;
+  try {
+    const scheduler = require('./services/campaignScheduler');
+    const r = await scheduler.rescheduleActiveCampaigns({ graceMs: GRACE_MS });
+    if (r.messages) console.log(`[Startup] ${r.messages} mensagens de ${r.campaigns} campanha(s) reagendadas`);
+  } catch (e) { console.error('[Startup] falha ao reagendar campanhas:', e.message); }
+
   try {
     const { Message } = require('./models');
     const { enqueueMessage } = require('./services/queueService');
-    const stuckMsgs = await Message.findAll({
-      where: { status: 'queued' },
+    const singles = await Message.findAll({
+      where: { status: 'queued', campaign_id: null },
       attributes: ['id', 'user_id', 'to_phone', 'content', 'scheduled_for'],
-      limit: 500,
+      order: [['scheduled_for', 'ASC']],
     });
-    if (stuckMsgs.length > 0) {
-      console.log(`[Startup] reenfileirando ${stuckMsgs.length} mensagens pendentes (grace 90s para reconexão do desktop)`);
-      const GRACE_MS = 90_000; // 90s — tempo para o Electron reconectar
-      const now = Date.now();
-      for (const msg of stuckMsgs) {
-        const delay = msg.scheduled_for
-          ? Math.max(GRACE_MS, new Date(msg.scheduled_for).getTime() - now)
-          : GRACE_MS;
-        await enqueueMessage(msg.id, msg.user_id, msg.to_phone, msg.content, delay);
-      }
+    const now = Date.now();
+    let overdue = 0;
+    for (const msg of singles) {
+      const planned = msg.scheduled_for ? new Date(msg.scheduled_for).getTime() - now : 0;
+      // Atrasadas saem com 3s entre si em vez de todas no mesmo segundo
+      const delay = planned > GRACE_MS ? planned : GRACE_MS + 3000 * overdue++;
+      await enqueueMessage(msg.id, msg.user_id, msg.to_phone, msg.content, delay);
     }
+    if (singles.length) console.log(`[Startup] ${singles.length} mensagens avulsas reagendadas`);
   } catch (e) { console.error('[Startup] falha ao reenviar pendentes:', e.message); }
 
   // Reenfileira emails que ficaram com status=queued após restart

@@ -219,12 +219,36 @@ export default function CampaignsPage() {
   const removeAccountMutation = useMutation({
     mutationFn: ({ id, accountId }: { id: string; accountId: string }) =>
       api.post(`/campaigns/${id}/remove-account`, { accountId }),
-    onSuccess: (res) => {
+    onSuccess: (res, { id }) => {
       qc.invalidateQueries({ queryKey: ['campaigns'] });
-      qc.invalidateQueries({ queryKey: ['campaign-detail', detailCampaign?.id] });
-      toast.success(`Número removido. ${res.data.reassigned} mensagens reatribuídas para o número disponível.`);
+      qc.invalidateQueries({ queryKey: ['campaign-detail', id] });
+      setDetailCampaign((prev: any) => prev?.id === id ? { ...prev, account_ids: res.data.account_ids } : prev);
+      toast.success(`Número removido. ${res.data.reassigned} mensagens pendentes passaram para os outros números, nos mesmos horários.`);
     },
     onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao remover número'),
+  });
+
+  const addAccountMutation = useMutation({
+    mutationFn: ({ id, accountId }: { id: string; accountId: string }) =>
+      api.post(`/campaigns/${id}/add-account`, { accountId }),
+    onSuccess: (res, { id }) => {
+      qc.invalidateQueries({ queryKey: ['campaigns'] });
+      qc.invalidateQueries({ queryKey: ['campaign-detail', id] });
+      setDetailCampaign((prev: any) => prev?.id === id ? { ...prev, account_ids: res.data.account_ids } : prev);
+      toast.success(`Número adicionado. ${res.data.reassigned} mensagens pendentes redistribuídas entre os números.`);
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao adicionar número'),
+  });
+
+  const sendBatchNowMutation = useMutation({
+    mutationFn: ({ id, batchIndex }: { id: string; batchIndex: number }) =>
+      api.post(`/campaigns/${id}/send-batch-now`, { batchIndex }),
+    onSuccess: (res, { id }) => {
+      qc.invalidateQueries({ queryKey: ['campaigns'] });
+      qc.invalidateQueries({ queryKey: ['campaign-detail', id] });
+      toast.success(`Lote ${res.data.batch + 1} liberado: ${res.data.queued} mensagens saindo a partir de agora.`);
+    },
+    onError: (e: any) => toast.error(e.response?.data?.error || 'Erro ao antecipar lote'),
   });
 
   const clearQueueMutation = useMutation({
@@ -337,10 +361,15 @@ export default function CampaignsPage() {
     .replace(/\{\{name\}\}/gi, previewName)
     + (includeOptout ? '\n\nPara sair desta lista, responda: SAIR' : '');
 
+  // Mensagem que já falhou antes e voltou para a fila (ou já foi reenviada com sucesso)
+  const isRetried = (m: any) => m.status !== 'failed' && !!m.error_message;
+  const retriedCount = (detail?.messages ?? []).filter(isRetried).length;
+
   const filteredMessages = (detail?.messages ?? []).filter((m: any) => {
     if (msgFilter === 'all') return true;
     if (msgFilter === 'sent') return m.status === 'sent' || m.status === 'delivered';
     if (msgFilter === 'unconfirmed') return m.status === 'sent';
+    if (msgFilter === 'retried') return isRetried(m);
     return m.status === msgFilter;
   });
 
@@ -350,10 +379,35 @@ export default function CampaignsPage() {
       const nb = (b.Contact?.name ?? '').toLowerCase();
       return msgSort.dir === 'asc' ? na.localeCompare(nb) : nb.localeCompare(na);
     }
-    const da = a.sent_at ? new Date(a.sent_at).getTime() : 0;
-    const db = b.sent_at ? new Date(b.sent_at).getTime() : 0;
-    return msgSort.dir === 'asc' ? da - db : db - da;
+    const when = (m: any) => {
+      const d = m.status === 'queued' ? m.scheduled_for : m.sent_at;
+      return d ? new Date(d).getTime() : 0;
+    };
+    return msgSort.dir === 'asc' ? when(a) - when(b) : when(b) - when(a);
   });
+
+  // Dados mais recentes da campanha (o detalhe é atualizado a cada 15s)
+  const liveCampaign = detailCampaign && detail?.campaign?.id === detailCampaign.id
+    ? { ...detailCampaign, ...detail.campaign }
+    : detailCampaign;
+  const accountLabel = (id: string | null | undefined) => {
+    if (!id) return null;
+    const a = waAccounts.find((x: any) => x.id === id);
+    return a ? (a.label || a.phone || 'Número') : 'número excluído';
+  };
+  const shortTime = (iso: string) => {
+    const d = new Date(iso);
+    const sameDay = d.toDateString() === new Date().toDateString();
+    return d.toLocaleString('pt-BR', sameDay
+      ? { hour: '2-digit', minute: '2-digit' }
+      : { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  };
+  const untilStr = (iso: string) => {
+    const diff = Math.max(0, new Date(iso).getTime() - Date.now());
+    const h = Math.floor(diff / 3_600_000);
+    const m = Math.round((diff % 3_600_000) / 60_000);
+    return h > 0 ? `${h}h ${m}min` : `${m}min`;
+  };
 
   return (
     <div className="space-y-6">
@@ -983,44 +1037,98 @@ export default function CampaignsPage() {
                 </div>
               </div>
             )}
-            {/* Números em uso na campanha — permite remover um chip restrito */}
-            {detailCampaign.status === 'running' && (detailCampaign.account_ids?.length ?? 0) > 0 && (
-              <div className="mx-6 mt-3 p-3 bg-gray-50 border border-gray-200 rounded-xl">
-                <p className="text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1.5">
-                  <Smartphone size={12} /> Números enviando nesta campanha
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {detailCampaign.account_ids.map((accId: string) => {
-                    const acc = waAccounts.find((a: any) => a.id === accId);
-                    const connected = acc?.status === 'connected';
-                    return (
-                      <div key={accId} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${connected ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800'}`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${connected ? 'bg-green-500' : 'bg-red-500'}`} />
-                        {acc?.label || acc?.phone || accId.slice(0, 8)}
-                        {!connected && (
-                          <button
-                            onClick={() => {
-                              if (confirm(`Remover o número "${acc?.label || acc?.phone || accId.slice(0, 8)}" da campanha?\n\nAs mensagens pendentes deste número serão redistribuídas para os outros números conectados.`))
-                                removeAccountMutation.mutate({ id: detailCampaign.id, accountId: accId });
-                            }}
-                            disabled={removeAccountMutation.isPending}
-                            className="ml-1 hover:text-red-600 transition-colors"
-                            title="Remover número restrito da campanha"
-                          >
-                            <X size={10} />
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })}
+            {/* Aviso do servidor: por que a campanha está aguardando ou foi pausada */}
+            {detail?.notice && ['running', 'scheduled', 'paused'].includes(liveCampaign.status) && (
+              <div className="mx-6 mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+                <AlertTriangle size={16} className="text-amber-600 mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-sm text-amber-800">{detail.notice.text}</p>
+                  <p className="text-xs text-amber-600 mt-0.5">desde {shortTime(detail.notice.at)}</p>
                 </div>
-                {detailCampaign.account_ids.some((id: string) => waAccounts.find((a: any) => a.id === id)?.status !== 'connected') && (
-                  <p className="text-xs text-red-600 mt-2">
-                    Um ou mais números estão desconectados. Clique no X para redistribuir as mensagens pendentes para os números ativos.
-                  </p>
-                )}
               </div>
             )}
+
+            {/* Números da campanha — tirar um chip restrito ou incluir outro sem pausar */}
+            {['running', 'scheduled', 'paused'].includes(liveCampaign.status) && (liveCampaign.account_ids?.length ?? 0) > 0 && (() => {
+              const ids: string[] = liveCampaign.account_ids;
+              const restricted: string[] = detail?.restricted_account_ids ?? [];
+              const perAccount: any[] = detail?.accounts ?? [];
+              const sentBy = (id: string) => {
+                const s = perAccount.find((a) => a.account_id === id);
+                return s ? s.sent + s.delivered : 0;
+              };
+              const leftCampaign = perAccount.filter((a) => !ids.includes(a.account_id) && a.sent + a.delivered > 0);
+              const addable = connectedAccounts.filter((a: any) => !ids.includes(a.id));
+              const busy = removeAccountMutation.isPending || addAccountMutation.isPending;
+              return (
+                <div className="mx-6 mt-3 p-3 bg-gray-50 border border-gray-200 rounded-xl">
+                  <p className="text-xs font-semibold text-gray-600 mb-2 flex items-center gap-1.5">
+                    <Smartphone size={12} /> Números desta campanha
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {ids.map((accId) => {
+                      const acc = waAccounts.find((a: any) => a.id === accId);
+                      const isRestricted = restricted.includes(accId);
+                      const isOn = acc?.status === 'connected';
+                      const tone = isRestricted
+                        ? 'bg-amber-50 border-amber-300 text-amber-800'
+                        : isOn ? 'bg-green-50 border-green-200 text-green-800' : 'bg-red-50 border-red-200 text-red-800';
+                      const dot = isRestricted ? 'bg-amber-500' : isOn ? 'bg-green-500' : 'bg-red-500';
+                      const name = accountLabel(accId);
+                      return (
+                        <div key={accId} className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${tone}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${dot}`} />
+                          {name}
+                          <span className="font-normal opacity-75">
+                            · {sentBy(accId)} enviadas{isRestricted ? ' · falhando' : !isOn ? ' · desconectado' : ''}
+                          </span>
+                          {ids.length > 1 && (
+                            <button
+                              onClick={() => {
+                                if (confirm(`Remover o número "${name}" desta campanha?\n\nAs mensagens pendentes dele passam para os outros números da campanha, mantendo os horários dos lotes.`))
+                                  removeAccountMutation.mutate({ id: liveCampaign.id, accountId: accId });
+                              }}
+                              disabled={busy}
+                              className="ml-0.5 p-0.5 rounded-full hover:bg-white hover:text-red-600 transition-colors disabled:opacity-50"
+                              title="Remover este número da campanha"
+                              aria-label={`Remover ${name} da campanha`}
+                            >
+                              <X size={11} />
+                            </button>
+                          )}
+                        </div>
+                      );
+                    })}
+                    {addable.length > 0 && (
+                      <select
+                        value=""
+                        disabled={busy}
+                        onChange={(e) => {
+                          const accId = e.target.value;
+                          if (accId && confirm(`Adicionar "${accountLabel(accId)}" a esta campanha?\n\nAs mensagens pendentes serão divididas entre os números, mantendo os horários dos lotes.`))
+                            addAccountMutation.mutate({ id: liveCampaign.id, accountId: accId });
+                        }}
+                        className="text-xs border border-dashed border-gray-300 rounded-full px-2.5 py-1 bg-white text-gray-600 hover:border-gray-400 cursor-pointer"
+                        aria-label="Adicionar número à campanha"
+                      >
+                        <option value="">+ Adicionar número</option>
+                        {addable.map((a: any) => (
+                          <option key={a.id} value={a.id}>{a.label}{a.phone ? ` (+${a.phone})` : ''}</option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                  {leftCampaign.length > 0 && (
+                    <p className="text-xs text-gray-500 mt-2">
+                      Já enviaram e saíram da campanha: {leftCampaign.map((a) => `${accountLabel(a.account_id)} (${a.sent + a.delivered})`).join(', ')}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-2">
+                    Número restrito ou com problema? Clique no X: as mensagens pendentes dele passam para os outros números, sem mudar os horários dos lotes.
+                  </p>
+                </div>
+              );
+            })()}
 
             {detailCampaign.status === 'running' && (!desktopStatus || desktopStatus.desktop_connected) && connectedAccounts.length === 0 && (
               <div className="mx-6 mt-3 p-3 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
@@ -1123,95 +1231,91 @@ export default function CampaignsPage() {
                   </div>
                 )}
 
-                {/* Batch progress */}
-                {detailCampaign.batch_mode && detailCampaign.batch_size > 0 && (
-                  <div className="px-6 py-3 border-b border-gray-100 shrink-0">
-                    {(() => {
-                      const bs = detailCampaign.batch_size;
-                      const total = detailCampaign.total_contacts;
-                      const batchCount = Math.ceil(total / bs);
-                      const processed = (detail?.stats?.sent ?? 0) + (detail?.stats?.delivered ?? 0) + (detail?.stats?.failed ?? 0);
-                      const completedBatches = Math.floor(processed / bs);
-                      const createdMs = new Date(detailCampaign.createdAt ?? detailCampaign.created_at).getTime();
-                      const intervalMs = (detailCampaign.batch_interval_hours || 1) * 3600000;
-                      const now = Date.now();
-
-                      // Find the next batch that hasn't fully sent yet
-                      let nextBatchIdx = -1;
-                      let nextBatchTime: Date | null = null;
-                      for (let i = completedBatches; i < batchCount; i++) {
-                        const t = new Date(createdMs + i * intervalMs);
-                        if (t > new Date()) { nextBatchIdx = i; nextBatchTime = t; break; }
-                      }
-
-                      // Countdown string
-                      let countdownStr = '';
-                      if (nextBatchTime) {
-                        const diffMs = nextBatchTime.getTime() - now;
-                        const h = Math.floor(diffMs / 3600000);
-                        const m = Math.floor((diffMs % 3600000) / 60000);
-                        countdownStr = h > 0 ? `${h}h ${m}min` : `${m}min`;
-                      }
-
-                      // Show: completed batches summary + next few
-                      const visibleBatches: number[] = [];
-                      // Last 2 completed
-                      for (let i = Math.max(0, completedBatches - 2); i < completedBatches; i++) visibleBatches.push(i);
-                      // Current + next 3
-                      for (let i = completedBatches; i < Math.min(batchCount, completedBatches + 4); i++) visibleBatches.push(i);
-
-                      return (
-                        <>
-                          <div className="flex items-center justify-between mb-2">
-                            <p className="text-xs font-semibold text-gray-600 flex items-center gap-1.5">
-                              <Layers size={12} /> Lotes — {completedBatches}/{batchCount} concluídos
-                            </p>
-                            {nextBatchTime && detailCampaign.status === 'running' && (
-                              <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5 font-medium flex items-center gap-1">
-                                <Clock size={10} /> próximo em {countdownStr}
+                {/* Lotes — montados a partir do horário real de cada mensagem */}
+                {liveCampaign.batch_mode && Array.isArray(detail?.batches) && detail.batches.length > 0 && (() => {
+                  const batches: any[] = detail.batches;
+                  const now = Date.now();
+                  const active = ['running', 'scheduled'].includes(liveCampaign.status);
+                  const isSending = (b: any) => b.queued > 0 && !!b.nextAt && new Date(b.nextAt).getTime() <= now + 90_000;
+                  const firstPending = batches.find((b) => b.queued > 0);
+                  const doneCount = batches.filter((b) => b.queued === 0).length;
+                  const anchor = firstPending ? batches.indexOf(firstPending) : batches.length;
+                  const from = Math.max(0, anchor - 1);
+                  const to = Math.min(batches.length, anchor + 5);
+                  const intervalH = Number(liveCampaign.batch_interval_hours) || 1;
+                  const delayS = Math.round((liveCampaign.delay_ms || 5000) / 1000);
+                  return (
+                    <div className="px-6 py-3 border-b border-gray-100 shrink-0">
+                      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
+                        <p className="text-xs font-semibold text-gray-600 flex items-center gap-1.5">
+                          <Layers size={12} /> Lotes — {doneCount}/{batches.length} concluídos
+                          <span className="font-normal text-gray-400">· até {liveCampaign.batch_size} msgs a cada {intervalH}h</span>
+                        </p>
+                        {active && firstPending && isSending(firstPending) && (
+                          <span className="text-xs bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5 font-medium flex items-center gap-1">
+                            <Send size={10} /> enviando agora
+                          </span>
+                        )}
+                        {active && firstPending && !isSending(firstPending) && firstPending.nextAt && (
+                          <span className="text-xs bg-blue-50 text-blue-700 border border-blue-200 rounded-full px-2 py-0.5 font-medium flex items-center gap-1">
+                            <Clock size={10} /> próximo em {untilStr(firstPending.nextAt)}
+                          </span>
+                        )}
+                        {liveCampaign.status === 'paused' && firstPending && (
+                          <span className="text-xs bg-yellow-50 text-yellow-700 border border-yellow-200 rounded-full px-2 py-0.5 font-medium flex items-center gap-1">
+                            <Pause size={10} /> pausada
+                          </span>
+                        )}
+                      </div>
+                      <div className="space-y-1">
+                        {from > 0 && (
+                          <p className="text-xs text-gray-400 pl-4">{from} lote{from !== 1 ? 's' : ''} anterior{from !== 1 ? 'es' : ''} concluído{from !== 1 ? 's' : ''} ✓</p>
+                        )}
+                        {batches.slice(from, to).map((b) => {
+                          const done = b.queued === 0;
+                          const sending = active && isSending(b);
+                          const canSendNow = active && b === firstPending && !sending;
+                          return (
+                            <div key={b.index} className={`flex flex-wrap items-center gap-x-2 gap-y-1 text-xs rounded-lg px-2 py-1.5 ${sending ? 'bg-blue-50' : ''}`}>
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${done ? 'bg-green-500' : sending ? 'bg-blue-500 animate-pulse' : 'bg-gray-300'}`} />
+                              <span className={`font-medium w-14 shrink-0 ${sending ? 'text-blue-700' : 'text-gray-700'}`}>Lote {b.index + 1}</span>
+                              <span className={`tabular-nums ${sending ? 'text-blue-600' : 'text-gray-500'}`}>
+                                {b.sent + b.delivered}/{b.total} enviadas
+                                {b.failed > 0 && <span className="text-red-500"> · {b.failed} falha{b.failed !== 1 ? 's' : ''}</span>}
+                                {b.queued > 0 && <span> · {b.queued} na fila</span>}
                               </span>
-                            )}
-                            {!nextBatchTime && completedBatches < batchCount && detailCampaign.status === 'running' && (
-                              <span className="text-xs bg-green-50 text-green-700 border border-green-200 rounded-full px-2 py-0.5 font-medium flex items-center gap-1">
-                                <Send size={10} /> enviando agora
+                              <span className="ml-auto flex items-center gap-2 shrink-0">
+                                <span className="text-gray-400 tabular-nums">
+                                  {done
+                                    ? (b.lastSentAt ? `concluído ${shortTime(b.lastSentAt)}` : 'concluído')
+                                    : sending
+                                      ? (b.lastAt ? `até ${shortTime(b.lastAt)}` : '')
+                                      : (b.nextAt ? `às ${shortTime(b.nextAt)}` : '')}
+                                </span>
+                                {canSendNow && (
+                                  <button
+                                    onClick={() => {
+                                      if (confirm(`Enviar agora as ${b.queued} mensagens do Lote ${b.index + 1}?\n\nElas saem a partir de agora, com cerca de ${delayS}s entre cada uma. O lote seguinte continua respeitando o intervalo de ${intervalH}h a partir deste.`))
+                                        sendBatchNowMutation.mutate({ id: liveCampaign.id, batchIndex: b.index });
+                                    }}
+                                    disabled={sendBatchNowMutation.isPending}
+                                    className="flex items-center gap-1 px-2 py-0.5 rounded-md border border-blue-200 bg-white text-blue-700 font-semibold hover:bg-blue-50 transition-colors disabled:opacity-50"
+                                    title="Antecipar este lote"
+                                  >
+                                    <Send size={10} /> {sendBatchNowMutation.isPending ? 'Liberando…' : 'Enviar agora'}
+                                  </button>
+                                )}
                               </span>
-                            )}
-                          </div>
-                          <div className="space-y-1.5">
-                            {completedBatches > 2 && (
-                              <p className="text-xs text-gray-400 pl-4">{completedBatches - 2} lotes anteriores concluídos ✓</p>
-                            )}
-                            {visibleBatches.map((i) => {
-                              const batchStart = i * bs;
-                              const batchTotal = Math.min(bs, total - batchStart);
-                              const batchDone = Math.max(0, Math.min(batchTotal, processed - batchStart));
-                              const scheduledAt = new Date(createdMs + i * intervalMs);
-                              const isComplete = batchDone >= batchTotal;
-                              const isCurrent = !isComplete && scheduledAt <= new Date();
-                              const isFuture = scheduledAt > new Date();
-                              return (
-                                <div key={i} className={`flex items-center gap-2 text-xs rounded-lg px-2 py-1 ${isCurrent ? 'bg-blue-50' : ''}`}>
-                                  <span className={`w-2 h-2 rounded-full shrink-0 ${isComplete ? 'bg-green-500' : isCurrent ? 'bg-blue-500 animate-pulse' : 'bg-gray-200'}`} />
-                                  <span className={`font-medium w-14 ${isCurrent ? 'text-blue-700' : 'text-gray-700'}`}>Lote {i + 1}</span>
-                                  <span className={isCurrent ? 'text-blue-600 font-semibold' : 'text-gray-500'}>
-                                    {batchDone}/{batchTotal} msgs
-                                    {isCurrent && ' — enviando'}
-                                  </span>
-                                  <span className="ml-auto text-gray-400 tabular-nums text-xs">
-                                    {i === 0 ? 'início' : scheduledAt.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })}
-                                  </span>
-                                </div>
-                              );
-                            })}
-                            {completedBatches + 4 < batchCount && (
-                              <p className="text-xs text-gray-400 pl-4">...e mais {batchCount - completedBatches - 4} lotes agendados</p>
-                            )}
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </div>
-                )}
+                            </div>
+                          );
+                        })}
+                        {to < batches.length && (
+                          <p className="text-xs text-gray-400 pl-4">...e mais {batches.length - to} lote{batches.length - to !== 1 ? 's' : ''} agendado{batches.length - to !== 1 ? 's' : ''}</p>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 {/* Filtros */}
                 <div className="flex gap-2 px-6 py-3 pb-4 border-b border-gray-100 overflow-x-auto shrink-0">
@@ -1220,6 +1324,7 @@ export default function CampaignsPage() {
                     { key: 'delivered', label: `Entregues (${detail?.stats?.delivered ?? 0})` },
                     { key: 'unconfirmed', label: `Sem confirmação (${detail?.stats?.sent ?? 0})` },
                     { key: 'failed', label: `Falhas (${detail?.stats?.failed ?? 0})` },
+                    { key: 'retried', label: `Reenviados (${retriedCount})` },
                     { key: 'queued', label: `Na fila (${detail?.stats?.queued ?? 0})` },
                   ].map((f) => (
                     <button
@@ -1268,12 +1373,21 @@ export default function CampaignsPage() {
                           <span className={`badge text-xs ${STATUS_STYLE[m.status] ?? 'bg-gray-100 text-gray-600'}`}>
                             {STATUS_LABEL[m.status] ?? m.status}
                           </span>
-                          {m.sent_at && <p className="text-xs text-gray-400 mt-0.5">{formatDate(m.sent_at)}</p>}
-                          {m.status === 'failed' && m.error_message && (
-                            <p className="text-xs text-red-500 mt-0.5 max-w-[200px] text-right">{m.error_message}</p>
+                          {m.status === 'queued' && m.scheduled_for && (
+                            <p className="text-xs text-gray-400 mt-0.5">previsto {formatDate(m.scheduled_for)}</p>
                           )}
-                          {m.status !== 'failed' && m.error_message && (
-                            <p className="text-xs text-amber-500 mt-0.5 max-w-[200px] text-right" title={m.error_message}>⚠ Reenviado</p>
+                          {m.status !== 'queued' && m.sent_at && <p className="text-xs text-gray-400 mt-0.5">{formatDate(m.sent_at)}</p>}
+                          {m.account_id && m.status !== 'failed' && (
+                            <p className="text-xs text-gray-400">via {accountLabel(m.account_id)}</p>
+                          )}
+                          {m.status === 'failed' && m.error_message && (
+                            <p className="text-xs text-red-500 mt-0.5 max-w-[220px] text-right">{m.error_message}</p>
+                          )}
+                          {isRetried(m) && (
+                            <div className="mt-0.5 max-w-[220px] ml-auto text-right">
+                              <p className="text-xs font-medium text-amber-600">↻ {m.status === 'queued' ? 'Aguardando reenvio' : 'Reenviado'}</p>
+                              <p className="text-xs text-amber-500 truncate" title={m.error_message}>{m.error_message}</p>
+                            </div>
                           )}
                         </div>
                       </div>

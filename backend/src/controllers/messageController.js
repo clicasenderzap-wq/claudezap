@@ -1,6 +1,6 @@
 const { validationResult } = require('express-validator');
 const { Message, Contact, Campaign } = require('../models');
-const { enqueueMessage, enqueueBulk, enqueueBatched, enqueueScheduled, cancelJob } = require('../services/queueService');
+const { enqueueMessage, enqueueScheduled, cancelJob } = require('../services/queueService');
 const { Op } = require('sequelize');
 const { getLimit } = require('../middleware/planGuard');
 
@@ -143,7 +143,6 @@ async function sendCampaign(req, res) {
     const campaignStatus = startOffset > 0 ? 'scheduled' : 'running';
 
     const batchSz = Math.max(1, Number(batch_size));
-    const batchIntervalMs = (Number(batch_interval_hours) || 8) * 3_600_000;
 
     const campaign = await Campaign.create({
       user_id: req.user.id,
@@ -168,34 +167,13 @@ async function sendCampaign(req, res) {
         account_id: connectedAccounts[Math.floor(i / rotateEvery) % connectedAccounts.length].id,
         content: applyTemplate(message_template, c) + optoutText,
         status: 'queued',
+        batch_index: batch_mode ? Math.floor(i / batchSz) : null,
         ...(media_url && { media_url, media_type, media_filename }),
       }))
     );
 
-    const jobs = messages.map((m, i) => ({
-      messageId: m.id,
-      userId: req.user.id,
-      accountId: connectedAccounts[Math.floor(i / rotateEvery) % connectedAccounts.length].id,
-      phone: contacts[i].phone,
-      content: m.content,
-    }));
-
-    let queuedJobs;
-    if (batch_mode) {
-      queuedJobs = await enqueueBatched(jobs, delay_ms, batchSz, batchIntervalMs, startOffset);
-    } else {
-      queuedJobs = await enqueueBulk(jobs, delay_ms, startOffset);
-    }
-    // Salva job id e fireAt (horário real de disparo) para que o restart
-    // possa recriar o delay correto em vez de disparar tudo com delay=0
-    if (queuedJobs?.length) {
-      await Promise.all(messages.map((m, i) => {
-        const updates = {};
-        if (queuedJobs[i]?.id) updates.queue_job_id = String(queuedJobs[i].id);
-        if (queuedJobs[i]?.fireAt) updates.scheduled_for = queuedJobs[i].fireAt;
-        return Object.keys(updates).length ? m.update(updates) : null;
-      }));
-    }
+    // O agendador grava o horário de cada mensagem (scheduled_for) — sobrevive a restarts
+    await require('../services/campaignScheduler').rescheduleCampaign(campaign.id);
     res.status(201).json({ campaign, queued: messages.length });
   } catch (err) {
     console.error('[sendCampaign]', err.message);
@@ -276,7 +254,7 @@ async function cancelScheduled(req, res) {
       return res.status(400).json({ error: 'Mensagem já enviada ou não é um agendamento futuro' });
     }
 
-    if (msg.queue_job_id) await cancelJob(msg.queue_job_id);
+    await cancelJob(msg.id);
     await msg.update({ status: 'failed', error_message: 'Cancelado pelo usuário' });
     res.json({ success: true });
   } catch (err) {
@@ -318,7 +296,7 @@ async function retryAllStuck(req, res) {
     for (const msg of stuck) {
       try {
         // Cancela job antigo
-        if (msg.queue_job_id) await cancelJob(msg.queue_job_id).catch(() => {});
+        await cancelJob(msg.id);
 
         const phone = msg.to_phone || (msg.contact_id
           ? (await Contact.findByPk(msg.contact_id, { attributes: ['phone'] }))?.phone
@@ -351,7 +329,7 @@ async function retryMessage(req, res) {
     }
 
     // Cancela job antigo se houver
-    if (msg.queue_job_id) await cancelJob(msg.queue_job_id).catch(() => {});
+    await cancelJob(msg.id);
 
     // Determina o telefone de destino
     let phone = msg.to_phone;
@@ -384,12 +362,8 @@ async function clearQueue(req, res) {
       return res.json({ cleared: 0 });
     }
 
-    // Cancela os jobs no BullMQ
-    await Promise.all(
-      queuedMessages
-        .filter((m) => m.queue_job_id)
-        .map((m) => cancelJob(m.queue_job_id).catch(() => {}))
-    );
+    // Cancela os disparos agendados
+    await Promise.all(queuedMessages.map((m) => cancelJob(m.id)));
 
     // Marca todas as mensagens como falha
     await Message.update(
